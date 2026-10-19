@@ -1,0 +1,380 @@
+mod db;
+mod dupes;
+mod kind;
+mod scan;
+mod thumbs;
+mod watch;
+
+use std::collections::{HashMap, HashSet};
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+
+use rusqlite::Connection;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_opener::OpenerExt;
+
+use db::{Asset, Collection, Root};
+
+pub struct AppState {
+    pub db: Mutex<Connection>,
+    thumbs_dir: PathBuf,
+    previews_dir: PathBuf,
+    drag_icon: PathBuf,
+    thumb_permits: tokio::sync::Semaphore,
+    watchers: Mutex<HashMap<i64, watch::Watcher>>,
+    scanning: Mutex<HashSet<i64>>,
+}
+
+fn err(e: impl std::fmt::Display) -> String {
+    e.to_string()
+}
+
+fn with_db<T>(state: &AppState, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> Result<T, String> {
+    f(&state.db.lock().unwrap()).map_err(err)
+}
+
+fn asset(state: &AppState, id: i64) -> Result<Asset, String> {
+    db::asset(&state.db.lock().unwrap(), id)
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ScanProgress {
+    root_id: i64,
+    count: usize,
+    done: bool,
+}
+
+/// Rescans a root on a worker thread, reporting progress. Skips if that root is already being scanned.
+fn spawn_scan(app: AppHandle, root: Root) {
+    if !app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
+        return;
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let progress = |count, done| {
+            let _ = app.emit(
+                "scan-progress",
+                ScanProgress {
+                    root_id: root.id,
+                    count,
+                    done,
+                },
+            );
+        };
+        // shortcut: holds the DB lock for the whole scan, so other commands wait; split walking from writing if big libraries feel slow.
+        let result = {
+            let mut conn = state.db.lock().unwrap();
+            scan::scan_root(&mut conn, root.id, Path::new(&root.path), |n| progress(n, false))
+        };
+        state.scanning.lock().unwrap().remove(&root.id);
+        if let Err(e) = &result {
+            eprintln!("scan {}: {e}", root.path);
+        }
+        progress(result.unwrap_or(0), true);
+        let _ = app.emit("assets-changed", root.id);
+    });
+}
+
+/// Lets the webview load files under `path`, and watches it for changes.
+fn activate_root(app: &AppHandle, root: &Root) {
+    if let Err(e) = app.asset_protocol_scope().allow_directory(&root.path, true) {
+        eprintln!("asset scope {}: {e}", root.path);
+    }
+    match watch::start(app.clone(), root.id, PathBuf::from(&root.path)) {
+        Ok(w) => {
+            app.state::<AppState>().watchers.lock().unwrap().insert(root.id, w);
+        }
+        Err(e) => eprintln!("watch {}: {e}", root.path),
+    }
+}
+
+/// Lowercased on Windows and macOS, where paths are usually case-insensitive.
+fn path_key(p: &str) -> PathBuf {
+    let p = p.trim_end_matches(['/', '\\']);
+    if cfg!(any(windows, target_os = "macos")) {
+        PathBuf::from(p.to_lowercase())
+    } else {
+        PathBuf::from(p)
+    }
+}
+
+#[tauri::command]
+fn list_roots(state: State<'_, AppState>) -> Result<Vec<Root>, String> {
+    with_db(&state, db::roots)
+}
+
+#[tauri::command]
+fn add_root(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<Root, String> {
+    let dir = Path::new(&path);
+    if !dir.is_absolute() || !dir.is_dir() {
+        return Err(format!("{path} is not a folder."));
+    }
+    let key = path_key(&path);
+    for r in with_db(&state, db::roots)? {
+        let other = path_key(&r.path);
+        if key.starts_with(&other) || other.starts_with(&key) {
+            return Err(format!(
+                "{path} overlaps a folder that's already in the library ({}).",
+                r.path
+            ));
+        }
+    }
+    let path = path.trim_end_matches(['/', '\\']).to_string();
+    let path = if path.ends_with(':') { format!("{path}\\") } else { path }; // keep drive roots valid
+    let root = with_db(&state, |c| {
+        c.execute("INSERT INTO roots (path) VALUES (?1)", [&path])?;
+        Ok(Root {
+            id: c.last_insert_rowid(),
+            path: path.clone(),
+        })
+    })?;
+    activate_root(&app, &root);
+    spawn_scan(app, root.clone());
+    Ok(root)
+}
+
+/// Forgets a folder. Only the library entry goes; the files are never touched.
+#[tauri::command]
+fn remove_root(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    state.watchers.lock().unwrap().remove(&id);
+    with_db(&state, |c| {
+        c.execute("DELETE FROM roots WHERE id = ?1", [id]).map(|_| ())
+    })
+}
+
+#[tauri::command]
+fn rescan(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let root = with_db(&state, |c| db::root(c, id))?;
+    spawn_scan(app, root);
+    Ok(())
+}
+
+#[tauri::command]
+fn list_assets(state: State<'_, AppState>) -> Result<Vec<Asset>, String> {
+    with_db(&state, |c| db::assets(c, None))
+}
+
+/// Cached thumbnail path, generated on first request. None for kinds the backend can't draw (the UI uses an icon,
+/// or renders and saves one itself for 3D models).
+#[tauri::command]
+async fn thumbnail(state: State<'_, AppState>, id: i64) -> Result<Option<String>, String> {
+    let a = asset(&state, id)?;
+    let out = state.thumbs_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+    if out.exists() {
+        return Ok(Some(out.display().to_string()));
+    }
+    if a.kind != "image" || !kind::decodable(&a.ext) {
+        return Ok(None);
+    }
+    let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+    let made = tauri::async_runtime::spawn_blocking(move || thumbs::thumbnail(Path::new(&a.path), &a.ext, &out))
+        .await
+        .map_err(err)??;
+    Ok(Some(made.display().to_string()))
+}
+
+#[tauri::command]
+fn save_thumbnail(state: State<'_, AppState>, id: i64, png: Vec<u8>) -> Result<String, String> {
+    let a = asset(&state, id)?;
+    let out = state.thumbs_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+    thumbs::save_png(&png, &out)?;
+    Ok(out.display().to_string())
+}
+
+/// Full-size PNG for image formats the webview can't display (TGA, PSD, TIFF).
+#[tauri::command]
+async fn preview(state: State<'_, AppState>, id: i64) -> Result<String, String> {
+    let a = asset(&state, id)?;
+    if !kind::decodable(&a.ext) {
+        return Err("No preview for this file type".into());
+    }
+    let out = state.previews_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+    let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+    let made = tauri::async_runtime::spawn_blocking(move || thumbs::preview(Path::new(&a.path), &a.ext, &out))
+        .await
+        .map_err(err)??;
+    Ok(made.display().to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TextPreview {
+    text: String,
+    truncated: bool,
+}
+
+const TEXT_LIMIT: u64 = 1024 * 1024;
+
+fn read_capped(path: &Path, limit: u64) -> Result<TextPreview, String> {
+    let file = std::fs::File::open(path).map_err(err)?;
+    let mut buf = Vec::new();
+    file.take(limit + 1).read_to_end(&mut buf).map_err(err)?;
+    let truncated = buf.len() as u64 > limit;
+    buf.truncate(limit as usize);
+    Ok(TextPreview {
+        text: String::from_utf8_lossy(&buf).into_owned(),
+        truncated,
+    })
+}
+
+#[tauri::command]
+fn read_text(state: State<'_, AppState>, id: i64) -> Result<TextPreview, String> {
+    read_capped(Path::new(&asset(&state, id)?.path), TEXT_LIMIT)
+}
+
+#[tauri::command]
+fn set_favorite(state: State<'_, AppState>, ids: Vec<i64>, favorite: bool) -> Result<(), String> {
+    with_db(&state, |c| db::set_favorite(c, &ids, favorite))
+}
+
+#[tauri::command]
+fn add_tag(state: State<'_, AppState>, ids: Vec<i64>, tag: String) -> Result<String, String> {
+    let tag = db::clean_tag(&tag)?;
+    with_db(&state, |c| db::add_tag(c, &ids, &tag))?;
+    Ok(tag)
+}
+
+#[tauri::command]
+fn remove_tag(state: State<'_, AppState>, ids: Vec<i64>, tag: String) -> Result<(), String> {
+    with_db(&state, |c| db::remove_tag(c, &ids, &tag))
+}
+
+#[tauri::command]
+fn list_collections(state: State<'_, AppState>) -> Result<Vec<Collection>, String> {
+    with_db(&state, db::collections)
+}
+
+#[tauri::command]
+fn create_collection(state: State<'_, AppState>, name: String) -> Result<i64, String> {
+    db::create_collection(&state.db.lock().unwrap(), &name)
+}
+
+#[tauri::command]
+fn delete_collection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    with_db(&state, |c| {
+        c.execute("DELETE FROM collections WHERE id = ?1", [id]).map(|_| ())
+    })
+}
+
+#[tauri::command]
+fn set_in_collection(state: State<'_, AppState>, collection: i64, ids: Vec<i64>, member: bool) -> Result<(), String> {
+    with_db(&state, |c| db::set_in_collection(c, collection, &ids, member))
+}
+
+#[tauri::command]
+async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<i64>>, String> {
+    let todo = with_db(&state, dupes::unhashed)?;
+    // Hash without holding the DB lock; unreadable files are just skipped.
+    let hashes = tauri::async_runtime::spawn_blocking(move || {
+        todo.into_iter()
+            .filter_map(|(id, p)| dupes::hash_file(&p).ok().map(|h| (id, h)))
+            .collect::<Vec<_>>()
+    })
+    .await
+    .map_err(err)?;
+    with_db(&state, |c| {
+        dupes::store(c, &hashes)?;
+        dupes::groups(c)
+    })
+}
+
+#[tauri::command]
+fn reveal(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    app.opener().reveal_item_in_dir(asset(&state, id)?.path).map_err(err)
+}
+
+/// Opens in the default app. Refused for unknown file types, which could be programs or scripts.
+#[tauri::command]
+fn open_default(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let a = asset(&state, id)?;
+    if a.kind == "other" {
+        return Err("Asset Den only opens known asset types. Use Show in folder instead.".into());
+    }
+    app.opener().open_path(a.path, None::<&str>).map_err(err)
+}
+
+#[tauri::command]
+fn drag_icon(state: State<'_, AppState>) -> String {
+    state.drag_icon.display().to_string()
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_drag::init())
+        .setup(|app| {
+            let data = app.path().app_data_dir()?;
+            let cache = app.path().app_cache_dir()?;
+            let thumbs_dir = cache.join("thumbs");
+            let previews_dir = cache.join("previews");
+            for d in [&data, &thumbs_dir, &previews_dir] {
+                std::fs::create_dir_all(d)?;
+            }
+            let drag_icon = cache.join("drag-icon.png");
+            if !drag_icon.exists() {
+                image::RgbaImage::from_pixel(48, 48, image::Rgba([34, 197, 94, 255])).save(&drag_icon)?;
+            }
+            app.asset_protocol_scope().allow_directory(&cache, true)?;
+
+            let conn = db::open(&data.join("asset-den.db"))?;
+            let roots = db::roots(&conn)?;
+            app.manage(AppState {
+                db: Mutex::new(conn),
+                thumbs_dir,
+                previews_dir,
+                drag_icon,
+                thumb_permits: tokio::sync::Semaphore::new(4),
+                watchers: Mutex::new(HashMap::new()),
+                scanning: Mutex::new(HashSet::new()),
+            });
+            // Catch up on anything that changed while the app was closed.
+            for root in roots {
+                activate_root(app.handle(), &root);
+                spawn_scan(app.handle().clone(), root);
+            }
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            list_roots,
+            add_root,
+            remove_root,
+            rescan,
+            list_assets,
+            thumbnail,
+            save_thumbnail,
+            preview,
+            read_text,
+            set_favorite,
+            add_tag,
+            remove_tag,
+            list_collections,
+            create_collection,
+            delete_collection,
+            set_in_collection,
+            find_duplicates,
+            reveal,
+            open_default,
+            drag_icon
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn read_text_is_capped() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("big.json");
+        std::fs::write(&p, "x".repeat(100)).unwrap();
+        let t = super::read_capped(&p, 10).unwrap();
+        assert_eq!((t.text.len(), t.truncated), (10, true));
+        let t = super::read_capped(&p, 100).unwrap();
+        assert_eq!((t.text.len(), t.truncated), (100, false));
+    }
+}

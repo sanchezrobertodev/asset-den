@@ -1,0 +1,40 @@
+[package]
+name = "asset-den"
+version = "0.1.0"
+description = "Browse, preview and tag the game assets in your folders"
+authors = ["Roberto Sanchez"]
+license = "MIT"
+edition = "2024"
+
+[lib]
+# The `_lib` suffix avoids a lib/bin name clash on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "asset_den_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-drag = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.40", features = ["bundled"] }
+walkdir = "2"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp", "tga", "tiff", "ico"] }
+psd = "0.3"
+notify-debouncer-full = "0.7"
+blake3 = "1"
+tokio = { version = "1", features = ["sync"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
