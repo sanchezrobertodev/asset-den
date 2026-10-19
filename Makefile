@@ -1,18 +1,22 @@
-# Local stand-in for the `test` job in .github/workflows/release.yml.
+# Local checks. These replace GitHub Actions on every push; the workflow only runs when started by hand.
 # Recipes are plain commands so they run under sh (macOS/Linux, Git Bash) and cmd.exe.
 
 CARGO_MANIFEST := --manifest-path src-tauri/Cargo.toml
 
-.PHONY: check install typecheck test lint fmt fmt-check dev build
+.PHONY: check install typecheck ui test lint fmt fmt-check dev build
 
-## check: everything CI runs before bundling, plus clippy and rustfmt
-check: typecheck fmt-check lint test
+## check: run before every push. Frontend typecheck + production bundle, rustfmt, clippy, Rust tests
+check: ui fmt-check lint test
 
 install:
 	npm ci
 
 typecheck:
 	npm run typecheck
+
+## ui: typecheck and production-bundle the frontend (what `tauri build` embeds)
+ui:
+	npm run build
 
 test:
 	cargo test $(CARGO_MANIFEST)

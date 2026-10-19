@@ -4,6 +4,8 @@ A desktop asset browser for game developers on Windows, macOS and Linux. Point i
 indexes every sprite, sound, model, font, video and data file so you can find, preview, tag and drag them into your
 engine.
 
+![Asset Den browsing a sample library](docs/screenshot-grid.png)
+
 **Your files are only ever read.** Asset Den never renames, moves, edits or deletes anything in your folders. Tags,
 favorites and collections live in the app's own database. Removing a folder from the library only forgets it.
 
@@ -27,21 +29,41 @@ favorites and collections live in the app's own database. Removing a folder from
 - **Duplicates**: finds identical files across folders (hashes only same-size files) and shows the space they waste.
 - **Stats**: disk usage by type, extension and top-level folder.
 
+![Quick view of an FBX model](docs/screenshot-quickview.png)
+
 Keyboard: <kbd>/</kbd> search · arrows move · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click select · <kbd>Ctrl+A</kbd> select
 all · <kbd>Space</kbd> quick view · <kbd>Enter</kbd> open in default app · <kbd>F</kbd> favorite · <kbd>Esc</kbd> close.
 
-## Develop
+## Install
 
-Requires Node 22+, Rust stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
+There are no published releases yet, so build the installer on the OS you want it for. It needs Node 22+, Rust
+stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for that OS.
+
+```bash
+make install
+make build
+```
+
+The installers land in `src-tauri/target/release/bundle/`:
+
+| OS | Installer | Notes |
+|---|---|---|
+| Windows | `nsis/Asset Den_<version>_x64-setup.exe` (per-user, no admin) or `msi/…_x64_en-US.msi` | The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**. |
+| macOS | `dmg/Asset Den_<version>_<arch>.dmg` | Unsigned: the first time, right-click the app and choose **Open**. |
+| Linux | `appimage/…AppImage`, `deb/…deb` or `rpm/…rpm` | Install the GStreamer plugins for MP4/H.264 video previews. |
+
+To build all three OSes at once, run the **Build** workflow by hand from the repository's Actions tab.
+
+## Develop
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-`make check` runs the typecheck, Rust tests, clippy and rustfmt, the same checks as CI. `npm run tauri build` makes
-installers for the current OS. CI (`.github/workflows/release.yml`) builds Windows, macOS (universal) and Linux
-bundles.
+Run `make check` before every push. It typechecks and bundles the frontend, then runs rustfmt, clippy (warnings are
+errors) and the Rust tests. These local checks replace CI on push: the GitHub workflow only runs when started by hand,
+to build installers for every OS.
 
 ## Where things live
 
@@ -59,3 +81,7 @@ bundles.
   the GStreamer plugins for MP4/H.264.
 - A file renamed while the app is closed shows up as a new file on the next scan, so its tags don't follow it.
 - Video thumbnails, sprite-sheet slicing and syntax highlighting are not in v1.
+
+## License
+
+[MIT](LICENSE)

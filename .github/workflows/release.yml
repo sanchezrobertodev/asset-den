@@ -1,10 +1,8 @@
 name: Build
 
+# Manual only: day-to-day checks run locally with `make check`. Start it from the Actions tab (or
+# `gh workflow run Build`) to build Windows, macOS and Linux installers, e.g. for a release.
 on:
-  push:
-    branches: [master, main]
-    tags: ["v*"]
-  pull_request:
   workflow_dispatch:
 
 jobs:
