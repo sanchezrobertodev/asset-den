@@ -14,11 +14,12 @@ pub fn kind_of(ext: &str) -> &'static str {
 }
 
 /// Image formats the backend decodes itself (for thumbnails, and for previews of formats the webview can't show).
+pub const DECODABLE: [&str; 11] = [
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "tga", "psd", "tif", "tiff", "ico",
+];
+
 pub fn decodable(ext: &str) -> bool {
-    matches!(
-        ext,
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tga" | "psd" | "tif" | "tiff" | "ico"
-    )
+    DECODABLE.contains(&ext)
 }
 
 /// Engine sidecar files, OS junk, hidden files and dependency folders are never indexed.

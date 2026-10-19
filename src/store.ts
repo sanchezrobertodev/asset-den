@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, errorText } from "./api";
+import { noFilters, type Filters } from "./lib/filter";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { Asset, Collection, Kind, Root, View } from "./types";
 
@@ -13,6 +14,7 @@ interface State extends Prefs {
   view: View;
   query: string;
   kinds: Kind[];
+  filters: Filters;
   selected: Set<number>;
   activeId: number | null;
   quickView: boolean;
@@ -30,6 +32,9 @@ interface State extends Prefs {
   setView: (v: View) => void;
   setQuery: (q: string) => void;
   toggleKind: (k: Kind) => void;
+  setFilters: (f: Partial<Filters>) => void;
+  /** Clears the panel filters, the type filter and the search. */
+  clearFilters: () => void;
   setSort: (key: SortKey) => void;
   setLayout: (l: Layout) => void;
   setThumbSize: (n: number) => void;
@@ -80,6 +85,7 @@ export const useStore = create<State>((set, get) => {
     view: { type: "all" },
     query: "",
     kinds: [],
+    filters: noFilters,
     selected: new Set(),
     activeId: null,
     quickView: false,
@@ -88,14 +94,34 @@ export const useStore = create<State>((set, get) => {
     findingDuplicates: false,
 
     init: async () => {
-      await api.onScanProgress((p) =>
+      // While a scan runs, show new batches right away, then at most once a second, never two reloads at once.
+      let last = 0;
+      let busy = false;
+      let queued: ReturnType<typeof setTimeout> | null = null;
+      const refresh = async () => {
+        if (busy || queued) return;
+        const wait = last + 1000 - Date.now();
+        if (wait > 0) {
+          queued = setTimeout(() => {
+            queued = null;
+            void refresh();
+          }, wait);
+          return;
+        }
+        busy = true;
+        last = Date.now();
+        await get().reload();
+        busy = false;
+      };
+      await api.onScanProgress((p) => {
         set((s) => {
           const scanning = { ...s.scanning };
           if (p.done) delete scanning[p.rootId];
           else scanning[p.rootId] = p.count;
           return { scanning };
-        }),
-      );
+        });
+        if (!p.done) void refresh();
+      });
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
         // Bursts of file events arrive close together; reload once.
@@ -151,6 +177,8 @@ export const useStore = create<State>((set, get) => {
     setView: (view) => set({ view, selected: new Set(), activeId: null, quickView: false }),
     setQuery: (query) => set({ query }),
     toggleKind: (k) => set((s) => ({ kinds: s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
+    setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
+    clearFilters: () => set({ filters: noFilters, kinds: [], query: "" }),
     setSort: (key) => {
       set((s) => ({ sort: { key, desc: s.sort.key === key ? !s.sort.desc : key === "mtime" || key === "size" } }));
       persist();

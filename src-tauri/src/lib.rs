@@ -64,11 +64,8 @@ fn spawn_scan(app: AppHandle, root: Root) {
                 },
             );
         };
-        // shortcut: holds the DB lock for the whole scan, so other commands wait; split walking from writing if big libraries feel slow.
-        let result = {
-            let mut conn = state.db.lock().unwrap();
-            scan::scan_root(&mut conn, root.id, Path::new(&root.path), |n| progress(n, false))
-        };
+        // Commits in batches, so the UI can list and thumbnail assets while the scan runs.
+        let result = scan::scan_root(&state.db, root.id, Path::new(&root.path), |n| progress(n, false));
         state.scanning.lock().unwrap().remove(&root.id);
         if let Err(e) = &result {
             eprintln!("scan {}: {e}", root.path);
@@ -83,12 +80,20 @@ fn activate_root(app: &AppHandle, root: &Root) {
     if let Err(e) = app.asset_protocol_scope().allow_directory(&root.path, true) {
         eprintln!("asset scope {}: {e}", root.path);
     }
-    match watch::start(app.clone(), root.id, PathBuf::from(&root.path)) {
-        Ok(w) => {
-            app.state::<AppState>().watchers.lock().unwrap().insert(root.id, w);
-        }
-        Err(e) => eprintln!("watch {}: {e}", root.path),
-    }
+    // Starting a watcher walks the whole tree (file-ID cache), which takes seconds on big folders: do it off-thread.
+    let (app, root) = (app.clone(), root.clone());
+    tauri::async_runtime::spawn_blocking(
+        move || match watch::start(app.clone(), root.id, PathBuf::from(&root.path)) {
+            Ok(w) => {
+                let state = app.state::<AppState>();
+                // The folder may have been removed while the watcher was starting.
+                if with_db(&state, |c| db::root(c, root.id)).is_ok() {
+                    state.watchers.lock().unwrap().insert(root.id, w);
+                }
+            }
+            Err(e) => eprintln!("watch {}: {e}", root.path),
+        },
+    );
 }
 
 /// Lowercased on Windows and macOS, where paths are usually case-insensitive.

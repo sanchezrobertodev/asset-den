@@ -66,7 +66,7 @@ mod tests {
         let mut conn = db::open_memory();
         conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
             .unwrap();
-        scan::scan_root(&mut conn, 1, r, |_| {}).unwrap();
+        scan::tests::scan(&mut conn, 1, r);
 
         let todo = unhashed(&conn).unwrap();
         assert_eq!(todo.len(), 3);

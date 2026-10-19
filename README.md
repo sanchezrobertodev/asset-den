@@ -15,7 +15,10 @@ favorites and collections live in the app's own database. Removing a folder from
   deleted files. Renames keep their tags. Engine sidecars (`.meta`, `.import`, `.uid`), hidden folders and
   `node_modules` are skipped.
 - **Browse**: virtualized grid with adjustable thumbnails, or a sortable list. Search by name, folder or `#tag`,
-  filter by type, and sort by name, kind, size, date or folder.
+  filter by type, and sort by name, kind, size, date or folder. Assets show up while a folder is still being
+  scanned.
+- **Filters**: extension, image size (presets like tiny sprites or textures, min/max width and height, square only),
+  file size, modified date, untagged only, and any of several tags.
 - **Quick view** (<kbd>Space</kbd>, arrows to step through):
   - images: zoom and pan, pixel-art scaling, checkerboard for transparency (PNG, JPG, GIF, WebP, BMP, SVG, plus
     TGA/PSD/TIFF via a decoded preview)

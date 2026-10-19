@@ -3,10 +3,10 @@
 
 CARGO_MANIFEST := --manifest-path src-tauri/Cargo.toml
 
-.PHONY: check install typecheck ui test lint fmt fmt-check dev build
+.PHONY: check install typecheck ui ui-test test lint fmt fmt-check dev build
 
-## check: run before every push. Frontend typecheck + production bundle, rustfmt, clippy, Rust tests
-check: ui fmt-check lint test
+## check: run before every push. Frontend typecheck, bundle and tests, rustfmt, clippy, Rust tests
+check: ui ui-test fmt-check lint test
 
 install:
 	npm ci
@@ -17,6 +17,10 @@ typecheck:
 ## ui: typecheck and production-bundle the frontend (what `tauri build` embeds)
 ui:
 	npm run build
+
+## ui-test: frontend logic tests (plain Node, no test framework)
+ui-test:
+	node --experimental-strip-types src/lib/filter.test.ts
 
 test:
 	cargo test $(CARGO_MANIFEST)

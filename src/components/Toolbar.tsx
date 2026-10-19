@@ -3,6 +3,7 @@ import { ArrowDownWideNarrow, ArrowUpNarrowWide, Grid2x2, Grid3x3, List, Monitor
 import type { RefObject } from "react";
 import type { SortKey, Theme } from "../lib/prefs";
 import { useStore } from "../store";
+import { FilterButton } from "./FilterPanel";
 import { IconButton, Kbd } from "./ui";
 
 const sortLabels: Record<SortKey, string> = {
@@ -48,6 +49,7 @@ export function Toolbar({ count, searchRef }: { count: number; searchRef: RefObj
           )}
         </span>
       </div>
+      <FilterButton />
       <span className="font-mono text-xs whitespace-nowrap text-muted" aria-live="polite">
         {count.toLocaleString()} {count === 1 ? "asset" : "assets"}
       </span>

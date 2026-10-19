@@ -5,6 +5,17 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Filters** panel in the toolbar: extension, image size (presets, min/max width and height, square only), file size,
+  modified date, untagged only, and any of several tags.
+
+### Changed
+
+- Assets appear while a folder is being scanned instead of after the whole scan. Scans commit in batches, image
+  dimensions are read in a second, parallel pass, and the file watcher starts in the background. A 20,000-file folder
+  now indexes in about 1 s instead of 13 s, and adding a folder no longer blocks the window.
+
 ## [0.1.0] - 2026-10-18
 
 ### Added

@@ -1,13 +1,16 @@
 //! Keeps the `assets` table in step with the files under a root. Only ever reads the files.
 
+use std::fs::Metadata;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
 
 use rusqlite::{Connection, OptionalExtension, Result, params};
 use walkdir::WalkDir;
 
-use crate::kind::{ignored_name, ignored_rel, kind_of};
+use crate::db::abs_path;
+use crate::kind::{DECODABLE, ignored_name, ignored_rel, kind_of};
 
 /// `path` relative to `root`, with `/` separators. None when it's outside the root or ignored.
 pub fn rel_of(root: &Path, path: &Path) -> Option<String> {
@@ -42,18 +45,24 @@ fn dimensions(path: &Path, ext: &str) -> Option<(u32, u32)> {
                 (be(&h[18..22]), be(&h[14..18]))
             })
         }
-        e if crate::kind::decodable(e) => image::image_dimensions(path).ok(),
+        e if DECODABLE.contains(&e) => image::image_dimensions(path).ok(),
         _ => None,
     }
 }
 
 /// Inserts or refreshes one file's row; returns false if it isn't an indexable file.
-/// Unchanged files keep their hash and skip the header read.
-pub fn upsert_file(conn: &Connection, root_id: i64, root: &Path, path: &Path, seen: i64) -> Result<bool> {
+/// Unchanged files keep their hash and dimensions. With `with_dims` false, changed images get their dimensions
+/// later from [`fill_dimensions`], so a big scan isn't slowed down by opening every image.
+pub fn upsert_file(
+    conn: &Connection,
+    root_id: i64,
+    root: &Path,
+    path: &Path,
+    meta: &Metadata,
+    seen: i64,
+    with_dims: bool,
+) -> Result<bool> {
     let Some(rel) = rel_of(root, path) else {
-        return Ok(false);
-    };
-    let Ok(meta) = std::fs::metadata(path) else {
         return Ok(false);
     };
     if !meta.is_file() {
@@ -84,7 +93,11 @@ pub fn upsert_file(conn: &Connection, root_id: i64, root: &Path, path: &Path, se
     let name = rel.rsplit('/').next().unwrap_or(&rel).to_string();
     let ext = ext_of(&name);
     let kind = kind_of(&ext);
-    let dims = if kind == "image" { dimensions(path, &ext) } else { None };
+    let dims = if with_dims && kind == "image" {
+        Some(dimensions(path, &ext).unwrap_or((0, 0)))
+    } else {
+        None
+    };
     conn.execute(
         "INSERT INTO assets (root_id, rel_path, name, ext, kind, size, mtime, width, height, seen)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
@@ -108,49 +121,110 @@ pub fn upsert_file(conn: &Connection, root_id: i64, root: &Path, path: &Path, se
     Ok(true)
 }
 
-fn walk(dir: &Path) -> impl Iterator<Item = std::path::PathBuf> {
+/// Files under `dir`, with the metadata the directory listing already provides (no extra stat on Windows).
+fn walk(dir: &Path) -> impl Iterator<Item = (PathBuf, Metadata)> {
     WalkDir::new(dir)
         .follow_links(false)
         .into_iter()
         .filter_entry(|e| e.depth() == 0 || !ignored_name(&e.file_name().to_string_lossy()))
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .map(|e| e.into_path())
+        .filter_map(|e| e.metadata().ok().map(|m| (e.into_path(), m)))
 }
 
-/// Full rescan of a root: upserts every file, then drops rows for files that are gone.
-pub fn scan_root(conn: &mut Connection, root_id: i64, root: &Path, mut progress: impl FnMut(usize)) -> Result<usize> {
+const BATCH: usize = 500;
+
+/// Full rescan of a root: upserts every file, then drops rows for files that are gone. Commits every
+/// [`BATCH`] files and releases the lock in between, so the UI can show (and thumbnail) assets while it runs.
+/// `progress(count)` is called after every batch, including during the dimensions pass.
+pub fn scan_root(db: &Mutex<Connection>, root_id: i64, root: &Path, mut progress: impl FnMut(usize)) -> Result<usize> {
     let seen = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(1, |d| d.as_nanos() as i64);
-    let tx = conn.transaction()?;
     let mut count = 0;
-    for path in walk(root) {
-        if upsert_file(&tx, root_id, root, &path, seen)? {
-            count += 1;
-            if count % 500 == 0 {
-                progress(count);
+    let mut files = walk(root).peekable();
+    while files.peek().is_some() {
+        let batch: Vec<_> = files.by_ref().take(BATCH).collect();
+        let mut conn = db.lock().unwrap();
+        let tx = conn.transaction()?;
+        for (path, meta) in &batch {
+            if upsert_file(&tx, root_id, root, path, meta, seen, false)? {
+                count += 1;
             }
         }
+        tx.commit()?;
+        drop(conn);
+        progress(count);
+        // The mutex isn't fair: without a pause this thread re-locks at once and UI commands starve until the end.
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
-    tx.execute(
+    db.lock().unwrap().execute(
         "DELETE FROM assets WHERE root_id = ?1 AND seen != ?2",
         params![root_id, seen],
     )?;
-    tx.commit()?;
     progress(count);
+    fill_dimensions(db, root_id, root, || progress(count))?;
     Ok(count)
+}
+
+/// Reads image dimensions for rows that don't have them yet, from file headers, in parallel and in batches.
+/// Unreadable files get 0x0 so they aren't retried every scan.
+pub fn fill_dimensions(db: &Mutex<Connection>, root_id: i64, root: &Path, mut progress: impl FnMut()) -> Result<()> {
+    let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
+    let sql = format!(
+        "SELECT id, rel_path, ext FROM assets WHERE root_id = ?1 AND width IS NULL AND ext IN ({exts}) LIMIT {BATCH}"
+    );
+    let root_str = root.to_string_lossy();
+    let workers = std::thread::available_parallelism().map_or(4, |n| n.get().min(8));
+    loop {
+        let todo: Vec<(i64, String, String)> = {
+            let conn = db.lock().unwrap();
+            let mut stmt = conn.prepare(&sql)?;
+            stmt.query_map([root_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+                .collect::<Result<_>>()?
+        };
+        if todo.is_empty() {
+            return Ok(());
+        }
+        let root_str = &root_str;
+        let dims: Vec<(i64, (u32, u32))> = std::thread::scope(|s| {
+            let handles: Vec<_> = todo
+                .chunks(todo.len().div_ceil(workers))
+                .map(|chunk| {
+                    s.spawn(move || {
+                        chunk
+                            .iter()
+                            .map(|(id, rel, ext)| (*id, dimensions(&abs_path(root_str, rel), ext).unwrap_or((0, 0))))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            handles.into_iter().flat_map(|h| h.join().unwrap()).collect()
+        });
+        let mut conn = db.lock().unwrap();
+        let tx = conn.transaction()?;
+        for (id, (w, h)) in &dims {
+            tx.execute(
+                "UPDATE assets SET width = ?2, height = ?3 WHERE id = ?1",
+                params![id, w, h],
+            )?;
+        }
+        tx.commit()?;
+        drop(conn);
+        progress();
+        std::thread::sleep(std::time::Duration::from_millis(1)); // let waiting UI commands in, see scan_root
+    }
 }
 
 /// Syncs one path after a change event: a file, a whole folder, or something that's gone.
 pub fn refresh_path(conn: &Connection, root_id: i64, root: &Path, path: &Path) -> Result<()> {
     let Some(rel) = rel_of(root, path) else { return Ok(()) };
     if path.is_dir() {
-        for f in walk(path) {
-            upsert_file(conn, root_id, root, &f, 0)?;
+        for (f, meta) in walk(path) {
+            upsert_file(conn, root_id, root, &f, &meta, 0, true)?;
         }
-    } else if path.is_file() {
-        upsert_file(conn, root_id, root, path, 0)?;
+    } else if let Some(meta) = std::fs::metadata(path).ok().filter(|m| m.is_file()) {
+        upsert_file(conn, root_id, root, path, &meta, 0, true)?;
     } else {
         conn.execute(
             "DELETE FROM assets WHERE root_id = ?1 AND (rel_path = ?2 OR substr(rel_path, 1, length(?2) + 1) = ?2 || '/')",
@@ -197,7 +271,7 @@ pub fn rename_path(conn: &Connection, root_id: i64, root: &Path, from: &Path, to
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::db;
     use std::fs;
@@ -224,6 +298,14 @@ mod tests {
         v
     }
 
+    /// Runs a full scan on a plain connection (the app passes its shared Mutex).
+    pub fn scan(conn: &mut Connection, root: i64, r: &Path) -> usize {
+        let db = Mutex::new(std::mem::replace(conn, Connection::open_in_memory().unwrap()));
+        let n = scan_root(&db, root, r, |_| {}).unwrap();
+        *conn = db.into_inner().unwrap();
+        n
+    }
+
     fn png(path: &Path, w: u32, h: u32) {
         image::RgbaImage::new(w, h).save(path).unwrap();
     }
@@ -238,7 +320,7 @@ mod tests {
         fs::write(r.join("sprites/.hidden/x.png"), "x").unwrap();
         fs::write(r.join("jump.wav"), "RIFF").unwrap();
 
-        assert_eq!(scan_root(&mut conn, root, r, |_| {}).unwrap(), 2);
+        assert_eq!(scan(&mut conn, root, r), 2);
         assert_eq!(rels(&conn), ["jump.wav", "sprites/hero.png"]);
         let hero = db::assets(&conn, None)
             .unwrap()
@@ -257,7 +339,7 @@ mod tests {
         // Tags survive a rescan; deleted files drop out.
         db::add_tag(&conn, &[hero.id], "player").unwrap();
         fs::remove_file(r.join("jump.wav")).unwrap();
-        scan_root(&mut conn, root, r, |_| {}).unwrap();
+        scan(&mut conn, root, r);
         let all = db::assets(&conn, None).unwrap();
         assert_eq!(all.len(), 1);
         assert_eq!((all[0].id, all[0].tags.clone()), (hero.id, vec!["player".to_string()]));
@@ -270,7 +352,7 @@ mod tests {
         fs::create_dir_all(r.join("old")).unwrap();
         fs::write(r.join("old/a.png"), "x").unwrap();
         fs::write(r.join("b.ogg"), "x").unwrap();
-        scan_root(&mut conn, root, r, |_| {}).unwrap();
+        scan(&mut conn, root, r);
         let ids: Vec<i64> = db::assets(&conn, None).unwrap().iter().map(|a| a.id).collect();
         db::add_tag(&conn, &ids, "keep").unwrap();
 
@@ -302,5 +384,34 @@ mod tests {
         fs::write(r.join("x.png.meta"), "x").unwrap();
         refresh_path(&conn, root, r, &r.join("x.png.meta")).unwrap();
         assert!(rels(&conn).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    /// `BENCH_DIR=<folder> cargo test --release scan_bench -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn scan_bench() {
+        let dir = std::path::PathBuf::from(std::env::var("BENCH_DIR").unwrap());
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = crate::db::open(&tmp.path().join("b.db")).unwrap();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [dir.display().to_string()])
+            .unwrap();
+        let db = std::sync::Mutex::new(conn);
+        let t = std::time::Instant::now();
+        let mut first = None;
+        let n = super::scan_root(&db, 1, &dir, |_| {
+            first.get_or_insert(t.elapsed());
+        })
+        .unwrap();
+        println!(
+            "cold scan: {n} files in {:?}, first batch visible after {:?}",
+            t.elapsed(),
+            first.unwrap()
+        );
+        let t = std::time::Instant::now();
+        super::scan_root(&db, 1, &dir, |_| {}).unwrap();
+        println!("rescan: {:?}", t.elapsed());
     }
 }

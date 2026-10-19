@@ -7,7 +7,7 @@ import { Sidebar } from "./components/Sidebar";
 import { DuplicatesView, StatsView } from "./components/ToolViews";
 import { Toolbar } from "./components/Toolbar";
 import { Button, IconButton, Kbd } from "./components/ui";
-import { visibleAssets } from "./lib/filter";
+import { activeFilterCount, visibleAssets } from "./lib/filter";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { useStore } from "./store";
 
@@ -26,8 +26,8 @@ export default function App() {
   }, []);
 
   const visible = useMemo(
-    () => visibleAssets(s.assets, s.view, s.query, s.kinds, s.collections, s.sort),
-    [s.assets, s.view, s.query, s.kinds, s.collections, s.sort],
+    () => visibleAssets(s.assets, s.view, s.query, s.kinds, s.filters, s.collections, s.sort),
+    [s.assets, s.view, s.query, s.kinds, s.filters, s.collections, s.sort],
   );
   const selectedAssets = useMemo(() => s.assets.filter((a) => s.selected.has(a.id)), [s.assets, s.selected]);
   // Quick view follows the active asset, which may be outside the list (e.g. opened from Duplicates).
@@ -119,6 +119,11 @@ export default function App() {
               <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted">
                 <SearchX aria-hidden className="size-8" />
                 {Object.keys(s.scanning).length ? "Scanning…" : "Nothing matches."}
+                {(s.query || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && (
+                  <Button size="sm" onClick={s.clearFilters}>
+                    Clear search and filters
+                  </Button>
+                )}
               </div>
             ) : (
               <AssetBrowser assets={visible} />
