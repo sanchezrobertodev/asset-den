@@ -21,6 +21,7 @@ ui:
 ## ui-test: frontend logic tests (plain Node, no test framework)
 ui-test:
 	node --experimental-strip-types src/lib/filter.test.ts
+	node --experimental-strip-types src/lib/folders.test.ts
 
 test:
 	cargo test $(CARGO_MANIFEST)

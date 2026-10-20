@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api, errorText } from "./api";
 import { noFilters, type Filters } from "./lib/filter";
+import { ancestorKeys } from "./lib/folders";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, ViewName } from "./types";
 
@@ -34,6 +35,10 @@ interface State extends Prefs {
   colSel: number | null;
   dups: DupGroup[] | null;
   dupSel: number;
+  /** Folder-tree nodes that are open, by folder key. */
+  expanded: Set<string>;
+  /** Most recently opened folders, newest first. */
+  recentFolders: FolderFilter[];
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
@@ -53,6 +58,8 @@ interface State extends Prefs {
   setSort: (key: SortKey) => void;
   setLayout: (l: Layout) => void;
   setGrouped: (g: boolean) => void;
+  setSubfolders: (on: boolean) => void;
+  toggleExpanded: (key: string) => void;
   setThumbSize: (n: number) => void;
   setTheme: (t: Theme) => void;
   setPixelated: (p: boolean) => void;
@@ -81,8 +88,8 @@ let toastSeq = 0;
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, sort, layout, thumbSize, pixelated, grouped } = get();
-    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped });
+    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders } = get();
+    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -98,6 +105,16 @@ export const useStore = create<State>((set, get) => {
       await get().reload();
       return false;
     }
+  };
+  /** Side effects of opening a folder: the tree expands down to it and it joins the recent list. */
+  const folderState = (f: FolderFilter | null | undefined): Partial<State> => {
+    if (!f) return {};
+    const { expanded, recentFolders } = get();
+    const same = (x: FolderFilter) => x.rootId === f.rootId && x.path === f.path;
+    return {
+      expanded: new Set([...expanded, ...ancestorKeys(f).slice(0, -1)]),
+      recentFolders: [f, ...recentFolders.filter((x) => !same(x))].slice(0, 6),
+    };
   };
   const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
 
@@ -121,6 +138,8 @@ export const useStore = create<State>((set, get) => {
     colSel: null,
     dups: null,
     dupSel: 0,
+    expanded: new Set(),
+    recentFolders: [],
 
     init: async () => {
       // While a scan runs, show new batches right away, then at most once a second, never two reloads at once.
@@ -184,7 +203,8 @@ export const useStore = create<State>((set, get) => {
       if (!path) return;
       try {
         const root = await api.addRoot(path);
-        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: "library", folder: { rootId: root.id, path: "" } }));
+        const folder = { rootId: root.id, path: "" };
+        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: "library", folder, ...folderState(folder) }));
       } catch (e) {
         get().setError(e);
       }
@@ -192,7 +212,7 @@ export const useStore = create<State>((set, get) => {
     removeRoot: async (id) => {
       const root = get().roots.find((r) => r.id === id);
       await write(() => api.removeRoot(id));
-      set((s) => ({ folder: s.folder?.rootId === id ? null : s.folder }));
+      set((s) => ({ folder: s.folder?.rootId === id ? null : s.folder, recentFolders: s.recentFolders.filter((f) => f.rootId !== id) }));
       await get().reload();
       if (root) get().showToast(`Removed ${root.path} from the library. Files are untouched.`);
     },
@@ -213,11 +233,11 @@ export const useStore = create<State>((set, get) => {
     },
     dismissToast: () => set({ toast: null }),
 
-    go: (view, extra = {}) => set({ view, full: false, palette: false, ...extra }),
+    go: (view, extra = {}) => set({ view, full: false, palette: false, ...extra, ...folderState(extra.folder) }),
     setQuery: (query) => set({ query }),
     toggleKind: (k) =>
       set((s) => ({ kinds: k === "all" ? [] : s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
-    setFolder: (folder) => set({ folder }),
+    setFolder: (folder) => set({ folder, ...folderState(folder) }),
     setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
     clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "" }),
     setSort: (key) => {
@@ -232,6 +252,17 @@ export const useStore = create<State>((set, get) => {
       set({ grouped });
       persist();
     },
+    setSubfolders: (subfolders) => {
+      set({ subfolders });
+      persist();
+    },
+    toggleExpanded: (key) =>
+      set((s) => {
+        const expanded = new Set(s.expanded);
+        if (expanded.has(key)) expanded.delete(key);
+        else expanded.add(key);
+        return { expanded };
+      }),
     setThumbSize: (thumbSize) => {
       set({ thumbSize });
       persist();
