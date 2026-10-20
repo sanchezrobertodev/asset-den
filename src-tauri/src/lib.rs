@@ -292,6 +292,16 @@ fn remove_tag(state: State<'_, AppState>, ids: Vec<i64>, tag: String) -> Result<
 }
 
 #[tauri::command]
+fn get_sprite_sheet(state: State<'_, AppState>, id: i64) -> Result<Option<db::SpriteSheet>, String> {
+    with_db(&state, |c| db::sprite_sheet(c, id))
+}
+
+#[tauri::command]
+fn set_sprite_sheet(state: State<'_, AppState>, id: i64, sheet: db::SpriteSheet) -> Result<(), String> {
+    db::set_sprite_sheet(&state.db.lock().unwrap(), id, sheet)
+}
+
+#[tauri::command]
 fn list_collections(state: State<'_, AppState>) -> Result<Vec<Collection>, String> {
     with_db(&state, db::collections)
 }
@@ -529,6 +539,8 @@ pub fn run() {
             set_favorite,
             add_tag,
             remove_tag,
+            get_sprite_sheet,
+            set_sprite_sheet,
             list_collections,
             create_collection,
             delete_collection,

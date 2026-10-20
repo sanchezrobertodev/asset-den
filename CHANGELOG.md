@@ -5,6 +5,14 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Animate** plays an image as a sprite sheet, in the side panel and in full screen. It guesses the grid from the
+  image size (a 256×64 strip becomes 4 frames of 64×64) and lets you set columns and rows or the frame size, fps
+  (12 by default), play and pause, step frame by frame, loop, and pixel-art scaling. The slicing is saved per asset in
+  the app's database, so it survives rescans and renames, and an image you have animated opens animated next time.
+  The image file itself is never changed.
+
 ### Changed
 
 - Big libraries stay responsive while files change. Scans and file events now send only the files that changed

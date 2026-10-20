@@ -20,6 +20,13 @@ export interface Asset {
   tags: string[];
 }
 
+/** How an image is sliced into animation frames, remembered per asset. */
+export interface SpriteSheet {
+  cols: number;
+  rows: number;
+  fps: number;
+}
+
 export interface Root {
   id: number;
   path: string;

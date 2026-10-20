@@ -514,6 +514,41 @@ pub mod tests {
     }
 
     #[test]
+    fn sprite_sheet_survives_rename_and_rescan() {
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        png(&r.join("walk.png"), 256, 64);
+        scan(&mut conn, root, r);
+        let id = db::assets(&conn, None).unwrap()[0].id;
+        assert_eq!(db::sprite_sheet(&conn, id).unwrap(), None);
+
+        let sheet = db::SpriteSheet {
+            cols: 4,
+            rows: 1,
+            fps: 12,
+        };
+        db::set_sprite_sheet(&conn, id, sheet).unwrap();
+        let faster = db::SpriteSheet { fps: 24, ..sheet };
+        db::set_sprite_sheet(&conn, id, faster).unwrap();
+        assert!(db::set_sprite_sheet(&conn, id, db::SpriteSheet { cols: 0, ..sheet }).is_err());
+
+        fs::rename(r.join("walk.png"), r.join("run.png")).unwrap();
+        rename_path(&conn, root, r, &r.join("walk.png"), &r.join("run.png"), &mut vec![]).unwrap();
+        scan(&mut conn, root, r);
+        let all = db::assets(&conn, None).unwrap();
+        assert_eq!((all.len(), all[0].id, all[0].name.as_str()), (1, id, "run.png"));
+        assert_eq!(db::sprite_sheet(&conn, id).unwrap(), Some(faster));
+
+        // Gone with the file.
+        fs::remove_file(r.join("run.png")).unwrap();
+        scan(&mut conn, root, r);
+        let left: i64 = conn
+            .query_row("SELECT count(*) FROM sprite_sheets", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(left, 0);
+    }
+
+    #[test]
     fn refresh_adds_and_removes() {
         let (dir, conn, root) = setup();
         let r = dir.path();

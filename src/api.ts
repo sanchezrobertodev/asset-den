@@ -5,7 +5,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { AssetsDelta } from "./lib/delta";
-import type { Asset, Collection, DupGroup, Root, ScanProgress, TextPreview } from "./types";
+import type { Asset, Collection, DupGroup, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
   version: string;
@@ -36,6 +36,8 @@ export const api = {
   setFavorite: (ids: number[], favorite: boolean) => invoke<void>("set_favorite", { ids, favorite }),
   addTag: (ids: number[], tag: string) => invoke<string>("add_tag", { ids, tag }),
   removeTag: (ids: number[], tag: string) => invoke<void>("remove_tag", { ids, tag }),
+  getSpriteSheet: (id: number) => invoke<SpriteSheet | null>("get_sprite_sheet", { id }),
+  setSpriteSheet: (id: number, sheet: SpriteSheet) => invoke<void>("set_sprite_sheet", { id, sheet }),
   listCollections: () => invoke<Collection[]>("list_collections"),
   createCollection: (name: string) => invoke<number>("create_collection", { name }),
   deleteCollection: (id: number) => invoke<void>("delete_collection", { id }),

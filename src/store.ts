@@ -4,7 +4,7 @@ import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
 import { noFilters, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
-import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, ViewName } from "./types";
+import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, SpriteSheet, ViewName } from "./types";
 
 export interface Toast {
   id: number;
@@ -40,6 +40,8 @@ interface State extends Prefs {
   expanded: Set<string>;
   /** Most recently opened folders, newest first. */
   recentFolders: FolderFilter[];
+  /** Saved sprite-sheet slicing by asset id, loaded on demand; null when the asset has none. */
+  sheets: Record<number, SpriteSheet | null>;
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
@@ -81,6 +83,8 @@ interface State extends Prefs {
   findDuplicates: () => Promise<void>;
   ignoreDuplicate: (hash: string) => Promise<void>;
   trashDuplicates: (keep: number, remove: number[]) => Promise<void>;
+  loadSheet: (id: number) => Promise<void>;
+  saveSheet: (id: number, sheet: SpriteSheet) => Promise<void>;
 }
 
 const prefs = loadPrefs();
@@ -123,11 +127,13 @@ export const useStore = create<State>((set, get) => {
     };
   };
   const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
-  /** Forgets selection, the active asset and duplicate entries for assets that are gone. */
+  /** Forgets selection, the active asset, duplicate entries and cached slicings for assets that are gone. */
   const keepOnly = (s: State, has: (id: number) => boolean): Partial<State> => ({
     selected: new Set([...s.selected].filter(has)),
     activeId: s.activeId !== null && has(s.activeId) ? s.activeId : null,
     dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter(has) })).filter((g) => g.ids.length > 1) ?? null,
+    // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
+    sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => has(Number(id)))),
   });
   /** Patches `assets` with the deltas received so far, or reloads everything if one went missing. True if it patched. */
   const applyIncoming = () => {
@@ -185,6 +191,7 @@ export const useStore = create<State>((set, get) => {
     full: false,
     palette: false,
     toast: null,
+    sheets: {},
     colSel: null,
     dups: null,
     dupSel: 0,
@@ -321,6 +328,24 @@ export const useStore = create<State>((set, get) => {
     setPixelated: (pixelated) => {
       set({ pixelated });
       persist();
+    },
+
+    // On a failed read the entry stays unknown, so a guess never overwrites a saved slicing.
+    loadSheet: async (id) => {
+      try {
+        const sheet = await api.getSpriteSheet(id);
+        set((st) => ({ sheets: { ...st.sheets, [id]: sheet } }));
+      } catch (e) {
+        get().setError(e);
+      }
+    },
+    saveSheet: async (id, sheet) => {
+      set((st) => ({ sheets: { ...st.sheets, [id]: sheet } }));
+      try {
+        await api.setSpriteSheet(id, sheet);
+      } catch (e) {
+        get().setError(e);
+      }
     },
 
     select: (id, mode = "replace", order = []) =>
