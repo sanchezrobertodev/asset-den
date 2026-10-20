@@ -13,6 +13,11 @@ All notable changes to Asset Den are documented here. The format follows
   the app's database, so it survives rescans and renames, and an image you have animated opens animated next time.
   The image file itself is never changed.
 
+### Fixed
+
+- The first duplicate check after a big import no longer freezes scans and the window for minutes. Hashes are now
+  saved in batches of 500, so on an 80,000-file library the check takes about 7 seconds instead of 3.5 minutes.
+
 ## [0.2.1] - 2026-10-20
 
 ### Fixed
