@@ -1,6 +1,7 @@
 //! Duplicate detection: only files whose size collides get hashed, and hashes are kept until the file changes.
 
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use rusqlite::{Connection, Result, params};
 
@@ -31,6 +32,27 @@ pub fn hash_file(path: &Path) -> std::io::Result<String> {
 pub fn store(conn: &Connection, hashes: &[(i64, String)]) -> Result<()> {
     for (id, hash) in hashes {
         conn.execute("UPDATE assets SET hash = ?2 WHERE id = ?1", params![id, hash])?;
+    }
+    Ok(())
+}
+
+const BATCH: usize = 500;
+
+/// Hashes `todo` [`BATCH`] files at a time and stores each batch in one transaction. The lock is only held
+/// while a batch is written, so scans and UI commands get in between. Unreadable files are skipped.
+pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, PathBuf)]) -> Result<()> {
+    for batch in todo.chunks(BATCH) {
+        let hashes: Vec<_> = batch
+            .iter()
+            .filter_map(|(id, p)| hash_file(p).ok().map(|h| (*id, h)))
+            .collect();
+        let mut conn = db.lock().unwrap();
+        let tx = conn.transaction()?;
+        store(&tx, &hashes)?;
+        tx.commit()?;
+        drop(conn);
+        // The mutex isn't fair: without a pause the next batch can re-lock before a waiting command.
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
     Ok(())
 }
@@ -159,5 +181,31 @@ mod tests {
         assert_eq!((tags, kept.favorite), (vec!["a".to_string(), "b".to_string()], true));
         assert_eq!(db::collections(&conn).unwrap()[0].asset_ids, vec![keep]);
         assert!(db::asset(&conn, remove).is_err());
+    }
+
+    #[test]
+    fn hash_and_store_spans_batches() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        // All the same size, so all need a hash; one pair is identical.
+        for i in 0..BATCH + 10 {
+            fs::write(r.join(format!("{i}.png")), format!("{i:04}")).unwrap();
+        }
+        fs::write(r.join("copy.png"), "0007").unwrap();
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let todo = unhashed(&conn).unwrap();
+        assert_eq!(todo.len(), BATCH + 11);
+        fs::remove_file(r.join("3.png")).unwrap(); // gone since the scan: skipped, stays unhashed
+
+        let db = Mutex::new(conn);
+        hash_and_store(&db, &todo).unwrap();
+        let conn = db.into_inner().unwrap();
+        let left = unhashed(&conn).unwrap();
+        assert_eq!(left.len(), 1);
+        assert!(left[0].1.ends_with("3.png"));
+        assert_eq!(groups(&conn).unwrap()[0].ids.len(), 2);
     }
 }

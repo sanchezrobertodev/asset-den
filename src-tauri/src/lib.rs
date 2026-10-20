@@ -280,20 +280,14 @@ fn set_in_collection(state: State<'_, AppState>, collection: i64, ids: Vec<i64>,
 }
 
 #[tauri::command]
-async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<dupes::DupGroup>, String> {
+async fn find_duplicates(app: AppHandle, state: State<'_, AppState>) -> Result<Vec<dupes::DupGroup>, String> {
     let todo = with_db(&state, dupes::unhashed)?;
-    // Hash without holding the DB lock; unreadable files are just skipped.
-    let hashes = tauri::async_runtime::spawn_blocking(move || {
-        todo.into_iter()
-            .filter_map(|(id, p)| dupes::hash_file(&p).ok().map(|h| (id, h)))
-            .collect::<Vec<_>>()
-    })
-    .await
-    .map_err(err)?;
-    with_db(&state, |c| {
-        dupes::store(c, &hashes)?;
-        dupes::groups(c)
-    })
+    // Hashes off the lock and stores in batches, so a big first check doesn't block scans and UI commands.
+    tauri::async_runtime::spawn_blocking(move || dupes::hash_and_store(&app.state::<AppState>().db, &todo))
+        .await
+        .map_err(err)?
+        .map_err(err)?;
+    with_db(&state, dupes::groups)
 }
 
 /// "Not duplicates" / "Keep both": hides a group until it's un-ignored.
