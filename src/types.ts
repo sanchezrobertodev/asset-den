@@ -31,6 +31,11 @@ export interface Collection {
   assetIds: number[];
 }
 
+export interface DupGroup {
+  hash: string;
+  ids: number[];
+}
+
 export interface ScanProgress {
   rootId: number;
   count: number;
@@ -42,11 +47,10 @@ export interface TextPreview {
   truncated: boolean;
 }
 
-export type View =
-  | { type: "all" }
-  | { type: "favorites" }
-  | { type: "root"; id: number }
-  | { type: "tag"; tag: string }
-  | { type: "collection"; id: number }
-  | { type: "duplicates" }
-  | { type: "stats" };
+export type ViewName = "library" | "favorites" | "collections" | "duplicates" | "insights";
+
+/** Limits the library to one folder: a whole root (path "") or a folder inside it. */
+export interface FolderFilter {
+  rootId: number;
+  path: string;
+}

@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS asset_tags (
   PRIMARY KEY (asset_id, tag)
 );
 CREATE TABLE IF NOT EXISTS collections (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS ignored_dups (hash TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS collection_assets (
   collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
   asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
@@ -206,7 +207,7 @@ pub fn collections(conn: &Connection) -> Result<Vec<Collection>> {
     .collect()
 }
 
-pub fn create_collection(conn: &Connection, name: &str) -> std::result::Result<i64, String> {
+fn collection_name(conn: &Connection, name: &str, except: Option<i64>) -> std::result::Result<String, String> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > 80 {
         return Err("Collection names must be 1 to 80 characters.".into());
@@ -215,12 +216,24 @@ pub fn create_collection(conn: &Connection, name: &str) -> std::result::Result<i
         .query_row("SELECT id FROM collections WHERE name = ?1", [name], |r| r.get(0))
         .optional()
         .map_err(|e| e.to_string())?;
-    if existing.is_some() {
+    if existing.is_some_and(|id| Some(id) != except) {
         return Err(format!("A collection named \"{name}\" already exists."));
     }
-    conn.execute("INSERT INTO collections (name) VALUES (?1)", [name])
+    Ok(name.to_string())
+}
+
+pub fn create_collection(conn: &Connection, name: &str) -> std::result::Result<i64, String> {
+    let name = collection_name(conn, name, None)?;
+    conn.execute("INSERT INTO collections (name) VALUES (?1)", [&name])
         .map_err(|e| e.to_string())?;
     Ok(conn.last_insert_rowid())
+}
+
+pub fn rename_collection(conn: &Connection, id: i64, name: &str) -> std::result::Result<String, String> {
+    let name = collection_name(conn, name, Some(id))?;
+    conn.execute("UPDATE collections SET name = ?2 WHERE id = ?1", params![id, name])
+        .map_err(|e| e.to_string())?;
+    Ok(name)
 }
 
 pub fn set_in_collection(conn: &Connection, collection: i64, ids: &[i64], member: bool) -> Result<()> {

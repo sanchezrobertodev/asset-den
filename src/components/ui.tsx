@@ -1,28 +1,32 @@
 import clsx from "clsx";
-import { AudioLines, Box, Clapperboard, File, FileCode, Image as ImageIcon, Type, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { kindLabel } from "../lib/format";
 import type { Kind } from "../types";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "accent" | "invert" | "outline" | "ghost" | "danger";
 
 export function Button({
-  variant = "secondary",
+  variant = "outline",
   size = "md",
   className,
   children,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
   return (
     <button
       type="button"
       className={clsx(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-colors duration-150",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-[9px] whitespace-nowrap transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-3.5 text-sm",
-        variant === "primary" && "bg-accent text-accent-fg hover:enabled:bg-accent-hover",
-        variant === "secondary" && "border border-border-strong bg-surface text-fg hover:enabled:bg-surface-hover",
-        variant === "ghost" && "text-fg hover:enabled:bg-surface-hover",
-        variant === "danger" && "border border-danger/50 bg-surface text-danger hover:enabled:bg-danger/10",
+        size === "sm" && "h-8 px-2.5",
+        size === "md" && "h-[34px] px-3.5",
+        size === "lg" && "h-[38px] px-4",
+        variant === "accent" && "bg-accent font-semibold text-accent-fg hover:enabled:brightness-105",
+        variant === "invert" && "bg-invert-bg font-semibold text-invert-fg hover:enabled:opacity-90",
+        variant === "outline" && "border border-line-strong text-fg hover:enabled:bg-active",
+        variant === "ghost" && "text-muted hover:enabled:text-fg",
+        variant === "danger" && "border border-danger/50 text-danger hover:enabled:bg-danger/10",
         className,
       )}
       {...rest}
@@ -35,16 +39,18 @@ export function Button({
 export function IconButton({
   label,
   className,
+  bordered,
   children,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; bordered?: boolean }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       className={clsx(
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-fg disabled:opacity-50",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-active hover:text-fg disabled:opacity-40",
+        bordered && "border border-line-strong text-fg",
         className,
       )}
       {...rest}
@@ -54,66 +60,53 @@ export function IconButton({
   );
 }
 
-const kindIcon: Record<Kind, typeof ImageIcon> = {
-  image: ImageIcon,
-  audio: AudioLines,
-  model: Box,
-  font: Type,
-  video: Clapperboard,
-  text: FileCode,
-  other: File,
-};
-
-/** Kind tints from the design system: image=info, audio=warn, model=accent, font=fg, video=danger, text/other=muted. */
-export const kindTint: Record<Kind, string> = {
-  image: "text-info",
-  audio: "text-warn",
-  model: "text-accent",
-  font: "text-fg",
-  video: "text-danger",
-  text: "text-muted",
-  other: "text-muted",
-};
-
-export function KindIcon({ kind, className }: { kind: Kind; className?: string }) {
-  const Icon = kindIcon[kind];
-  return <Icon aria-hidden className={clsx("shrink-0", kindTint[kind], className)} />;
-}
-
-export function Checkbox({
-  checked,
-  indeterminate,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  onChange: () => void;
-  label: string;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = !!indeterminate;
-  }, [indeterminate]);
+/** The design's colored type label ("Images", "Audio"…). */
+export function KindPill({ kind, className }: { kind: Kind; className?: string }) {
   return (
-    <input
-      ref={ref}
-      type="checkbox"
-      aria-label={label}
-      checked={checked}
-      onChange={onChange}
-      onClick={(e) => e.stopPropagation()}
-      tabIndex={-1}
-      className="size-4 cursor-pointer rounded accent-[var(--accent)]"
-    />
+    <span data-kind={kind} className={clsx("k-pill rounded-md px-2 py-[3px] text-[11.5px] font-medium whitespace-nowrap", className)}>
+      {kindLabel[kind]}
+    </span>
   );
 }
 
+export function KindDot({ kind, className }: { kind: Kind; className?: string }) {
+  return <span aria-hidden data-kind={kind} className={clsx("k-dot inline-block shrink-0 rounded-full", className ?? "size-[7px]")} />;
+}
+
 export function Kbd({ children }: { children: ReactNode }) {
+  return <kbd className="rounded border border-line-x px-1.5 font-mono text-[11px] text-fg-2">{children}</kbd>;
+}
+
+export function Label({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={clsx("text-[11px] font-medium tracking-[.06em] text-faint uppercase", className)}>{children}</span>;
+}
+
+/** Two-or-more option toggle in a bordered pill, like the design's Grid / List switch. */
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+  label: string;
+}) {
   return (
-    <kbd className="rounded border border-border-strong bg-surface-2 px-1.5 py-px font-mono text-[11px] text-muted">
-      {children}
-    </kbd>
+    <div role="group" aria-label={label} className="flex h-[30px] shrink-0 overflow-hidden rounded-lg border border-line-strong">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={clsx("px-2.5 whitespace-nowrap", value === o.value ? "bg-active text-fg" : "text-muted hover:text-fg")}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -122,66 +115,49 @@ export function Modal({
   onClose,
   children,
   footer,
-  wide,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
-  wide?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
-    panel.current?.querySelector<HTMLElement>("[data-autofocus], button, input")?.focus();
+    panel.current?.querySelector<HTMLElement>("[data-autofocus], button")?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Tab" && panel.current) {
-        const f = [...panel.current.querySelectorAll<HTMLElement>("button, input, a[href], [tabindex='0']")].filter(
-          (el) => !el.hasAttribute("disabled"),
-        );
-        if (!f.length) return;
-        const first = f[0];
-        const last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
       }
     };
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       prev?.focus();
     };
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-scrim p-4 pt-[14vh]" onMouseDown={onClose}>
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         onMouseDown={(e) => e.stopPropagation()}
-        className={clsx(
-          "flex max-h-[85vh] w-full flex-col rounded-lg border border-border-strong bg-surface shadow-2xl",
-          wide ? "max-w-2xl" : "max-w-lg",
-        )}
+        className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <h2 id="modal-title" className="text-base font-semibold">
+        <div className="flex items-center justify-between gap-3 px-5 pt-4">
+          <h2 id="modal-title" className="text-[15px] font-semibold">
             {title}
           </h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">
             <X className="size-4" />
           </IconButton>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>}
+        <div className="px-5 py-3 text-fg-2">{children}</div>
+        {footer && <div className="flex justify-end gap-2 px-5 pt-1 pb-4">{footer}</div>}
       </div>
     </div>
   );

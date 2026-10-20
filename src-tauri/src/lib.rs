@@ -270,7 +270,7 @@ fn set_in_collection(state: State<'_, AppState>, collection: i64, ids: Vec<i64>,
 }
 
 #[tauri::command]
-async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<i64>>, String> {
+async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<dupes::DupGroup>, String> {
     let todo = with_db(&state, dupes::unhashed)?;
     // Hash without holding the DB lock; unreadable files are just skipped.
     let hashes = tauri::async_runtime::spawn_blocking(move || {
@@ -284,6 +284,121 @@ async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<i64>>, St
         dupes::store(c, &hashes)?;
         dupes::groups(c)
     })
+}
+
+/// "Not duplicates" / "Keep both": hides a group until it's un-ignored.
+#[tauri::command]
+fn set_duplicate_ignored(state: State<'_, AppState>, hash: String, ignored: bool) -> Result<(), String> {
+    with_db(&state, |c| dupes::set_ignored(c, &hash, ignored))
+}
+
+/// The one command that changes files: moves copies of `keep` to the OS trash (restorable there), after
+/// re-checking byte for byte that they are still identical, and moves their tags, favorite and collections to `keep`.
+#[tauri::command]
+async fn trash_duplicates(state: State<'_, AppState>, keep: i64, remove: Vec<i64>) -> Result<usize, String> {
+    let kept = asset(&state, keep)?;
+    let copies = remove
+        .iter()
+        .filter(|id| **id != keep)
+        .map(|id| asset(&state, *id))
+        .collect::<Result<Vec<_>, _>>()?;
+    let paths: Vec<PathBuf> = copies.iter().map(|a| PathBuf::from(&a.path)).collect();
+    let keep_path = PathBuf::from(&kept.path);
+    let identical = tauri::async_runtime::spawn_blocking(move || {
+        let want = dupes::hash_file(&keep_path).map_err(err)?;
+        for p in &paths {
+            if dupes::hash_file(p).map_err(err)? != want {
+                return Err(format!("{} is no longer identical, so nothing was moved.", p.display()));
+            }
+        }
+        Ok::<_, String>(())
+    })
+    .await
+    .map_err(err)?;
+    identical?;
+    let mut done = 0;
+    for copy in &copies {
+        trash::delete(&copy.path).map_err(|e| format!("Couldn't move {} to the trash: {e}", copy.name))?;
+        with_db(&state, |c| dupes::merge_and_forget(c, keep, copy.id))?;
+        done += 1;
+    }
+    Ok(done)
+}
+
+#[tauri::command]
+fn rename_collection(state: State<'_, AppState>, id: i64, name: String) -> Result<String, String> {
+    db::rename_collection(&state.db.lock().unwrap(), id, &name)
+}
+
+/// `dir/name`, or `dir/stem (2).ext` and so on if that's taken, so copies never overwrite anything.
+fn free_path(dir: &Path, name: &str) -> PathBuf {
+    let p = Path::new(name);
+    let stem = p
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let ext = p
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+    (1..)
+        .map(|n| {
+            if n == 1 {
+                dir.join(name)
+            } else {
+                dir.join(format!("{stem} ({n}){ext}"))
+            }
+        })
+        .find(|c| !c.exists())
+        .unwrap()
+}
+
+fn copy_into(files: &[Asset], dest: &Path) -> (usize, Vec<String>) {
+    let mut failed = Vec::new();
+    let mut copied = 0;
+    for a in files {
+        let target = free_path(dest, &a.name);
+        let r = std::fs::File::open(&a.path).and_then(|mut src| {
+            let mut out = std::fs::OpenOptions::new().write(true).create_new(true).open(&target)?;
+            std::io::copy(&mut src, &mut out)
+        });
+        match r {
+            Ok(_) => copied += 1,
+            Err(e) => failed.push(format!("{}: {e}", a.name)),
+        }
+    }
+    (copied, failed)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CopyResult {
+    copied: usize,
+    failed: Vec<String>,
+}
+
+/// Copies a collection's files into `dest`. Originals are only read; existing files in `dest` are never replaced.
+#[tauri::command]
+async fn copy_collection(state: State<'_, AppState>, id: i64, dest: String) -> Result<CopyResult, String> {
+    let dest = PathBuf::from(dest);
+    if !dest.is_dir() {
+        return Err(format!("{} is not a folder.", dest.display()));
+    }
+    let files = with_db(&state, |c| {
+        let ids = db::collections(c)?
+            .into_iter()
+            .find(|col| col.id == id)
+            .map(|col| col.asset_ids)
+            .unwrap_or_default();
+        Ok(db::assets(c, None)?
+            .into_iter()
+            .filter(|a| ids.contains(&a.id))
+            .collect::<Vec<_>>())
+    })?;
+    let (copied, failed) = tauri::async_runtime::spawn_blocking(move || copy_into(&files, &dest))
+        .await
+        .map_err(err)?;
+    Ok(CopyResult { copied, failed })
 }
 
 #[tauri::command]
@@ -362,6 +477,10 @@ pub fn run() {
             delete_collection,
             set_in_collection,
             find_duplicates,
+            set_duplicate_ignored,
+            trash_duplicates,
+            rename_collection,
+            copy_collection,
             reveal,
             open_default,
             drag_icon
@@ -372,6 +491,36 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn copies_never_overwrite() {
+        let dir = tempfile::tempdir().unwrap();
+        let (src, dest) = (dir.path().join("src"), dir.path().join("dest"));
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(&dest).unwrap();
+        std::fs::write(src.join("hero.png"), "new").unwrap();
+        std::fs::write(dest.join("hero.png"), "old").unwrap();
+        let a = crate::db::Asset {
+            id: 1,
+            root_id: 1,
+            rel_path: "hero.png".into(),
+            path: src.join("hero.png").display().to_string(),
+            name: "hero.png".into(),
+            ext: "png".into(),
+            kind: "image".into(),
+            size: 3,
+            mtime: 0,
+            width: None,
+            height: None,
+            favorite: false,
+            tags: vec![],
+        };
+        let (copied, failed) = super::copy_into(&[a.clone(), a], &dest);
+        assert_eq!((copied, failed.len()), (2, 0));
+        assert_eq!(std::fs::read_to_string(dest.join("hero.png")).unwrap(), "old");
+        assert_eq!(std::fs::read_to_string(dest.join("hero (2).png")).unwrap(), "new");
+        assert!(dest.join("hero (3).png").exists());
+    }
+
     #[test]
     fn read_text_is_capped() {
         let dir = tempfile::tempdir().unwrap();

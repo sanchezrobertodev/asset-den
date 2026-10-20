@@ -1,156 +1,218 @@
-import { CircleAlert, FolderPlus, SearchX, X } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import clsx from "clsx";
+import { useEffect, useMemo } from "react";
 import { AssetBrowser } from "./components/AssetBrowser";
-import { DetailPanel, openAsset } from "./components/DetailPanel";
-import { QuickView } from "./components/QuickView";
+import { CollectionsView } from "./components/CollectionsView";
+import { DuplicatesView } from "./components/DuplicatesView";
+import { FullView } from "./components/FullView";
+import { BrowseBar, Header } from "./components/Header";
+import { InsightsView } from "./components/InsightsView";
+import { Palette } from "./components/Palette";
+import { Peek } from "./components/Peek";
 import { Sidebar } from "./components/Sidebar";
-import { DuplicatesView, StatsView } from "./components/ToolViews";
-import { Toolbar } from "./components/Toolbar";
-import { Button, IconButton, Kbd } from "./components/ui";
-import { activeFilterCount, visibleAssets } from "./lib/filter";
+import { Button, Kbd } from "./components/ui";
+import { activeFilterCount, groupByFolder, visibleAssets } from "./lib/filter";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { useStore } from "./store";
+
+const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 
 function typing(t: EventTarget | null) {
   const el = t as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
+function Toast() {
+  const { toast, dismissToast } = useStore();
+  if (!toast) return null;
+  return (
+    <div
+      role={toast.error ? "alert" : "status"}
+      className={clsx(
+        "absolute bottom-6 left-1/2 z-[80] flex max-w-[min(720px,90%)] -translate-x-1/2 items-center gap-3.5 rounded-[11px] bg-invert-bg py-2.5 pr-3 pl-4 text-invert-fg shadow-[0_16px_40px_-12px_rgba(0,0,0,.6)]",
+        toast.error && "border-l-4 border-danger",
+      )}
+    >
+      <span className="font-medium">{toast.message}</span>
+      {toast.undo && (
+        <button
+          type="button"
+          onClick={() => {
+            dismissToast();
+            void toast.undo!();
+          }}
+          className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold text-fg"
+        >
+          Undo
+        </button>
+      )}
+      {toast.error && (
+        <button type="button" onClick={dismissToast} className="h-7 rounded-[7px] px-2 font-semibold opacity-70 hover:opacity-100">
+          Dismiss
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Empty({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-6 py-20 text-center text-muted">
+      <span className="text-[15px] font-medium text-fg">{title}</span>
+      <span>{body}</span>
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
+
 export default function App() {
   const s = useStore();
-  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void useStore.getState().init();
     return onSystemThemeChange(() => applyTheme(useStore.getState().theme));
   }, []);
 
+  const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
+  const scope = { view: s.view, kinds: s.kinds, folder: s.folder, query: s.query, filters: s.filters, collection };
   const visible = useMemo(
-    () => visibleAssets(s.assets, s.view, s.query, s.kinds, s.filters, s.collections, s.sort),
-    [s.assets, s.view, s.query, s.kinds, s.filters, s.collections, s.sort],
+    () => visibleAssets(s.assets, scope, s.sort),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [s.assets, s.view, s.kinds, s.folder, s.query, s.filters, collection, s.sort],
   );
-  const selectedAssets = useMemo(() => s.assets.filter((a) => s.selected.has(a.id)), [s.assets, s.selected]);
-  // Quick view follows the active asset, which may be outside the list (e.g. opened from Duplicates).
+  // Same scope without the type chips, so each chip can show its count.
+  const scopeAssets = useMemo(
+    () => visibleAssets(s.assets, { ...scope, kinds: [] }, s.sort),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [s.assets, s.view, s.folder, s.query, s.filters, collection, s.sort],
+  );
+  const browse = s.view === "library" || s.view === "favorites";
+  const navigable = browse || s.view === "collections";
+  const groups = useMemo(() => (browse && s.grouped ? groupByFolder(visible, s.roots) : null), [browse, s.grouped, visible, s.roots]);
+  const order = useMemo(() => (groups ? groups.flatMap((g) => g.items) : visible), [groups, visible]);
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
-  const activeIndex = visible.findIndex((a) => a.id === s.activeId);
-  const toolView = s.view.type === "duplicates" || s.view.type === "stats";
-
-  const step = (delta: number) => {
-    if (!visible.length) return;
-    const i = activeIndex < 0 ? 0 : Math.min(visible.length - 1, Math.max(0, activeIndex + delta));
-    s.select(visible[i].id);
-  };
+  const peekOn = s.peek && !!active && (navigable || s.full);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
-      if (e.key === "Escape") {
-        if (st.quickView) st.setQuickView(false);
-        else if (!typing(e.target)) st.setSelected([]);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        st.setPalette(!st.palette);
         return;
       }
-      if (typing(e.target) || (toolView && !st.quickView)) return;
-      const cols = st.layout === "grid" && !st.quickView ? st.cols : 1;
-      const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols };
-      if (e.key in moves) {
+      if (st.palette) return;
+      if (typing(e.target)) {
+        if (e.key === "Escape") (e.target as HTMLElement).blur();
+        return;
+      }
+      if (e.key === "/") {
         e.preventDefault();
-        step(moves[e.key]);
-      } else if (e.key === " ") {
+        st.setPalette(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (st.full) st.setFull(false);
+        else if (st.peek) st.setPeek(false);
+        else st.setSelected([]);
+        return;
+      }
+      if (!navigable && !st.full) return;
+      const i = order.findIndex((a) => a.id === st.activeId);
+      const ensureActive = () => {
+        if (st.activeId === null && order.length) st.select(order[0].id);
+        return st.activeId !== null || order.length > 0;
+      };
+      if (e.key === " ") {
         e.preventDefault();
-        if (st.quickView) st.setQuickView(false);
-        else {
-          if (st.activeId === null && visible.length) st.select(visible[0].id);
-          st.setQuickView(true);
-        }
-      } else if (e.key === "Enter" && active) {
-        void openAsset(active);
-      } else if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey && selectedAssets.length) {
-        void st.setFavorite(
-          selectedAssets.map((a) => a.id),
-          !selectedAssets.every((a) => a.favorite),
-        );
-      } else if (e.key === "/" && !st.quickView) {
+        if (st.full) st.setFull(false);
+        else if (ensureActive()) st.setPeek(!st.peek);
+      } else if (e.key === "Enter") {
         e.preventDefault();
-        searchRef.current?.focus();
-      } else if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey) && !st.quickView) {
+        if (ensureActive()) st.setFull(true);
+      } else if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key) && order.length) {
         e.preventDefault();
-        st.setSelected(visible.map((a) => a.id));
+        const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+        st.select(order[((i < 0 ? 0 : i + d) + order.length) % order.length].id);
+      } else if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey) {
+        const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
+        const items = st.assets.filter((a) => ids.includes(a.id));
+        if (items.length) void st.setFavorite(ids, !items.every((a) => a.favorite));
+      } else if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        st.setSelected(order.map((a) => a.id));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [order, navigable]);
+
+  const scanning = Object.keys(s.scanning).length > 0;
+  const filtered = s.query || s.kinds.length > 0 || s.folder !== null || activeFilterCount(s.filters) > 0;
 
   return (
-    <div className="flex h-full">
+    <div className="relative grid h-full grid-cols-[220px_minmax(0,1fr)] overflow-hidden bg-bg text-fg">
       <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col">
-        {!toolView && <Toolbar count={visible.length} searchRef={searchRef} />}
-        {s.error && (
-          <div role="alert" className="flex items-start gap-2 border-b border-danger/40 bg-danger/10 px-4 py-2 text-[13px] text-danger">
-            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-            <span className="flex-1">{s.error}</span>
-            <IconButton label="Dismiss" className="size-6 text-danger" onClick={() => s.setError(null)}>
-              <X className="size-3.5" />
-            </IconButton>
-          </div>
-        )}
-        <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1">
-            {s.view.type === "duplicates" ? (
-              <DuplicatesView />
-            ) : s.view.type === "stats" ? (
-              <StatsView />
-            ) : !s.roots.length ? (
-              <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-                <FolderPlus aria-hidden className="size-12 text-accent" />
-                <div>
-                  <h1 className="text-lg font-semibold">Add your first asset folder</h1>
-                  <p className="mt-1 max-w-md text-[13px] text-muted">
-                    Asset Den indexes the sprites, sounds, models, fonts and videos in it and keeps watching for changes.
-                    Your files are only read, never changed.
-                  </p>
-                </div>
-                <Button variant="primary" onClick={() => void s.addRoot()}>
-                  <FolderPlus aria-hidden className="size-4" /> Add folder
-                </Button>
-              </div>
-            ) : !visible.length ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted">
-                <SearchX aria-hidden className="size-8" />
-                {Object.keys(s.scanning).length ? "Scanning…" : "Nothing matches."}
-                {(s.query || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && (
-                  <Button size="sm" onClick={s.clearFilters}>
-                    Clear search and filters
-                  </Button>
+      <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
+        <section className="flex min-h-0 min-w-0 flex-col">
+          <Header />
+          {browse && (
+            <>
+              <BrowseBar count={visible.length} scopeAssets={scopeAssets} />
+              <div className="min-h-0 flex-1">
+                {!s.roots.length ? (
+                  <Empty
+                    title="Import your first asset folder"
+                    body="Asset Den indexes the sprites, sounds, models, fonts and videos in it and keeps watching for changes."
+                    action={
+                      <Button variant="accent" size="lg" onClick={() => void s.importFolder()}>
+                        Import a folder
+                      </Button>
+                    }
+                  />
+                ) : visible.length ? (
+                  <AssetBrowser assets={order} groups={groups} />
+                ) : scanning && !s.assets.length ? (
+                  <Empty title="Scanning…" body="Assets appear here as soon as they're indexed." />
+                ) : s.view === "favorites" && !filtered ? (
+                  <Empty title="No favorites yet" body="Press F on any asset to add it here." />
+                ) : (
+                  <Empty
+                    title="No assets match these filters"
+                    body="Try removing a type, folder or search filter."
+                    action={<Button onClick={s.clearFilters}>Clear search and filters</Button>}
+                  />
                 )}
               </div>
-            ) : (
-              <AssetBrowser assets={visible} />
-            )}
-          </div>
-          {!toolView && <DetailPanel items={selectedAssets} />}
+            </>
+          )}
+          {s.view === "collections" && <CollectionsView items={visible} />}
+          {s.view === "duplicates" && <DuplicatesView />}
+          {s.view === "insights" && <InsightsView />}
+        </section>
+        {peekOn && <Peek list={s.view === "collections" ? visible : order} />}
+      </div>
+
+      {s.full && active && <FullView list={s.view === "collections" ? visible : order} />}
+      {s.palette && <Palette />}
+      <Toast />
+      {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
+        <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs text-faint">
+          <span>
+            <Kbd>Space</Kbd> quick view
+          </span>
+          <span>
+            <Kbd>↵</Kbd> full screen
+          </span>
+          <span>
+            <Kbd>← →</Kbd> move
+          </span>
+          <span>
+            <Kbd>F</Kbd> favorite
+          </span>
+          <span>
+            <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd> search
+          </span>
         </div>
-        {!toolView && (
-          <footer className="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-surface px-4 text-[11px] text-muted">
-            <span>
-              <Kbd>Space</Kbd> quick view
-            </span>
-            <span>
-              <Kbd>←↑→↓</Kbd> move
-            </span>
-            <span>
-              <Kbd>Enter</Kbd> open
-            </span>
-            <span>
-              <Kbd>F</Kbd> favorite
-            </span>
-            <span>Drag cards into your engine or a folder to copy them</span>
-          </footer>
-        )}
-      </main>
-      {s.quickView && active && (
-        <QuickView asset={active} index={activeIndex} total={visible.length} onStep={step} />
       )}
     </div>
   );

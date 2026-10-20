@@ -2,7 +2,14 @@ import { create } from "zustand";
 import { api, errorText } from "./api";
 import { noFilters, type Filters } from "./lib/filter";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
-import type { Asset, Collection, Kind, Root, View } from "./types";
+import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, ViewName } from "./types";
+
+export interface Toast {
+  id: number;
+  message: string;
+  undo?: () => void | Promise<void>;
+  error?: boolean;
+}
 
 interface State extends Prefs {
   roots: Root[];
@@ -10,56 +17,72 @@ interface State extends Prefs {
   collections: Collection[];
   /** Files indexed so far, per root being scanned. */
   scanning: Record<number, number>;
-  error: string | null;
-  view: View;
-  query: string;
+  view: ViewName;
   kinds: Kind[];
+  folder: FolderFilter | null;
+  query: string;
   filters: Filters;
   selected: Set<number>;
   activeId: number | null;
-  quickView: boolean;
-  /** Grid columns, so arrow up/down can move a whole row. */
-  cols: number;
-  duplicates: number[][] | null;
-  findingDuplicates: boolean;
+  /** Side panel with the active asset (Space). */
+  peek: boolean;
+  /** Full-screen view of the active asset (Enter). */
+  full: boolean;
+  palette: boolean;
+  toast: Toast | null;
+  /** Open collection in the Collections view. */
+  colSel: number | null;
+  dups: DupGroup[] | null;
+  dupSel: number;
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
-  addRoot: () => Promise<void>;
+  importFolder: () => Promise<void>;
   removeRoot: (id: number) => Promise<void>;
   rescan: (id: number) => Promise<void>;
   setError: (e: unknown) => void;
-  setView: (v: View) => void;
+  showToast: (message: string, undo?: Toast["undo"]) => void;
+  dismissToast: () => void;
+  go: (view: ViewName, extra?: Partial<Pick<State, "kinds" | "folder" | "colSel" | "dupSel" | "query">>) => void;
   setQuery: (q: string) => void;
-  toggleKind: (k: Kind) => void;
+  toggleKind: (k: Kind | "all") => void;
+  setFolder: (f: FolderFilter | null) => void;
   setFilters: (f: Partial<Filters>) => void;
-  /** Clears the panel filters, the type filter and the search. */
+  /** Clears the Filters panel, type chips, folder and search. */
   clearFilters: () => void;
   setSort: (key: SortKey) => void;
   setLayout: (l: Layout) => void;
+  setGrouped: (g: boolean) => void;
   setThumbSize: (n: number) => void;
   setTheme: (t: Theme) => void;
   setPixelated: (p: boolean) => void;
-  setCols: (n: number) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
   select: (id: number, mode?: "replace" | "toggle" | "range", order?: number[]) => void;
   setSelected: (ids: number[]) => void;
-  setQuickView: (open: boolean) => void;
+  setPeek: (open: boolean) => void;
+  setFull: (open: boolean) => void;
+  setPalette: (open: boolean) => void;
   setFavorite: (ids: number[], favorite: boolean) => Promise<void>;
   addTag: (ids: number[], tag: string) => Promise<void>;
   removeTag: (ids: number[], tag: string) => Promise<void>;
-  createCollection: (name: string) => Promise<number | null>;
+  newCollection: () => Promise<void>;
+  renameCollection: (id: number, name: string) => Promise<boolean>;
   deleteCollection: (id: number) => Promise<void>;
   setInCollection: (collection: number, ids: number[], member: boolean) => Promise<void>;
+  copyCollection: (id: number) => Promise<void>;
   findDuplicates: () => Promise<void>;
+  ignoreDuplicate: (hash: string) => Promise<void>;
+  trashDuplicates: (keep: number, remove: number[]) => Promise<void>;
 }
 
 const prefs = loadPrefs();
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+let toastSeq = 0;
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, sort, layout, thumbSize, pixelated } = get();
-    savePrefs({ theme, sort, layout, thumbSize, pixelated });
+    const { theme, sort, layout, thumbSize, pixelated, grouped } = get();
+    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -69,11 +92,14 @@ export const useStore = create<State>((set, get) => {
   const write = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
+      return true;
     } catch (e) {
-      set({ error: errorText(e) });
+      get().setError(e);
       await get().reload();
+      return false;
     }
   };
+  const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
 
   return {
     ...prefs,
@@ -81,17 +107,20 @@ export const useStore = create<State>((set, get) => {
     assets: [],
     collections: [],
     scanning: {},
-    error: null,
-    view: { type: "all" },
-    query: "",
+    view: "library",
     kinds: [],
+    folder: null,
+    query: "",
     filters: noFilters,
     selected: new Set(),
     activeId: null,
-    quickView: false,
-    cols: 1,
-    duplicates: null,
-    findingDuplicates: false,
+    peek: false,
+    full: false,
+    palette: false,
+    toast: null,
+    colSel: null,
+    dups: null,
+    dupSel: 0,
 
     init: async () => {
       // While a scan runs, show new batches right away, then at most once a second, never two reloads at once.
@@ -124,67 +153,83 @@ export const useStore = create<State>((set, get) => {
       });
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
-        // Bursts of file events arrive close together; reload once.
+        // Bursts of file events arrive close together; reload once, then re-check duplicates.
         if (pending) clearTimeout(pending);
-        pending = setTimeout(() => void get().reload(), 150);
+        pending = setTimeout(() => void get().reload().then(() => get().findDuplicates()), 150);
       });
       await get().reload();
+      void get().findDuplicates();
     },
 
     reload: async () => {
       try {
-        const [roots, assets, collections] = await Promise.all([
-          api.listRoots(),
-          api.listAssets(),
-          api.listCollections(),
-        ]);
+        const [roots, assets, collections] = await Promise.all([api.listRoots(), api.listAssets(), api.listCollections()]);
         const ids = new Set(assets.map((a) => a.id));
         set((s) => ({
           roots,
-          assets: assets as Asset[],
+          assets,
           collections,
           selected: new Set([...s.selected].filter((id) => ids.has(id))),
           activeId: s.activeId !== null && ids.has(s.activeId) ? s.activeId : null,
-          quickView: s.quickView && s.activeId !== null && ids.has(s.activeId),
-          duplicates: s.duplicates?.map((g) => g.filter((id) => ids.has(id))).filter((g) => g.length > 1) ?? null,
+          colSel: collections.some((c) => c.id === s.colSel) ? s.colSel : (collections[0]?.id ?? null),
+          dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter((id) => ids.has(id)) })).filter((g) => g.ids.length > 1) ?? null,
         }));
       } catch (e) {
-        set({ error: errorText(e) });
+        get().setError(e);
       }
     },
 
-    addRoot: async () => {
+    importFolder: async () => {
       const path = await api.pickFolder();
       if (!path) return;
       try {
         const root = await api.addRoot(path);
-        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: { type: "root", id: root.id } }));
+        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: "library", folder: { rootId: root.id, path: "" } }));
       } catch (e) {
-        set({ error: errorText(e) });
+        get().setError(e);
       }
     },
     removeRoot: async (id) => {
+      const root = get().roots.find((r) => r.id === id);
       await write(() => api.removeRoot(id));
-      set((s) => ({ view: s.view.type === "root" && s.view.id === id ? { type: "all" } : s.view }));
+      set((s) => ({ folder: s.folder?.rootId === id ? null : s.folder }));
       await get().reload();
+      if (root) get().showToast(`Removed ${root.path} from the library. Files are untouched.`);
     },
     rescan: async (id) => {
       set((s) => ({ scanning: { ...s.scanning, [id]: 0 } }));
       await write(() => api.rescan(id));
     },
-    setError: (e) => set({ error: e === null ? null : errorText(e) }),
 
-    setView: (view) => set({ view, selected: new Set(), activeId: null, quickView: false }),
+    setError: (e) => {
+      if (toastTimer) clearTimeout(toastTimer);
+      set({ toast: { id: ++toastSeq, message: errorText(e), error: true } });
+      toastTimer = setTimeout(() => get().dismissToast(), 8000);
+    },
+    showToast: (message, undo) => {
+      if (toastTimer) clearTimeout(toastTimer);
+      set({ toast: { id: ++toastSeq, message, undo } });
+      toastTimer = setTimeout(() => get().dismissToast(), 4500);
+    },
+    dismissToast: () => set({ toast: null }),
+
+    go: (view, extra = {}) => set({ view, full: false, palette: false, ...extra }),
     setQuery: (query) => set({ query }),
-    toggleKind: (k) => set((s) => ({ kinds: s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
+    toggleKind: (k) =>
+      set((s) => ({ kinds: k === "all" ? [] : s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
+    setFolder: (folder) => set({ folder }),
     setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
-    clearFilters: () => set({ filters: noFilters, kinds: [], query: "" }),
+    clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "" }),
     setSort: (key) => {
       set((s) => ({ sort: { key, desc: s.sort.key === key ? !s.sort.desc : key === "mtime" || key === "size" } }));
       persist();
     },
     setLayout: (layout) => {
       set({ layout });
+      persist();
+    },
+    setGrouped: (grouped) => {
+      set({ grouped });
       persist();
     },
     setThumbSize: (thumbSize) => {
@@ -200,7 +245,6 @@ export const useStore = create<State>((set, get) => {
       set({ pixelated });
       persist();
     },
-    setCols: (cols) => set({ cols }),
 
     select: (id, mode = "replace", order = []) =>
       set((s) => {
@@ -221,64 +265,120 @@ export const useStore = create<State>((set, get) => {
         return { selected: new Set([id]), activeId: id };
       }),
     setSelected: (ids) => set({ selected: new Set(ids) }),
-    setQuickView: (quickView) => set((s) => ({ quickView: quickView && s.activeId !== null })),
+    setPeek: (peek) => set((s) => ({ peek: peek && s.activeId !== null, full: peek && s.full })),
+    setFull: (full) => set((s) => ({ full: full && s.activeId !== null, peek: s.peek || full })),
+    setPalette: (palette) => set({ palette }),
 
     setFavorite: async (ids, favorite) => {
       patchAssets(ids, (a) => ({ ...a, favorite }));
-      await write(() => api.setFavorite(ids, favorite));
+      if (!(await write(() => api.setFavorite(ids, favorite)))) return;
+      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
+      get().showToast(favorite ? `Added ${what} to Favorites` : `Removed ${what} from Favorites`, () =>
+        get().setFavorite(ids, !favorite),
+      );
     },
     addTag: async (ids, raw) => {
       try {
-        const tag = await api.addTag(ids, raw);
+        const tag = await api.addTag(ids, raw.replace(/^#/, ""));
         patchAssets(ids, (a) => (a.tags.includes(tag) ? a : { ...a, tags: [...a.tags, tag].sort() }));
       } catch (e) {
-        set({ error: errorText(e) });
+        get().setError(e);
       }
     },
     removeTag: async (ids, tag) => {
       patchAssets(ids, (a) => ({ ...a, tags: a.tags.filter((t) => t !== tag) }));
       await write(() => api.removeTag(ids, tag));
     },
-    createCollection: async (name) => {
+
+    newCollection: async () => {
+      const names = new Set(get().collections.map((c) => c.name));
+      let name = "New collection";
+      for (let i = 2; names.has(name); i++) name = `New collection ${i}`;
       try {
         const id = await api.createCollection(name);
         set({ collections: await api.listCollections() });
-        return id;
+        get().go("collections", { colSel: id });
       } catch (e) {
-        set({ error: errorText(e) });
-        return null;
+        get().setError(e);
+      }
+    },
+    renameCollection: async (id, name) => {
+      try {
+        const clean = await api.renameCollection(id, name);
+        set((s) => ({ collections: s.collections.map((c) => (c.id === id ? { ...c, name: clean } : c)) }));
+        return true;
+      } catch (e) {
+        get().setError(e);
+        return false;
       }
     },
     deleteCollection: async (id) => {
-      set((s) => ({
-        collections: s.collections.filter((c) => c.id !== id),
-        view: s.view.type === "collection" && s.view.id === id ? { type: "all" } : s.view,
-      }));
-      await write(() => api.deleteCollection(id));
+      const c = get().collections.find((x) => x.id === id);
+      if (!c) return;
+      set((s) => ({ collections: s.collections.filter((x) => x.id !== id) }));
+      if (!(await write(() => api.deleteCollection(id)))) return;
+      await get().reload();
+      get().showToast(`Deleted ${c.name}. Files are untouched.`, async () => {
+        const nid = await api.createCollection(c.name);
+        if (c.assetIds.length) await api.setInCollection(nid, c.assetIds, true);
+        await get().reload();
+        set({ colSel: nid });
+      });
     },
     setInCollection: async (collection, ids, member) => {
+      const name = get().collections.find((c) => c.id === collection)?.name ?? "collection";
       set((s) => ({
         collections: s.collections.map((c) =>
           c.id !== collection
             ? c
-            : {
-                ...c,
-                assetIds: member
-                  ? [...new Set([...c.assetIds, ...ids])]
-                  : c.assetIds.filter((id) => !ids.includes(id)),
-              },
+            : { ...c, assetIds: member ? [...new Set([...c.assetIds, ...ids])] : c.assetIds.filter((id) => !ids.includes(id)) },
         ),
       }));
-      await write(() => api.setInCollection(collection, ids, member));
+      if (!(await write(() => api.setInCollection(collection, ids, member)))) return;
+      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
+      get().showToast(member ? `Added ${what} to ${name}` : `Removed ${what} from ${name}`, () =>
+        get().setInCollection(collection, ids, !member),
+      );
     },
-    findDuplicates: async () => {
-      set({ findingDuplicates: true });
+    copyCollection: async (id) => {
+      const c = get().collections.find((x) => x.id === id);
+      if (!c || !c.assetIds.length) return;
+      const dest = await api.pickFolder(`Copy ${c.name} to…`);
+      if (!dest) return;
       try {
-        set({ duplicates: await api.findDuplicates() });
+        const r = await api.copyCollection(id, dest);
+        if (r.failed.length) get().setError(`Copied ${r.copied} files. ${r.failed.length} failed: ${r.failed.slice(0, 3).join("; ")}`);
+        else get().showToast(`Copied ${r.copied} ${r.copied === 1 ? "file" : "files"} to ${dest}`);
       } catch (e) {
-        set({ error: errorText(e) });
-      } finally {
-        set({ findingDuplicates: false });
+        get().setError(e);
+      }
+    },
+
+    findDuplicates: async () => {
+      try {
+        set({ dups: await api.findDuplicates() });
+      } catch (e) {
+        get().setError(e);
+      }
+    },
+    ignoreDuplicate: async (hash) => {
+      set((s) => ({ dups: s.dups?.filter((g) => g.hash !== hash) ?? null }));
+      if (!(await write(() => api.setDuplicateIgnored(hash, true)))) return;
+      get().showToast("Marked as not duplicates", async () => {
+        await api.setDuplicateIgnored(hash, false);
+        await get().findDuplicates();
+      });
+    },
+    trashDuplicates: async (keep, remove) => {
+      const label = remove.length === 1 ? nameOf(remove[0]) : `${remove.length} copies`;
+      try {
+        await api.trashDuplicates(keep, remove);
+        await get().reload();
+        await get().findDuplicates();
+        get().showToast(`Moved ${label} to the Trash. You can restore it from there.`);
+      } catch (e) {
+        get().setError(e);
+        await get().reload();
       }
     },
   };

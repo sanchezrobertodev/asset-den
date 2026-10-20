@@ -35,17 +35,54 @@ pub fn store(conn: &Connection, hashes: &[(i64, String)]) -> Result<()> {
     Ok(())
 }
 
-/// Groups of asset ids with identical content, biggest wasted space first.
-pub fn groups(conn: &Connection) -> Result<Vec<Vec<i64>>> {
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct DupGroup {
+    pub hash: String,
+    pub ids: Vec<i64>,
+}
+
+/// Groups of identical files, biggest wasted space first, without the ones marked "not duplicates".
+pub fn groups(conn: &Connection) -> Result<Vec<DupGroup>> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT group_concat(id) FROM assets WHERE hash IS NOT NULL AND size IN ({SAME_SIZE})
+        "SELECT hash, group_concat(id) FROM assets
+         WHERE hash IS NOT NULL AND size IN ({SAME_SIZE}) AND hash NOT IN (SELECT hash FROM ignored_dups)
          GROUP BY size, hash HAVING count(*) > 1 ORDER BY size * (count(*) - 1) DESC"
     ))?;
     stmt.query_map([], |r| {
-        let ids: String = r.get(0)?;
-        Ok(ids.split(',').filter_map(|i| i.parse().ok()).collect())
+        let ids: String = r.get(1)?;
+        Ok(DupGroup {
+            hash: r.get(0)?,
+            ids: ids.split(',').filter_map(|i| i.parse().ok()).collect(),
+        })
     })?
     .collect()
+}
+
+pub fn set_ignored(conn: &Connection, hash: &str, ignored: bool) -> Result<()> {
+    let sql = if ignored {
+        "INSERT OR IGNORE INTO ignored_dups (hash) VALUES (?1)"
+    } else {
+        "DELETE FROM ignored_dups WHERE hash = ?1"
+    };
+    conn.execute(sql, [hash]).map(|_| ())
+}
+
+/// Moves a removed copy's tags, favorite and collection memberships onto the copy that's kept, then drops its row.
+pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()> {
+    conn.execute(
+        "INSERT OR IGNORE INTO asset_tags (asset_id, tag) SELECT ?1, tag FROM asset_tags WHERE asset_id = ?2",
+        params![keep, remove],
+    )?;
+    conn.execute(
+        "UPDATE assets SET favorite = 1 WHERE id = ?1 AND (SELECT favorite FROM assets WHERE id = ?2) = 1",
+        params![keep, remove],
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO collection_assets (collection_id, asset_id)
+         SELECT collection_id, ?1 FROM collection_assets WHERE asset_id = ?2",
+        params![keep, remove],
+    )?;
+    conn.execute("DELETE FROM assets WHERE id = ?1", [remove]).map(|_| ())
 }
 
 #[cfg(test)]
@@ -76,8 +113,51 @@ mod tests {
 
         let g = groups(&conn).unwrap();
         assert_eq!(g.len(), 1);
-        let names: Vec<String> = g[0].iter().map(|id| db::asset(&conn, *id).unwrap().rel_path).collect();
+        let names: Vec<String> = g[0]
+            .ids
+            .iter()
+            .map(|id| db::asset(&conn, *id).unwrap().rel_path)
+            .collect();
         assert_eq!(names.len(), 2);
         assert!(names.contains(&"a.png".into()) && names.contains(&"copy/a.png".into()));
+    }
+
+    #[test]
+    fn ignore_and_merge() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "same").unwrap();
+        fs::write(r.join("b.png"), "same").unwrap();
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let hashes: Vec<_> = unhashed(&conn)
+            .unwrap()
+            .iter()
+            .map(|(id, p)| (*id, hash_file(p).unwrap()))
+            .collect();
+        store(&conn, &hashes).unwrap();
+        let g = groups(&conn).unwrap().remove(0);
+
+        set_ignored(&conn, &g.hash, true).unwrap();
+        assert!(groups(&conn).unwrap().is_empty());
+        set_ignored(&conn, &g.hash, false).unwrap();
+        assert_eq!(groups(&conn).unwrap().len(), 1);
+
+        let (keep, remove) = (g.ids[0], g.ids[1]);
+        db::add_tag(&conn, &[keep], "a").unwrap();
+        db::add_tag(&conn, &[remove], "b").unwrap();
+        db::set_favorite(&conn, &[remove], true).unwrap();
+        let c = db::create_collection(&conn, "Level").unwrap();
+        db::set_in_collection(&conn, c, &[remove], true).unwrap();
+        merge_and_forget(&conn, keep, remove).unwrap();
+
+        let kept = db::asset(&conn, keep).unwrap();
+        let mut tags = kept.tags.clone();
+        tags.sort();
+        assert_eq!((tags, kept.favorite), (vec!["a".to_string(), "b".to_string()], true));
+        assert_eq!(db::collections(&conn).unwrap()[0].asset_ids, vec![keep]);
+        assert!(db::asset(&conn, remove).is_err());
     }
 }

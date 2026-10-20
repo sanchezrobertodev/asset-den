@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
-import type { Asset, Collection, Root, ScanProgress, TextPreview } from "./types";
+import type { Asset, Collection, DupGroup, Root, ScanProgress, TextPreview } from "./types";
 
 export const api = {
   listRoots: () => invoke<Root[]>("list_roots"),
@@ -22,12 +22,16 @@ export const api = {
   deleteCollection: (id: number) => invoke<void>("delete_collection", { id }),
   setInCollection: (collection: number, ids: number[], member: boolean) =>
     invoke<void>("set_in_collection", { collection, ids, member }),
-  findDuplicates: () => invoke<number[][]>("find_duplicates"),
+  renameCollection: (id: number, name: string) => invoke<string>("rename_collection", { id, name }),
+  copyCollection: (id: number, dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { id, dest }),
+  findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
+  setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
+  trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),
   reveal: (id: number) => invoke<void>("reveal", { id }),
   openDefault: (id: number) => invoke<void>("open_default", { id }),
   dragIcon: () => invoke<string>("drag_icon"),
-  pickFolder: async () => {
-    const picked = await open({ directory: true, multiple: false, title: "Add an asset folder" });
+  pickFolder: async (title = "Import an asset folder") => {
+    const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;
   },
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),

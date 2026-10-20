@@ -10,17 +10,20 @@ export interface Prefs {
   layout: Layout;
   thumbSize: number;
   pixelated: boolean;
+  /** Group the library by folder, as in the design. */
+  grouped: boolean;
 }
 
 const defaults: Prefs = {
   theme: "system",
   sort: { key: "name", desc: false },
   layout: "grid",
-  thumbSize: 148,
+  thumbSize: 160,
   pixelated: false,
+  grouped: true,
 };
 
-const KEY = "assetden.prefs.v1";
+const KEY = "assetden.prefs.v2";
 
 export function loadPrefs(): Prefs {
   try {

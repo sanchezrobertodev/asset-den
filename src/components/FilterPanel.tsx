@@ -3,7 +3,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { activeFilterCount, noFilters, type Filters } from "../lib/filter";
 import { useStore } from "../store";
-import { Button, IconButton } from "./ui";
+import { IconButton } from "./ui";
 
 const MB = 1024 * 1024;
 
@@ -23,7 +23,7 @@ const datePresets: { label: string; days: number | null }[] = [
 
 function Group({ title, onClear, active, children }: { title: string; onClear: () => void; active: boolean; children: ReactNode }) {
   return (
-    <fieldset className="border-t border-border px-4 py-3 first:border-t-0">
+    <fieldset className="border-t border-line px-4 py-3 first:border-t-0">
       <legend className="sr-only">{title}</legend>
       <div className="mb-2 flex h-5 items-center justify-between">
         <span aria-hidden className="text-[11px] font-semibold tracking-wider text-muted uppercase">
@@ -48,8 +48,8 @@ function Chip({ on, onClick, children, label }: { on: boolean; onClick: () => vo
       aria-label={label}
       onClick={onClick}
       className={clsx(
-        "h-7 rounded-full border px-2.5 text-xs transition-colors duration-150",
-        on ? "border-accent bg-accent/15 text-fg" : "border-border-strong text-muted hover:text-fg",
+        "h-7 rounded-[14px] border px-2.5 text-xs transition-colors duration-150",
+        on ? "border-accent bg-accent/15 text-fg" : "border-line-strong text-muted hover:text-fg",
       )}
     >
       {children}
@@ -70,7 +70,7 @@ function NumField({ label, value, onChange, scale = 1 }: { label: string; value:
         onChange={(e) => onChange(e.target.value === "" ? null : Math.max(0, Number(e.target.value)) * scale)}
         onKeyDown={(e) => e.stopPropagation()}
         placeholder="Any"
-        className="h-8 w-full rounded-md border border-border-strong bg-bg px-2 text-[13px] text-fg placeholder:text-muted"
+        className="h-8 w-full rounded-md border border-line-strong bg-bg px-2 text-[13px] text-fg placeholder:text-muted"
       />
     </label>
   );
@@ -111,23 +111,26 @@ export function FilterButton() {
 
   return (
     <div ref={root} className="relative">
-      <Button
-        size="sm"
-        variant={count ? "primary" : "secondary"}
+      <button
+        type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
+        className={clsx(
+          "flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border px-3 text-[12.5px] font-medium whitespace-nowrap",
+          count ? "border-accent bg-accent text-accent-fg" : "border-dashed border-line-x text-fg-2 hover:text-fg",
+        )}
       >
-        <SlidersHorizontal aria-hidden className="size-4" />
-        Filters{count > 0 && ` · ${count}`}
-      </Button>
+        <SlidersHorizontal aria-hidden className="size-3.5" />
+        {count ? `Filters · ${count}` : "More filters"}
+      </button>
       {open && (
         <div
           role="dialog"
           aria-label="Filters"
-          className="absolute top-10 left-0 z-30 flex max-h-[75vh] w-96 flex-col rounded-lg border border-border-strong bg-surface shadow-2xl"
+          className="absolute top-10 left-0 z-30 flex max-h-[70vh] w-96 flex-col rounded-2xl border border-line-strong bg-field shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b border-border px-4 py-2">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2">
             <h2 className="text-sm font-semibold">Filters</h2>
             <div className="flex items-center gap-1">
               {count > 0 && (

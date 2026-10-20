@@ -4,21 +4,30 @@ import { useEffect, useState } from "react";
 import { fileUrl } from "../api";
 import { fontFamily, thumbnailFor } from "../lib/thumbs";
 import type { Asset } from "../types";
-import { KindIcon } from "./ui";
 
 /** Sprites this small are pixel art: scale them up crisp instead of blurry. */
 export const isTiny = (a: Asset) => !!a.width && !!a.height && a.width <= 64 && a.height <= 64;
 
-/** Square preview for a card or row: real thumbnail where possible, "Aa" for fonts, a kind icon otherwise. */
+/** Label sizes for the design's placeholder tiles: card, list row, filmstrip. */
+const sizes = {
+  card: { font: "text-[38px]", ext: "text-[11px]" },
+  row: { font: "text-[15px]", ext: "text-[8px]" },
+  strip: { font: "text-[22px]", ext: "text-[10px]" },
+};
+
+/**
+ * Square preview: the real thumbnail on a checkerboard for images and models, "Aa" in the font itself for fonts,
+ * and the design's striped tile with the extension for everything else.
+ */
 export function Thumb({
   asset,
   pixelated,
-  small,
+  size = "card",
   className,
 }: {
   asset: Asset;
   pixelated?: boolean;
-  small?: boolean;
+  size?: keyof typeof sizes;
   className?: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -40,9 +49,17 @@ export function Thumb({
     };
   }, [asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);
 
+  const picture = src && !failed;
   return (
-    <div className={clsx("checker flex items-center justify-center overflow-hidden", className)}>
-      {src && !failed ? (
+    <div
+      data-kind={asset.kind}
+      className={clsx(
+        "flex items-center justify-center overflow-hidden",
+        picture || asset.kind === "image" ? "checker" : "stripes",
+        className,
+      )}
+    >
+      {picture ? (
         <img
           src={src}
           alt=""
@@ -51,17 +68,12 @@ export function Thumb({
           onError={() => setFailed(true)}
           className={clsx("h-full w-full object-contain", (pixelated || isTiny(asset)) && "pixelated")}
         />
-      ) : family ? (
-        <span style={{ fontFamily: family }} className={clsx("leading-none text-fg", small ? "text-sm" : "text-4xl")}>
+      ) : asset.kind === "font" ? (
+        <span style={family ? { fontFamily: family } : undefined} className={clsx("leading-none text-fg", sizes[size].font)}>
           Aa
         </span>
       ) : (
-        <div className="flex flex-col items-center gap-1">
-          <KindIcon kind={asset.kind} className={small ? "size-4" : "size-9"} />
-          {!small && (
-            <span className="font-mono text-[11px] text-muted uppercase">{asset.ext || "file"}</span>
-          )}
-        </div>
+        <span className={clsx("k-text font-mono tracking-[.04em] uppercase", sizes[size].ext)}>{asset.ext || "file"}</span>
       )}
     </div>
   );

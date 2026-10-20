@@ -6,36 +6,42 @@ engine.
 
 ![Asset Den browsing a sample library](docs/screenshot-grid.png)
 
-**Your files are only ever read.** Asset Den never renames, moves, edits or deletes anything in your folders. Tags,
-favorites and collections live in the app's own database. Removing a folder from the library only forgets it.
+**Your files are left alone.** Tags, favorites and collections live in the app's own database, and removing a folder
+from the library only forgets it. The one exception is on the Duplicates page: when you choose to, Asset Den moves the
+extra copies of a file to your system's Trash (restorable there), after asking and after checking that they are still
+byte-for-byte identical. "Copy to folder…" only ever creates new files.
 
 ## Features
 
-- **Library**: add one or more folders. A fast scan indexes them and a live watcher picks up added, renamed and
-  deleted files. Renames keep their tags. Engine sidecars (`.meta`, `.import`, `.uid`), hidden folders and
-  `node_modules` are skipped.
-- **Browse**: virtualized grid with adjustable thumbnails, or a sortable list. Search by name, folder or `#tag`,
-  filter by type, and sort by name, kind, size, date or folder. Assets show up while a folder is still being
-  scanned.
-- **Filters**: extension, image size (presets like tiny sprites or textures, min/max width and height, square only),
-  file size, modified date, untagged only, and any of several tags.
-- **Quick view** (<kbd>Space</kbd>, arrows to step through):
-  - images: zoom and pan, pixel-art scaling, checkerboard for transparency (PNG, JPG, GIF, WebP, BMP, SVG, plus
+- **Library**: import one or more folders. Assets appear while a folder is still scanning, and a live watcher picks up
+  added, renamed and deleted files (renames keep their tags). Engine sidecars (`.meta`, `.import`, `.uid`), hidden
+  folders and `node_modules` are skipped.
+- **Browse**: a grid or list grouped by folder (or all together), type chips, sorting and a thumbnail-size slider.
+  **More filters** narrows by extension, image size, file size, date and tags.
+- **Search** (<kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd>): one box for assets, folders and actions, with `type:audio`,
+  `in:sprites`, `#player` and `size:>1mb`. Its first result applies the search to the grid.
+- **Side panel** (<kbd>Space</kbd>) and **full screen** (<kbd>Enter</kbd>) previews:
+  - images: zoom and pan, pixel-art scaling, transparency checkerboard (PNG, JPG, GIF, WebP, BMP, SVG, and
     TGA/PSD/TIFF via a decoded preview)
-  - audio: waveform and playback (WAV, OGG, MP3, FLAC…), plus play-on-hover in the grid
-  - 3D models: orbit viewer with wireframe, triangle counts and the first animation playing (GLB/glTF, FBX, OBJ, STL),
-    plus auto-rendered thumbnails
-  - fonts: specimen at several sizes with editable sample text
-  - video playback; JSON, shaders, scripts and other text
-- **Tags, favorites, collections**: work on one asset or a whole selection.
+  - audio: waveform and playback, plus play-on-hover in the grid
+  - 3D models: orbit, wireframe, triangle counts, the first animation (GLB/glTF, FBX, OBJ, STL), with auto-rendered
+    thumbnails
+  - fonts: a specimen with editable sample text
+  - video and text
+- **Organize**: tags, favorites and collections. Rename a collection in place, or copy its files into a folder for a
+  build or a handoff. Most changes show a toast with **Undo**.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
-- **Duplicates**: finds identical files across folders (hashes only same-size files) and shows the space they waste.
-- **Stats**: disk usage by type, extension and top-level folder.
+- **Duplicates**: identical files side by side. Keep the one you want, then mark the rest as not duplicates or move
+  them to the Trash, with tags, favorites and collections merged into the kept file.
+- **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
 
-![Quick view of an FBX model](docs/screenshot-quickview.png)
+![Duplicates review](docs/screenshot-duplicates.png)
 
-Keyboard: <kbd>/</kbd> search · arrows move · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click select · <kbd>Ctrl+A</kbd> select
-all · <kbd>Space</kbd> quick view · <kbd>Enter</kbd> open in default app · <kbd>F</kbd> favorite · <kbd>Esc</kbd> close.
+![Full-screen preview with filmstrip](docs/screenshot-quickview.png)
+
+Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side panel · <kbd>Enter</kbd> full screen ·
+<kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and
+<kbd>Ctrl+A</kbd> select · <kbd>Esc</kbd> step back.
 
 ## Install
 
@@ -83,7 +89,9 @@ to build installers for every OS.
 - Which audio and video formats play depends on the OS webview. Windows (WebView2) plays the most; on Linux, install
   the GStreamer plugins for MP4/H.264.
 - A file renamed while the app is closed shows up as a new file on the next scan, so its tags don't follow it.
-- Video thumbnails, sprite-sheet slicing and syntax highlighting are not in v1.
+- Video thumbnails, sprite-sheet slicing and syntax highlighting are not built yet.
+- The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
+  `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.
 
 ## License
 

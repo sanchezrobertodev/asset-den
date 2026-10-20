@@ -234,11 +234,23 @@ Before delivering any UI code, verify:
 
 ---
 
-## Asset Den overrides (apply on top of the generated rules)
+## Asset Den overrides (these win over everything above)
 
-- This is a desktop app, not a landing page: ignore the generated "Pattern" and the scroll-reveal motion. Motion is limited to 150ms hover/focus color transitions and the quick-view fade.
-- Tokens are the same semantic set as Skillshelf (`--bg`, `--surface`, `--surface-2`, `--border`, `--fg`, `--muted`, `--accent`…) in `src/index.css`, with dark and light variants. Components never use raw hex.
-- Asset previews sit on a neutral checkerboard (`--checker-a/--checker-b`) so transparent sprites stay visible in both themes.
-- Each kind gets one icon (lucide) and one tint used only on the kind badge: image=info, audio=warn, model=accent, font=fg, video=danger, text=muted.
-- Grid cards are square thumbnails with name and size below. Selection is a 2px `--ring` outline, not just a color change. Every icon-only button has `aria-label` + `title`.
-- Keyboard: arrows move the selection, Space opens or closes quick view, Enter opens the file, `/` focuses search, Esc closes overlays.
+The live design is the **"Asset Den UI/UX redesign"** project in Claude Design (`Asset Den.dc.html`), applied on
+2026-10-19. Where it and the generated rules above disagree, the Claude Design project wins.
+
+- **Palette:** warm near-black (`#131210` background, `#efede8` text) with one green accent, `oklch(0.8 0.17 152)`.
+  The light theme is the same palette inverted warm. All values are tokens in `src/index.css`; components never use
+  raw colors except the photo-dark "Remove" chip on thumbnails.
+- **Type:** Geist for the UI (13px base, 15–26px headings), Geist Mono for sizes, dimensions, paths and counts.
+- **Kinds:** one oklch hue per kind (image 250, audio 75, model 152, font 300, video 25, text 200, other neutral),
+  shown as a pill (`.k-pill`), a dot (`.k-dot`) or a bar (`.k-bar`). Lightness and chroma flip per theme.
+- **Shape:** 8–9px radius on controls, 12px on cards and thumbnails, 15px pill chips. Selection is a 2px accent
+  outline with 2px offset. Active chips and the primary panel button are inverted (`invert-bg`/`invert-fg`).
+- **Layout:** 220px sidebar, 60px header with title, search and Import, a side panel at `clamp(300px, 30vw, 400px)`,
+  and a full-screen view with a 320px info column and a 100px filmstrip.
+- **Interaction:** <kbd>Space</kbd> side panel, <kbd>Enter</kbd> full screen, <kbd>Esc</kbd> steps back,
+  <kbd>←</kbd> <kbd>→</kbd> move, <kbd>F</kbd> favorite, <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search. Feedback goes
+  in an inverted toast at the bottom center, with Undo where the change can be undone.
+- **Motion:** 150ms color transitions only. Transparent assets always sit on the checkerboard; assets without a picture
+  sit on the striped tile.

@@ -1,19 +1,21 @@
 import clsx from "clsx";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, Star } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
-import { bytes, date, folderOf, kindLabel } from "../lib/format";
-import type { SortKey } from "../lib/prefs";
+import type { Group } from "../lib/filter";
+import { ago, bytes, folderOf } from "../lib/format";
 import { thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Thumb } from "./Thumb";
+import { KindPill } from "./ui";
 
-const GAP = 12;
-const PAD = 16;
+const GAP = 16;
+const PAD = 28;
+const GROUP_GAP = 26;
+const HEAD = 30;
 const CAPTION = 46;
-const ROW = 36;
+const ROW = 46;
 
 let dragIcon: Promise<string> | null = null;
 
@@ -49,19 +51,17 @@ function hoverPlay(a: Asset | null) {
   }, 350);
 }
 
-function useClickHandlers(assets: Asset[]) {
-  const select = useStore((s) => s.select);
-  const setQuickView = useStore((s) => s.setQuickView);
+function useHandlers(assets: Asset[]) {
+  const { select, setPeek, setFull } = useStore();
   return (a: Asset) => ({
-    onClick: (e: MouseEvent) =>
-      select(
-        a.id,
-        e.shiftKey ? "range" : e.ctrlKey || e.metaKey ? "toggle" : "replace",
-        assets.map((x) => x.id),
-      ),
+    onClick: (e: MouseEvent) => {
+      const mode = e.shiftKey ? "range" : e.ctrlKey || e.metaKey ? "toggle" : "replace";
+      select(a.id, mode, assets.map((x) => x.id));
+      if (mode === "replace") setPeek(true);
+    },
     onDoubleClick: () => {
       select(a.id);
-      setQuickView(true);
+      setFull(true);
     },
     onDragStart: (e: DragEvent) => void dragOut(e, a, assets),
     onMouseEnter: a.kind === "audio" ? () => hoverPlay(a) : undefined,
@@ -69,17 +69,56 @@ function useClickHandlers(assets: Asset[]) {
   });
 }
 
-export function AssetBrowser({ assets }: { assets: Asset[] }) {
-  const layout = useStore((s) => s.layout);
-  useEffect(() => () => hoverPlay(null), []);
-  return layout === "grid" ? <Grid assets={assets} /> : <List assets={assets} />;
+type Line = { type: "head"; group: Group; first: boolean } | { type: "items"; items: Asset[] };
+
+/** Flattens groups into virtualizer lines: an optional heading, then rows of `perRow` assets. */
+function lines(assets: Asset[], groups: Group[] | null, perRow: number): Line[] {
+  const out: Line[] = [];
+  const push = (items: Asset[]) => {
+    for (let i = 0; i < items.length; i += perRow) out.push({ type: "items", items: items.slice(i, i + perRow) });
+  };
+  if (!groups) push(assets);
+  else
+    groups.forEach((g, i) => {
+      out.push({ type: "head", group: g, first: i === 0 });
+      push(g.items);
+    });
+  return out;
 }
 
-function Grid({ assets }: { assets: Asset[] }) {
+/** `assets` is the display order (already grouped); `groups` is null when not grouping by folder. */
+export function AssetBrowser({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
+  const layout = useStore((s) => s.layout);
+  useEffect(() => () => hoverPlay(null), []);
+  return layout === "grid" ? <Grid assets={assets} groups={groups} /> : <List assets={assets} groups={groups} />;
+}
+
+
+function GroupHead({ group }: { group: Group }) {
+  return (
+    <div className="flex h-[30px] items-baseline gap-2.5 pt-1">
+      <span className="text-sm font-semibold">{group.label}</span>
+      <span className="font-mono text-[11px] text-faint">
+        {group.items.length.toLocaleString()} {group.items.length === 1 ? "file" : "files"} · {bytes(group.bytes)}
+      </span>
+    </div>
+  );
+}
+
+function useActiveScroll(order: Asset[], lineOf: (index: number) => number, scrollTo: (line: number) => void) {
+  const activeId = useStore((s) => s.activeId);
+  useEffect(() => {
+    const i = order.findIndex((a) => a.id === activeId);
+    if (i >= 0) scrollTo(lineOf(i));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+}
+
+function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const { thumbSize, selected, activeId, pixelated, setCols } = useStore();
-  const handlers = useClickHandlers(assets);
+  const { thumbSize, selected, activeId, peek, pixelated } = useStore();
+  const handlers = useHandlers(assets);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -89,146 +128,175 @@ function Grid({ assets }: { assets: Asset[] }) {
     return () => ro.disconnect();
   }, []);
 
-  const cols = Math.max(1, Math.floor((width - PAD * 2 + GAP) / (thumbSize + GAP)));
-  const rowH = thumbSize + CAPTION + GAP;
-  useEffect(() => setCols(cols), [cols, setCols]);
+  const inner = Math.max(0, width - PAD * 2);
+  const cols = Math.max(1, Math.floor((inner + GAP) / (thumbSize + GAP)));
+  const cardW = (inner - GAP * (cols - 1)) / cols;
+  const rowH = cardW + CAPTION + GAP;
+  const items = useMemo(() => lines(assets, groups, cols), [assets, groups, cols]);
+  const order = assets;
 
   const v = useVirtualizer({
-    count: Math.ceil(assets.length / cols),
+    count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowH,
+    estimateSize: (i) => {
+      const l = items[i];
+      return l.type === "head" ? HEAD + 12 + (l.first ? 0 : GROUP_GAP) : rowH;
+    },
     overscan: 3,
-    paddingStart: PAD,
-    paddingEnd: PAD,
+    paddingStart: 4,
+    paddingEnd: 60,
   });
-  useEffect(() => v.measure(), [rowH, v]);
-
-  useEffect(() => {
-    const i = assets.findIndex((a) => a.id === activeId);
-    if (i >= 0) v.scrollToIndex(Math.floor(i / cols), { align: "auto" });
-  }, [activeId, cols, assets, v]);
+  useEffect(() => v.measure(), [rowH, items, v]);
+  useActiveScroll(
+    order,
+    (i) => {
+      const id = order[i].id;
+      return items.findIndex((l) => l.type === "items" && l.items.some((a) => a.id === id));
+    },
+    (line) => line >= 0 && v.scrollToIndex(line, { align: "auto" }),
+  );
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto" role="listbox" aria-multiselectable aria-label="Assets">
       <div style={{ height: v.getTotalSize(), position: "relative" }}>
-        {v.getVirtualItems().map((row) => (
-          <div
-            key={row.key}
-            className="absolute left-0 flex w-full"
-            style={{ top: row.start, gap: GAP, paddingLeft: PAD, paddingRight: PAD }}
-          >
-            {assets.slice(row.index * cols, row.index * cols + cols).map((a) => {
-              const isSel = selected.has(a.id);
-              return (
-                <div
-                  key={a.id}
-                  role="option"
-                  aria-selected={isSel}
-                  draggable
-                  title={a.relPath}
-                  {...handlers(a)}
-                  style={{ width: thumbSize }}
-                  className={clsx(
-                    "group relative flex cursor-pointer flex-col rounded-lg border bg-surface p-1.5 transition-colors duration-150 select-none",
-                    isSel ? "border-ring outline-2 outline-ring" : "border-border hover:border-border-strong",
-                    a.id === activeId && !isSel && "border-border-strong",
-                  )}
-                >
-                  <Thumb asset={a} pixelated={pixelated} className="aspect-square w-full rounded-md" />
-                  <div className="mt-1.5 min-w-0 px-0.5">
-                    <div className="truncate text-[13px] font-medium">{a.name}</div>
-                    <div className="truncate font-mono text-[11px] text-muted">
-                      {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
-                      {bytes(a.size)}
-                    </div>
-                  </div>
-                  {a.favorite && (
-                    <Star
-                      aria-label="Favorite"
-                      className="absolute top-2.5 right-2.5 size-4 fill-warn text-warn drop-shadow"
-                    />
-                  )}
+        {v.getVirtualItems().map((row) => {
+          const l = items[row.index];
+          return (
+            <div key={row.key} className="absolute left-0 w-full" style={{ top: row.start, paddingLeft: PAD, paddingRight: PAD }}>
+              {l.type === "head" ? (
+                <div style={{ paddingTop: l.first ? 0 : GROUP_GAP }}>
+                  <GroupHead group={l.group} />
                 </div>
-              );
-            })}
-          </div>
-        ))}
+              ) : (
+                <div className="flex" style={{ gap: GAP }}>
+                  {l.items.map((a) => {
+                    const isSel = selected.has(a.id) || (a.id === activeId && peek);
+                    return (
+                      <div
+                        key={a.id}
+                        role="option"
+                        aria-selected={isSel}
+                        draggable
+                        title={a.relPath}
+                        {...handlers(a)}
+                        style={{ width: cardW }}
+                        className="flex min-w-0 cursor-pointer flex-col gap-[7px] select-none"
+                      >
+                        <div
+                          className={clsx(
+                            "relative aspect-square rounded-xl outline-offset-2",
+                            isSel ? "outline-2 outline-accent" : "outline-0",
+                          )}
+                        >
+                          <Thumb asset={a} pixelated={pixelated} className="h-full w-full rounded-xl" />
+                          {a.favorite && (
+                            <span aria-label="Favorite" className="absolute top-2 right-2.5 text-sm text-star">
+                              ★
+                            </span>
+                          )}
+                          <KindPill kind={a.kind} className="absolute bottom-2 left-2 px-[7px] py-0.5 text-[11px]" />
+                        </div>
+                        <span className="truncate font-medium">{a.name}</span>
+                        <span className="-mt-[3px] truncate font-mono text-[11px] text-muted">
+                          {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
+                          {bytes(a.size)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-const columns: { key: SortKey; label: string; className: string }[] = [
-  { key: "name", label: "Name", className: "flex-1 min-w-0" },
-  { key: "kind", label: "Kind", className: "w-28" },
-  { key: "size", label: "Size", className: "w-24 text-right" },
-  { key: "mtime", label: "Modified", className: "w-44" },
-  { key: "folder", label: "Folder", className: "w-64 min-w-0" },
-];
+const COLS = "48px minmax(0,1.6fr) 120px 90px 80px minmax(0,1fr) 96px";
 
-function List({ assets }: { assets: Asset[] }) {
+function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selected, activeId, sort, setSort, pixelated } = useStore();
-  const handlers = useClickHandlers(assets);
+  const { selected, activeId, peek, pixelated } = useStore();
+  const handlers = useHandlers(assets);
+  const items = useMemo(() => lines(assets, groups, 1), [assets, groups]);
+  const order = assets;
   const v = useVirtualizer({
-    count: assets.length,
+    count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW,
-    overscan: 10,
+    estimateSize: (i) => {
+      const l = items[i];
+      return l.type === "head" ? HEAD + 10 + (l.first ? 0 : GROUP_GAP) : ROW;
+    },
+    overscan: 12,
+    paddingEnd: 60,
   });
-
-  useEffect(() => {
-    const i = assets.findIndex((a) => a.id === activeId);
-    if (i >= 0) v.scrollToIndex(i, { align: "auto" });
-  }, [activeId, assets, v]);
+  useEffect(() => v.measure(), [items, v]);
+  useActiveScroll(
+    order,
+    (i) => items.findIndex((l) => l.type === "items" && l.items[0].id === order[i].id),
+    (line) => line >= 0 && v.scrollToIndex(line, { align: "auto" }),
+  );
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-1.5 text-xs font-medium text-muted">
-        <span className="w-7" />
-        {columns.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setSort(c.key)}
-            className={clsx("flex items-center gap-1 hover:text-fg", c.className, c.key === "size" && "justify-end")}
-            aria-label={`Sort by ${c.label}`}
-          >
-            {c.label}
-            {sort.key === c.key &&
-              (sort.desc ? <ArrowDown aria-hidden className="size-3" /> : <ArrowUp aria-hidden className="size-3" />)}
-          </button>
-        ))}
+    <div className="flex h-full flex-col px-7">
+      <div
+        className="grid h-[34px] flex-none items-center rounded-t-xl border border-line bg-panel px-2.5 text-[11.5px] font-medium text-faint"
+        style={{ gridTemplateColumns: COLS }}
+      >
+        <span />
+        <span>Name</span>
+        <span>Type</span>
+        <span>Dimensions</span>
+        <span>Size</span>
+        <span>Folder</span>
+        <span>Modified</span>
       </div>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" role="listbox" aria-multiselectable aria-label="Assets">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto" role="listbox" aria-multiselectable aria-label="Assets">
         <div style={{ height: v.getTotalSize(), position: "relative" }}>
           {v.getVirtualItems().map((row) => {
-            const a = assets[row.index];
-            const isSel = selected.has(a.id);
+            const l = items[row.index];
+            if (l.type === "head")
+              return (
+                <div key={row.key} className="absolute left-0 w-full px-1" style={{ top: row.start, paddingTop: l.first ? 10 : GROUP_GAP + 10 }}>
+                  <GroupHead group={l.group} />
+                </div>
+              );
+            const a = l.items[0];
+            const isSel = selected.has(a.id) || (a.id === activeId && peek);
             return (
               <div
-                key={a.id}
+                key={row.key}
                 role="option"
                 aria-selected={isSel}
                 draggable
                 {...handlers(a)}
-                style={{ top: row.start, height: ROW }}
+                style={{ top: row.start, height: ROW, gridTemplateColumns: COLS }}
                 className={clsx(
-                  "absolute left-0 flex w-full cursor-pointer items-center gap-3 px-4 text-[13px] select-none",
-                  isSel ? "bg-accent/15" : "hover:bg-surface-hover",
+                  "absolute left-0 grid w-full cursor-pointer items-center border-b border-line-soft px-2.5 select-none",
+                  isSel ? "bg-sel-row" : "hover:bg-hover",
                 )}
               >
-                <Thumb asset={a} small pixelated={pixelated} className="size-7 shrink-0 rounded" />
-                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <Thumb asset={a} size="row" pixelated={pixelated} className="size-8 rounded-[7px]" />
+                <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-medium">{a.name}</span>
-                  {a.favorite && <Star aria-label="Favorite" className="size-3.5 shrink-0 fill-warn text-warn" />}
+                  {a.tags.slice(0, 3).map((t) => (
+                    <span key={t} className="rounded-[5px] bg-active px-[7px] py-px text-[11px] whitespace-nowrap text-fg-2">
+                      #{t}
+                    </span>
+                  ))}
+                  {a.favorite && <span className="text-star">★</span>}
                 </span>
-                <span className="w-28 truncate text-muted">{kindLabel[a.kind]}</span>
-                <span className="w-24 text-right font-mono text-xs text-muted">{bytes(a.size)}</span>
-                <span className="w-44 truncate text-muted">{date(a.mtime)}</span>
-                <span className="w-64 truncate font-mono text-xs text-muted" title={folderOf(a.relPath)}>
+                <span>
+                  <KindPill kind={a.kind} />
+                </span>
+                <span className="font-mono text-xs text-muted">{a.width && a.height ? `${a.width}×${a.height}` : "—"}</span>
+                <span className="font-mono text-xs">{bytes(a.size)}</span>
+                <span className="truncate text-muted" title={folderOf(a.relPath)}>
                   {folderOf(a.relPath) || "/"}
                 </span>
+                <span className="text-muted">{ago(a.mtime)}</span>
               </div>
             );
           })}

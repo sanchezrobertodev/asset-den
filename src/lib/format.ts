@@ -22,6 +22,18 @@ export function bytes(n: number): string {
   return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
 }
 
+/** "3h ago", "Yesterday", "4d ago", "2w ago", then a date. */
+export function ago(ms: number, now = Date.now()): string {
+  if (!ms) return "—";
+  const d = (now - ms) / 86_400_000;
+  if (d < 1 / 24) return "Just now";
+  if (d < 1) return `${Math.round(d * 24)}h ago`;
+  if (d < 2) return "Yesterday";
+  if (d < 7) return `${Math.round(d)}d ago`;
+  if (d < 60) return `${Math.round(d / 7)}w ago`;
+  return new Date(ms).toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
 export function date(ms: number): string {
   return ms ? new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 }
