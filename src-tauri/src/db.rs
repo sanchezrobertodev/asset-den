@@ -118,13 +118,15 @@ pub fn root(conn: &Connection, id: i64) -> Result<Root> {
 
 const TAG_SEP: char = '\u{1f}';
 
-pub fn assets(conn: &Connection, only: Option<i64>) -> Result<Vec<Asset>> {
+/// All assets, or only those with the given ids.
+pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
     let roots: HashMap<i64, String> = roots(conn)?.into_iter().map(|r| (r.id, r.path)).collect();
     let mut stmt = conn.prepare(
         "SELECT a.id, a.root_id, a.rel_path, a.name, a.ext, a.kind, a.size, a.mtime, a.width, a.height, a.favorite,
                 (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id)
-         FROM assets a WHERE ?1 IS NULL OR a.id = ?1",
+         FROM assets a WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
     )?;
+    let only = only.map(|ids| serde_json::to_string(ids).unwrap_or_default());
     stmt.query_map([only], |r| {
         let root_id: i64 = r.get(1)?;
         let rel_path: String = r.get(2)?;
@@ -152,8 +154,18 @@ pub fn assets(conn: &Connection, only: Option<i64>) -> Result<Vec<Asset>> {
     .collect()
 }
 
+/// The current state of rows a change touched: rows that still exist, and the ids that are gone.
+pub fn delta(conn: &Connection, touched: &[i64]) -> Result<(Vec<Asset>, Vec<i64>)> {
+    let rows = assets(conn, Some(touched))?;
+    let found: std::collections::HashSet<i64> = rows.iter().map(|a| a.id).collect();
+    let mut removed: Vec<i64> = touched.iter().copied().filter(|id| !found.contains(id)).collect();
+    removed.sort_unstable();
+    removed.dedup();
+    Ok((rows, removed))
+}
+
 pub fn asset(conn: &Connection, id: i64) -> std::result::Result<Asset, String> {
-    assets(conn, Some(id))
+    assets(conn, Some(&[id]))
         .map_err(|e| e.to_string())?
         .pop()
         .ok_or_else(|| "That asset is no longer in the library. It may have been moved or deleted.".into())

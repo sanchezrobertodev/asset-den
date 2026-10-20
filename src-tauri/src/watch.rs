@@ -14,18 +14,23 @@ use crate::scan::{refresh_path, rename_path};
 
 pub type Watcher = Debouncer<RecommendedWatcher, RecommendedCache>;
 
-/// Applies one event; renames move rows in place so tags survive.
-pub fn apply(conn: &Connection, root_id: i64, root: &std::path::Path, kind: &EventKind, paths: &[PathBuf]) {
+/// Applies one event and returns the ids of the rows it added, changed or removed. Renames move rows in place so
+/// tags survive.
+pub fn apply(conn: &Connection, root_id: i64, root: &std::path::Path, kind: &EventKind, paths: &[PathBuf]) -> Vec<i64> {
+    let mut touched = Vec::new();
     let r = match (kind, paths) {
         (EventKind::Modify(ModifyKind::Name(RenameMode::Both)), [from, to]) => {
-            rename_path(conn, root_id, root, from, to)
+            rename_path(conn, root_id, root, from, to, &mut touched)
         }
         (EventKind::Access(_), _) => Ok(()),
-        _ => paths.iter().try_for_each(|p| refresh_path(conn, root_id, root, p)),
+        _ => paths
+            .iter()
+            .try_for_each(|p| refresh_path(conn, root_id, root, p, &mut touched)),
     };
     if let Err(e) = r {
         eprintln!("watch: {e}");
     }
+    touched
 }
 
 pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, String> {
@@ -38,9 +43,11 @@ pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, Str
         let state = app.state::<AppState>();
         {
             let conn = state.db.lock().unwrap();
-            for e in &events {
-                apply(&conn, root_id, &handler_root, &e.kind, &e.paths);
-            }
+            let touched: Vec<i64> = events
+                .iter()
+                .flat_map(|e| apply(&conn, root_id, &handler_root, &e.kind, &e.paths))
+                .collect();
+            crate::emit_delta(&app, &conn, &touched);
         }
         let _ = app.emit("assets-changed", root_id);
     })

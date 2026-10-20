@@ -50,9 +50,10 @@ fn dimensions(path: &Path, ext: &str) -> Option<(u32, u32)> {
     }
 }
 
-/// Inserts or refreshes one file's row; returns false if it isn't an indexable file.
-/// Unchanged files keep their hash and dimensions. With `with_dims` false, changed images get their dimensions
+/// Inserts or refreshes one file's row; returns false if it isn't an indexable file. Adds the row's id to `touched`
+/// when it was added or changed. Unchanged files keep their hash and dimensions. With `with_dims` false, changed images get their dimensions
 /// later from [`fill_dimensions`], so a big scan isn't slowed down by opening every image.
+#[allow(clippy::too_many_arguments)]
 pub fn upsert_file(
     conn: &Connection,
     root_id: i64,
@@ -61,6 +62,7 @@ pub fn upsert_file(
     meta: &Metadata,
     seen: i64,
     with_dims: bool,
+    touched: &mut Vec<i64>,
 ) -> Result<bool> {
     let Some(rel) = rel_of(root, path) else {
         return Ok(false);
@@ -98,13 +100,14 @@ pub fn upsert_file(
     } else {
         None
     };
-    conn.execute(
+    let id = conn.query_row(
         "INSERT INTO assets (root_id, rel_path, name, ext, kind, size, mtime, width, height, seen)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
          ON CONFLICT (root_id, rel_path) DO UPDATE SET
            name = excluded.name, ext = excluded.ext, kind = excluded.kind, size = excluded.size,
            mtime = excluded.mtime, width = excluded.width, height = excluded.height, seen = excluded.seen,
-           hash = NULL",
+           hash = NULL
+         RETURNING id",
         params![
             root_id,
             rel,
@@ -117,7 +120,9 @@ pub fn upsert_file(
             dims.map(|d| d.1),
             seen
         ],
+        |r| r.get(0),
     )?;
+    touched.push(id);
     Ok(true)
 }
 
@@ -136,8 +141,14 @@ const BATCH: usize = 500;
 
 /// Full rescan of a root: upserts every file, then drops rows for files that are gone. Commits every
 /// [`BATCH`] files and releases the lock in between, so the UI can show (and thumbnail) assets while it runs.
-/// `progress(count)` is called after every batch, including during the dimensions pass.
-pub fn scan_root(db: &Mutex<Connection>, root_id: i64, root: &Path, mut progress: impl FnMut(usize)) -> Result<usize> {
+/// `report(conn, count, touched)` is called after every batch, including the sweep and the dimensions pass, with the
+/// lock still held and the ids of the rows that batch added, changed or removed.
+pub fn scan_root(
+    db: &Mutex<Connection>,
+    root_id: i64,
+    root: &Path,
+    mut report: impl FnMut(&Connection, usize, &[i64]),
+) -> Result<usize> {
     let seen = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(1, |d| d.as_nanos() as i64);
@@ -145,31 +156,40 @@ pub fn scan_root(db: &Mutex<Connection>, root_id: i64, root: &Path, mut progress
     let mut files = walk(root).peekable();
     while files.peek().is_some() {
         let batch: Vec<_> = files.by_ref().take(BATCH).collect();
+        let mut touched = Vec::new();
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
         for (path, meta) in &batch {
-            if upsert_file(&tx, root_id, root, path, meta, seen, false)? {
+            if upsert_file(&tx, root_id, root, path, meta, seen, false, &mut touched)? {
                 count += 1;
             }
         }
         tx.commit()?;
+        report(&conn, count, &touched);
         drop(conn);
-        progress(count);
         // The mutex isn't fair: without a pause this thread re-locks at once and UI commands starve until the end.
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
-    db.lock().unwrap().execute(
-        "DELETE FROM assets WHERE root_id = ?1 AND seen != ?2",
-        params![root_id, seen],
-    )?;
-    progress(count);
-    fill_dimensions(db, root_id, root, || progress(count))?;
+    {
+        let conn = db.lock().unwrap();
+        let gone: Vec<i64> = conn
+            .prepare("DELETE FROM assets WHERE root_id = ?1 AND seen != ?2 RETURNING id")?
+            .query_map(params![root_id, seen], |r| r.get(0))?
+            .collect::<Result<_>>()?;
+        report(&conn, count, &gone);
+    }
+    fill_dimensions(db, root_id, root, |conn, ids| report(conn, count, ids))?;
     Ok(count)
 }
 
 /// Reads image dimensions for rows that don't have them yet, from file headers, in parallel and in batches.
-/// Unreadable files get 0x0 so they aren't retried every scan.
-pub fn fill_dimensions(db: &Mutex<Connection>, root_id: i64, root: &Path, mut progress: impl FnMut()) -> Result<()> {
+/// Unreadable files get 0x0 so they aren't retried every scan. `report(conn, ids)` gets each batch's ids, lock held.
+pub fn fill_dimensions(
+    db: &Mutex<Connection>,
+    root_id: i64,
+    root: &Path,
+    mut report: impl FnMut(&Connection, &[i64]),
+) -> Result<()> {
     let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
     let sql = format!(
         "SELECT id, rel_path, ext FROM assets WHERE root_id = ?1 AND width IS NULL AND ext IN ({exts}) LIMIT {BATCH}"
@@ -210,42 +230,56 @@ pub fn fill_dimensions(db: &Mutex<Connection>, root_id: i64, root: &Path, mut pr
             )?;
         }
         tx.commit()?;
+        report(&conn, &dims.iter().map(|(id, _)| *id).collect::<Vec<_>>());
         drop(conn);
-        progress();
         std::thread::sleep(std::time::Duration::from_millis(1)); // let waiting UI commands in, see scan_root
     }
 }
 
-/// Syncs one path after a change event: a file, a whole folder, or something that's gone.
-pub fn refresh_path(conn: &Connection, root_id: i64, root: &Path, path: &Path) -> Result<()> {
+/// Drops the rows for `rel` and everything under it, adding their ids to `touched`.
+fn delete_under(conn: &Connection, root_id: i64, rel: &str, touched: &mut Vec<i64>) -> Result<()> {
+    let mut stmt = conn.prepare(
+        "DELETE FROM assets WHERE root_id = ?1 AND (rel_path = ?2 OR substr(rel_path, 1, length(?2) + 1) = ?2 || '/')
+         RETURNING id",
+    )?;
+    for id in stmt.query_map(params![root_id, rel], |r| r.get(0))? {
+        touched.push(id?);
+    }
+    Ok(())
+}
+
+/// Syncs one path after a change event: a file, a whole folder, or something that's gone. Adds the ids of rows it
+/// added, changed or removed to `touched`.
+pub fn refresh_path(conn: &Connection, root_id: i64, root: &Path, path: &Path, touched: &mut Vec<i64>) -> Result<()> {
     let Some(rel) = rel_of(root, path) else { return Ok(()) };
     if path.is_dir() {
         for (f, meta) in walk(path) {
-            upsert_file(conn, root_id, root, &f, &meta, 0, true)?;
+            upsert_file(conn, root_id, root, &f, &meta, 0, true, touched)?;
         }
     } else if let Some(meta) = std::fs::metadata(path).ok().filter(|m| m.is_file()) {
-        upsert_file(conn, root_id, root, path, &meta, 0, true)?;
+        upsert_file(conn, root_id, root, path, &meta, 0, true, touched)?;
     } else {
-        conn.execute(
-            "DELETE FROM assets WHERE root_id = ?1 AND (rel_path = ?2 OR substr(rel_path, 1, length(?2) + 1) = ?2 || '/')",
-            params![root_id, rel],
-        )?;
+        delete_under(conn, root_id, &rel, touched)?;
     }
     Ok(())
 }
 
 /// Moves rows in place so a renamed file or folder keeps its tags, favorite and collections.
-pub fn rename_path(conn: &Connection, root_id: i64, root: &Path, from: &Path, to: &Path) -> Result<()> {
+pub fn rename_path(
+    conn: &Connection,
+    root_id: i64,
+    root: &Path,
+    from: &Path,
+    to: &Path,
+    touched: &mut Vec<i64>,
+) -> Result<()> {
     let (Some(from_rel), Some(to_rel)) = (rel_of(root, from), rel_of(root, to)) else {
         // Moved in or out of the root (or to/from an ignored place): treat as delete + add.
-        refresh_path(conn, root_id, root, from)?;
-        return refresh_path(conn, root_id, root, to);
+        refresh_path(conn, root_id, root, from, touched)?;
+        return refresh_path(conn, root_id, root, to, touched);
     };
     // Anything the move overwrote is replaced.
-    conn.execute(
-        "DELETE FROM assets WHERE root_id = ?1 AND (rel_path = ?2 OR substr(rel_path, 1, length(?2) + 1) = ?2 || '/')",
-        params![root_id, to_rel],
-    )?;
+    delete_under(conn, root_id, &to_rel, touched)?;
     conn.execute(
         "UPDATE assets SET rel_path = ?3 || substr(rel_path, length(?2) + 1)
          WHERE root_id = ?1 AND (rel_path = ?2 OR substr(rel_path, 1, length(?2) + 1) = ?2 || '/')",
@@ -259,6 +293,7 @@ pub fn rename_path(conn: &Connection, root_id: i64, root: &Path, from: &Path, to
         .query_map(params![root_id, to_rel], |r| Ok((r.get(0)?, r.get(1)?)))?
         .collect::<Result<_>>()?;
     for (id, rel) in moved {
+        touched.push(id);
         let name = rel.rsplit('/').next().unwrap_or(&rel).to_string();
         let ext = ext_of(&name);
         conn.execute(
@@ -267,7 +302,7 @@ pub fn rename_path(conn: &Connection, root_id: i64, root: &Path, from: &Path, to
         )?;
     }
     // Picks up content changes and anything the rows didn't cover.
-    refresh_path(conn, root_id, root, to)
+    refresh_path(conn, root_id, root, to, touched)
 }
 
 #[cfg(test)]
@@ -298,12 +333,26 @@ pub mod tests {
         v
     }
 
-    /// Runs a full scan on a plain connection (the app passes its shared Mutex).
+    /// Runs a full scan on a plain connection (the app passes its shared Mutex). Returns the file count.
     pub fn scan(conn: &mut Connection, root: i64, r: &Path) -> usize {
+        scan_touched(conn, root, r).0
+    }
+
+    /// A full scan, with every id its batches reported.
+    fn scan_touched(conn: &mut Connection, root: i64, r: &Path) -> (usize, Vec<i64>) {
         let db = Mutex::new(std::mem::replace(conn, Connection::open_in_memory().unwrap()));
-        let n = scan_root(&db, root, r, |_| {}).unwrap();
+        let mut touched = Vec::new();
+        let n = scan_root(&db, root, r, |_, _, ids| touched.extend_from_slice(ids)).unwrap();
         *conn = db.into_inner().unwrap();
-        n
+        (n, touched)
+    }
+
+    /// The delta the UI would get for `touched`: (sorted upserted rel paths, removed ids).
+    fn delta(conn: &Connection, touched: &[i64]) -> (Vec<String>, Vec<i64>) {
+        let (rows, removed) = db::delta(conn, touched).unwrap();
+        let mut rels: Vec<String> = rows.into_iter().map(|a| a.rel_path).collect();
+        rels.sort();
+        (rels, removed)
     }
 
     fn png(path: &Path, w: u32, h: u32) {
@@ -358,15 +407,110 @@ pub mod tests {
 
         // File rename that changes the kind.
         fs::rename(r.join("b.ogg"), r.join("b.txt")).unwrap();
-        rename_path(&conn, root, r, &r.join("b.ogg"), &r.join("b.txt")).unwrap();
+        rename_path(&conn, root, r, &r.join("b.ogg"), &r.join("b.txt"), &mut vec![]).unwrap();
         // Folder rename.
         fs::rename(r.join("old"), r.join("new")).unwrap();
-        rename_path(&conn, root, r, &r.join("old"), &r.join("new")).unwrap();
+        rename_path(&conn, root, r, &r.join("old"), &r.join("new"), &mut vec![]).unwrap();
 
         let all = db::assets(&conn, None).unwrap();
         assert_eq!(rels(&conn), ["b.txt", "new/a.png"]);
         assert!(all.iter().all(|a| a.tags == ["keep"]));
         assert_eq!(all.iter().find(|a| a.name == "b.txt").unwrap().kind, "text");
+    }
+
+    #[test]
+    fn scan_reports_changes_and_sweep() {
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "x").unwrap();
+        fs::write(r.join("b.wav"), "x").unwrap();
+        let (_, touched) = scan_touched(&mut conn, root, r);
+        assert_eq!(delta(&conn, &touched), (vec!["a.png".into(), "b.wav".into()], vec![]));
+
+        // A rescan with nothing changed reports nothing, so the UI does no work.
+        assert!(scan_touched(&mut conn, root, r).1.is_empty());
+
+        // The sweep reports deleted files; changed files come back as rows.
+        let gone = db::assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .find(|a| a.name == "b.wav")
+            .unwrap()
+            .id;
+        fs::remove_file(r.join("b.wav")).unwrap();
+        fs::write(r.join("a.png"), "longer").unwrap();
+        let (_, touched) = scan_touched(&mut conn, root, r);
+        assert_eq!(delta(&conn, &touched), (vec!["a.png".into()], vec![gone]));
+    }
+
+    #[test]
+    fn watcher_reports_add_rename_and_remove() {
+        use notify_debouncer_full::notify::event::{
+            AccessKind, CreateKind, EventKind, ModifyKind, RemoveKind, RenameMode,
+        };
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        fs::create_dir_all(r.join("old")).unwrap();
+        fs::write(r.join("old/a.png"), "x").unwrap();
+        scan(&mut conn, root, r);
+        let a = db::assets(&conn, None).unwrap()[0].id;
+        db::add_tag(&conn, &[a], "keep").unwrap();
+
+        // Add.
+        fs::write(r.join("new.png"), "x").unwrap();
+        let t = crate::watch::apply(
+            &conn,
+            root,
+            r,
+            &EventKind::Create(CreateKind::File),
+            &[r.join("new.png")],
+        );
+        assert_eq!(delta(&conn, &t), (vec!["new.png".into()], vec![]));
+        let added = db::assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .find(|x| x.name == "new.png")
+            .unwrap()
+            .id;
+
+        // Folder rename: same id, new path, tags kept.
+        fs::rename(r.join("old"), r.join("moved")).unwrap();
+        let t = crate::watch::apply(
+            &conn,
+            root,
+            r,
+            &EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
+            &[r.join("old"), r.join("moved")],
+        );
+        let (rows, removed) = db::delta(&conn, &t).unwrap();
+        assert!(removed.is_empty());
+        assert_eq!(
+            rows.iter()
+                .map(|x| (x.id, x.rel_path.as_str(), x.tags.clone()))
+                .collect::<Vec<_>>(),
+            [(a, "moved/a.png", vec!["keep".to_string()])]
+        );
+
+        // Remove.
+        fs::remove_file(r.join("new.png")).unwrap();
+        let t = crate::watch::apply(
+            &conn,
+            root,
+            r,
+            &EventKind::Remove(RemoveKind::File),
+            &[r.join("new.png")],
+        );
+        assert_eq!(delta(&conn, &t), (vec![], vec![added]));
+
+        // Access events touch nothing.
+        let t = crate::watch::apply(
+            &conn,
+            root,
+            r,
+            &EventKind::Access(AccessKind::Any),
+            &[r.join("moved/a.png")],
+        );
+        assert!(t.is_empty());
     }
 
     #[test]
@@ -389,7 +533,7 @@ pub mod tests {
         assert!(db::set_sprite_sheet(&conn, id, db::SpriteSheet { cols: 0, ..sheet }).is_err());
 
         fs::rename(r.join("walk.png"), r.join("run.png")).unwrap();
-        rename_path(&conn, root, r, &r.join("walk.png"), &r.join("run.png")).unwrap();
+        rename_path(&conn, root, r, &r.join("walk.png"), &r.join("run.png"), &mut vec![]).unwrap();
         scan(&mut conn, root, r);
         let all = db::assets(&conn, None).unwrap();
         assert_eq!((all.len(), all[0].id, all[0].name.as_str()), (1, id, "run.png"));
@@ -410,14 +554,14 @@ pub mod tests {
         let r = dir.path();
         fs::create_dir_all(r.join("pack/sub")).unwrap();
         fs::write(r.join("pack/sub/a.glb"), "x").unwrap();
-        refresh_path(&conn, root, r, &r.join("pack")).unwrap();
+        refresh_path(&conn, root, r, &r.join("pack"), &mut vec![]).unwrap();
         assert_eq!(rels(&conn), ["pack/sub/a.glb"]);
         fs::remove_dir_all(r.join("pack")).unwrap();
-        refresh_path(&conn, root, r, &r.join("pack")).unwrap();
+        refresh_path(&conn, root, r, &r.join("pack"), &mut vec![]).unwrap();
         assert!(rels(&conn).is_empty());
         // Ignored paths are never added.
         fs::write(r.join("x.png.meta"), "x").unwrap();
-        refresh_path(&conn, root, r, &r.join("x.png.meta")).unwrap();
+        refresh_path(&conn, root, r, &r.join("x.png.meta"), &mut vec![]).unwrap();
         assert!(rels(&conn).is_empty());
     }
 }
@@ -436,7 +580,7 @@ mod bench {
         let db = std::sync::Mutex::new(conn);
         let t = std::time::Instant::now();
         let mut first = None;
-        let n = super::scan_root(&db, 1, &dir, |_| {
+        let n = super::scan_root(&db, 1, &dir, |_, _, _| {
             first.get_or_insert(t.elapsed());
         })
         .unwrap();
@@ -446,7 +590,7 @@ mod bench {
             first.unwrap()
         );
         let t = std::time::Instant::now();
-        super::scan_root(&db, 1, &dir, |_| {}).unwrap();
+        super::scan_root(&db, 1, &dir, |_, _, _| {}).unwrap();
         println!("rescan: {:?}", t.elapsed());
     }
 }

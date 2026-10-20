@@ -85,11 +85,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.assets, s.view, s.kinds, s.folder, s.subfolders, s.query, s.filters, collection, s.sort],
   );
-  // Same scope without the type chips, so each chip can show its count.
+  // Same scope without the type chips, so each chip can show its count. Only counted, so not sorted.
   const scopeAssets = useMemo(
-    () => visibleAssets(s.assets, { ...scope, kinds: [] }, s.sort),
+    () => visibleAssets(s.assets, { ...scope, kinds: [] }, null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection, s.sort],
+    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection],
   );
   const browse = s.view === "library" || s.view === "favorites";
   const navigable = browse || s.view === "collections";

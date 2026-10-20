@@ -24,6 +24,7 @@ ui-test:
 	node --experimental-strip-types src/lib/folders.test.ts
 	node --experimental-strip-types src/lib/scheduler.test.ts
 	node --experimental-strip-types src/lib/sprites.test.ts
+	node --experimental-strip-types src/lib/delta.test.ts
 
 test:
 	cargo test $(CARGO_MANIFEST)

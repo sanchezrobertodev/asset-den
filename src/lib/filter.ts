@@ -126,8 +126,8 @@ export interface Scope {
   collection: Collection | null;
 }
 
-/** Assets the current view shows, after type chips, folder, search and Filters panel, sorted. */
-export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; desc: boolean }): Asset[] {
+/** Assets the current view shows, after type chips, folder, search and Filters panel, sorted (unless `sort` is null). */
+export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; desc: boolean } | null): Asset[] {
   const members = s.view === "collections" ? new Set(s.collection?.assetIds ?? []) : null;
   const q = parseQuery(s.query);
   const now = Date.now();
@@ -143,6 +143,7 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
     }
     return matchesFilters(a, s.filters, now) && matchesQuery(a, q);
   });
+  if (!sort) return out;
   const dir = sort.desc ? -1 : 1;
   return out.sort((a, b) => dir * compare[sort.key](a, b));
 }

@@ -13,6 +13,12 @@ All notable changes to Asset Den are documented here. The format follows
   the app's database, so it survives rescans and renames, and an image you have animated opens animated next time.
   The image file itself is never changed.
 
+### Changed
+
+- Big libraries stay responsive while files change. Scans and file events now send only the files that changed
+  instead of the whole library, so a rescan where nothing changed costs the UI nothing, a new file appears in about half
+  a second, and importing a large folder no longer freezes the window.
+
 ### Fixed
 
 - The first duplicate check after a big import no longer freezes scans and the window for minutes. Hashes are now

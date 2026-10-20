@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use rusqlite::Connection;
 use serde::Serialize;
@@ -25,6 +26,8 @@ pub struct AppState {
     thumb_permits: tokio::sync::Semaphore,
     watchers: Mutex<HashMap<i64, watch::Watcher>>,
     scanning: Mutex<HashSet<i64>>,
+    /// Number of the last `assets-delta` sent. Only changed with the db lock held, so it matches what's committed.
+    seq: AtomicU64,
 }
 
 fn err(e: impl std::fmt::Display) -> String {
@@ -47,6 +50,31 @@ struct ScanProgress {
     done: bool,
 }
 
+/// Changed or added rows and removed ids, numbered so the UI can tell when it missed one and must reload.
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct AssetsDelta {
+    seq: u64,
+    upserted: Vec<Asset>,
+    removed: Vec<i64>,
+}
+
+/// Sends the UI the current state of the rows in `touched`. Call with the db lock held (`conn`), so deltas are numbered
+/// and sent in commit order. Emitting only queues the event, so it doesn't hold the lock for long.
+pub(crate) fn emit_delta(app: &AppHandle, conn: &Connection, touched: &[i64]) {
+    if touched.is_empty() {
+        return;
+    }
+    // On error the number is still used up: the UI sees the gap and reloads everything.
+    let seq = app.state::<AppState>().seq.fetch_add(1, Ordering::SeqCst) + 1;
+    match db::delta(conn, touched) {
+        Ok((upserted, removed)) => {
+            let _ = app.emit("assets-delta", AssetsDelta { seq, upserted, removed });
+        }
+        Err(e) => eprintln!("delta: {e}"),
+    }
+}
+
 /// Rescans a root on a worker thread, reporting progress. Skips if that root is already being scanned.
 fn spawn_scan(app: AppHandle, root: Root) {
     if !app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
@@ -64,8 +92,11 @@ fn spawn_scan(app: AppHandle, root: Root) {
                 },
             );
         };
-        // Commits in batches, so the UI can list and thumbnail assets while the scan runs.
-        let result = scan::scan_root(&state.db, root.id, Path::new(&root.path), |n| progress(n, false));
+        // Commits in batches and sends each batch's changes, so the UI shows (and thumbnails) assets while it runs.
+        let result = scan::scan_root(&state.db, root.id, Path::new(&root.path), |conn, n, touched| {
+            emit_delta(&app, conn, touched);
+            progress(n, false);
+        });
         state.scanning.lock().unwrap().remove(&root.id);
         if let Err(e) = &result {
             eprintln!("scan {}: {e}", root.path);
@@ -157,9 +188,22 @@ fn rescan(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), Str
     Ok(())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AssetList {
+    /// The last delta these rows include; the UI applies only later ones.
+    seq: u64,
+    assets: Vec<Asset>,
+}
+
 #[tauri::command]
-fn list_assets(state: State<'_, AppState>) -> Result<Vec<Asset>, String> {
-    with_db(&state, |c| db::assets(c, None))
+fn list_assets(state: State<'_, AppState>) -> Result<AssetList, String> {
+    with_db(&state, |c| {
+        Ok(AssetList {
+            seq: state.seq.load(Ordering::SeqCst),
+            assets: db::assets(c, None)?,
+        })
+    })
 }
 
 /// Cached thumbnail path, generated on first request. None for kinds the backend can't draw (the UI uses an icon,
@@ -467,6 +511,7 @@ pub fn run() {
                 ),
                 watchers: Mutex::new(HashMap::new()),
                 scanning: Mutex::new(HashSet::new()),
+                seq: AtomicU64::new(0),
             });
             // Catch up on anything that changed while the app was closed.
             for root in roots {
