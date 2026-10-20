@@ -1,5 +1,7 @@
 import clsx from "clsx";
-import { ChevronRight, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
+import { openUpdates } from "../appUpdate";
+import { UpdateNotice } from "./AppUpdate";
 import { useMemo, type ReactNode } from "react";
 import { treeFor, type FolderNode } from "../lib/folders";
 import { baseName, bytes, kindLabel } from "../lib/format";
@@ -144,6 +146,7 @@ export function Sidebar() {
       </div>
 
       <div className="flex flex-none flex-col gap-2 px-3 py-4">
+        <UpdateNotice />
         <div className="flex items-end justify-between gap-2">
           <div className="flex min-w-0 flex-col gap-0.5 text-xs">
             <span className="truncate text-fg-2">{s.roots.length === 1 ? baseName(s.roots[0].path) : `${s.roots.length} folders`}</span>
@@ -151,9 +154,14 @@ export function Sidebar() {
               {bytes(total)} · {s.assets.length.toLocaleString()} files
             </span>
           </div>
-          <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
-            <ThemeIcon className="size-4" />
-          </IconButton>
+          <div className="flex flex-none">
+            <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
+              <CircleArrowUp className="size-4" />
+            </IconButton>
+            <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
+              <ThemeIcon className="size-4" />
+            </IconButton>
+          </div>
         </div>
         <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label="Library size by type">
           {KINDS.filter((k) => byKind.get(k)).map((k) => (

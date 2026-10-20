@@ -23,3 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
+# Output of make release / make release-dry
+release/

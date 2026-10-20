@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { openUpdates } from "../appUpdate";
 import { matchesQuery, parseQuery } from "../lib/filter";
 import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
@@ -103,6 +104,7 @@ export function Palette() {
         s.setLayout("grid");
         s.go("library");
       }],
+      ["Check for updates", openUpdates],
       ["Clear search and filters", () => {
         s.clearFilters();
         s.go("library");

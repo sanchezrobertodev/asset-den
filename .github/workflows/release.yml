@@ -64,7 +64,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ matrix.args }}
+          # Updates are signed locally by make release; CI builds plain installers.
+          args: ${{ matrix.args }} --config src-tauri/tauri.no-updater.conf.json
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Asset Den {0}', github.ref_name) || '' }}
           releaseDraft: true

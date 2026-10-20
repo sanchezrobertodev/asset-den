@@ -1,8 +1,25 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { Asset, Collection, DupGroup, Root, ScanProgress, TextPreview } from "./types";
+
+export interface AppUpdate {
+  version: string;
+  currentVersion: string;
+  date: string | null;
+  notes: string | null;
+}
+
+export interface DownloadProgress {
+  downloaded: number;
+  total: number | null;
+}
+
+/** The update found by the last check, kept for installing. */
+let pendingUpdate: Update | null = null;
 
 export const api = {
   listRoots: () => invoke<Root[]>("list_roots"),
@@ -37,6 +54,25 @@ export const api = {
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
+  /** Asks the release feed for a newer, signed version of Asset Den. null when up to date. */
+  checkAppUpdate: async (): Promise<AppUpdate | null> => {
+    const update = await check();
+    void pendingUpdate?.close().catch(() => {});
+    pendingUpdate = update;
+    if (!update) return null;
+    return { version: update.version, currentVersion: update.currentVersion, date: update.date ?? null, notes: update.body ?? null };
+  },
+  /** Downloads, verifies and installs the pending update, then restarts. On Windows the installer closes the app itself. */
+  installAppUpdate: async (onProgress: (p: DownloadProgress) => void) => {
+    if (!pendingUpdate) throw new Error("No update to install. Check for updates first.");
+    const progress: DownloadProgress = { downloaded: 0, total: null };
+    await pendingUpdate.downloadAndInstall((e) => {
+      if (e.event === "Started") progress.total = e.data.contentLength ?? null;
+      else if (e.event === "Progress") progress.downloaded += e.data.chunkLength;
+      onProgress({ ...progress });
+    });
+    await relaunch();
+  },
   /** Copy-mode drag, so dropping onto a folder never moves the original. */
   drag: (paths: string[], icon: string) => startDrag({ item: paths, icon, mode: "copy" }),
 };
