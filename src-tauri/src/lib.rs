@@ -457,7 +457,10 @@ pub fn run() {
                 thumbs_dir,
                 previews_dir,
                 drag_icon,
-                thumb_permits: tokio::sync::Semaphore::new(4),
+                // One decode per core (2 to 8): the frontend only sends what's on screen, so use the CPU for it.
+                thumb_permits: tokio::sync::Semaphore::new(
+                    std::thread::available_parallelism().map_or(4, |n| n.get().clamp(2, 8)),
+                ),
                 watchers: Mutex::new(HashMap::new()),
                 scanning: Mutex::new(HashSet::new()),
             });

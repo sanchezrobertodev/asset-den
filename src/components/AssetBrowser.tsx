@@ -184,7 +184,7 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                       >
                         <div
                           className={clsx(
-                            "relative aspect-square rounded-xl outline-offset-2",
+                            "relative aspect-square overflow-hidden rounded-xl outline-offset-2",
                             isSel ? "outline-2 outline-accent" : "outline-0",
                           )}
                         >

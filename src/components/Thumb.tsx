@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { fileUrl } from "../api";
-import { fontFamily, thumbnailFor } from "../lib/thumbs";
+import { fontFamily, requestThumbnail } from "../lib/thumbs";
 import type { Asset } from "../types";
 
 /** Sprites this small are pixel art: scale them up crisp instead of blurry. */
@@ -39,13 +39,16 @@ export function Thumb({
     setFamily(null);
     setFailed(false);
     let live = true;
+    // Withdrawn on unmount, so cards a fast scroll passes never cost a thumbnail.
+    let withdraw = () => {};
     if (asset.kind === "image" && asset.ext === "svg") setSrc(fileUrl(asset.path));
     else if (asset.kind === "image" || asset.kind === "model")
-      void thumbnailFor(asset).then((p) => live && (p ? setSrc(convertFileSrc(p)) : setFailed(true)));
+      withdraw = requestThumbnail(asset, (p) => live && (p ? setSrc(convertFileSrc(p)) : setFailed(true)));
     else if (asset.kind === "font")
       void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : setFailed(true)));
     return () => {
       live = false;
+      withdraw();
     };
   }, [asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);
 
