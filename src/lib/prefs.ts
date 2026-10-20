@@ -12,6 +12,8 @@ export interface Prefs {
   pixelated: boolean;
   /** Group the library by folder, as in the design. */
   grouped: boolean;
+  /** With a folder open, also show its subfolders' files. */
+  subfolders: boolean;
 }
 
 const defaults: Prefs = {
@@ -21,6 +23,7 @@ const defaults: Prefs = {
   thumbSize: 160,
   pixelated: false,
   grouped: true,
+  subfolders: true,
 };
 
 const KEY = "assetden.prefs.v2";

@@ -53,7 +53,7 @@ assert.deepEqual(q("tex t.tga"), [2]);
 assert.deepEqual(q("sfx"), [3]); // an exact tag also matches as plain text
 
 // Views, sorting, grouping
-const scope = (o: Partial<Scope>): Scope => ({ view: "library", kinds: [], folder: null, query: "", filters: noFilters, collection: null, ...o });
+const scope = (o: Partial<Scope>): Scope => ({ view: "library", kinds: [], folder: null, subfolders: true, query: "", filters: noFilters, collection: null, ...o });
 assert.deepEqual(visibleAssets(all, scope({ view: "favorites" }), { key: "name", desc: false }).map((a) => a.id), [1]);
 assert.deepEqual(visibleAssets(all, scope({ folder: { rootId: 1, path: "pack" } }), { key: "name", desc: false }).map((a) => a.id), [1]);
 assert.deepEqual(visibleAssets(all, scope({ view: "collections", collection: { id: 1, name: "c", assetIds: [3, 2] } }), { key: "name", desc: false }).map((a) => a.id), [3, 2]);

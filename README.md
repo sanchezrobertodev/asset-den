@@ -16,6 +16,9 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
 - **Library**: import one or more folders. Assets appear while a folder is still scanning, and a live watcher picks up
   added, renamed and deleted files (renames keep their tags). Engine sidecars (`.meta`, `.import`, `.uid`), hidden
   folders and `node_modules` are skipped.
+- **Folders**: an expandable folder tree in the sidebar with file counts, and a breadcrumb in the header whose carets
+  jump to any subfolder or a recent folder. Subfolder chips drill down, <kbd>Alt+↑</kbd> goes to the parent, and
+  **Include subfolders** switches between a folder's own files and everything below it.
 - **Browse**: a grid or list grouped by folder (or all together), type chips, sorting and a thumbnail-size slider.
   **More filters** narrows by extension, image size, file size, date and tags.
 - **Search** (<kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd>): one box for assets, folders and actions, with `type:audio`,

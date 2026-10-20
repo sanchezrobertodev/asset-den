@@ -16,6 +16,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ### Added
 
+- Folder navigation: an expandable folder tree in the sidebar, a header breadcrumb with jump menus (subfolders and
+  recent folders), subfolder chips, an **Include subfolders** toggle, and <kbd>Alt+↑</kbd> for the parent folder.
 - Search palette (<kbd>Ctrl/⌘ K</kbd>, <kbd>/</kbd>) for assets, folders and actions, with `type:`, `in:`, `#tag` and `size:` filters.
 - Duplicates review: pick the copy to keep, mark groups as not duplicates, or move the copies to the Trash. Their tags,
   favorite and collections move to the kept file, and the files are re-checked for identical content first.

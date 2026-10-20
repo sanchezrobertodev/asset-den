@@ -1,5 +1,5 @@
 import type { Asset, Collection, FolderFilter, Kind, Root, ViewName } from "../types";
-import { folderOf, kindLabel } from "./format.ts";
+import { baseName, folderOf, kindLabel } from "./format.ts";
 import type { SortKey } from "./prefs";
 
 /** Extra filters from the Filters panel. null / empty means "any". */
@@ -118,6 +118,8 @@ export interface Scope {
   view: ViewName;
   kinds: Kind[];
   folder: FolderFilter | null;
+  /** With a folder: also show files in its subfolders. */
+  subfolders: boolean;
   query: string;
   filters: Filters;
   /** The open collection, for the Collections view. */
@@ -135,7 +137,9 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
     if (s.kinds.length && !s.kinds.includes(a.kind)) return false;
     if (s.folder) {
       if (a.rootId !== s.folder.rootId) return false;
-      if (s.folder.path && !(a.relPath === s.folder.path || a.relPath.startsWith(s.folder.path + "/"))) return false;
+      if (!s.subfolders) {
+        if (folderOf(a.relPath) !== s.folder.path) return false;
+      } else if (s.folder.path && !a.relPath.startsWith(s.folder.path + "/")) return false;
     }
     return matchesFilters(a, s.filters, now) && matchesQuery(a, q);
   });
@@ -150,17 +154,22 @@ export interface Group {
   bytes: number;
 }
 
-/** Splits a sorted list into folder groups (keeping the sort inside each), folders in name order. */
-export function groupByFolder(list: Asset[], roots: Root[]): Group[] {
-  const rootName = new Map(roots.map((r) => [r.id, r.path.split(/[\\/]/).filter(Boolean).pop() ?? r.path]));
-  const multi = roots.length > 1;
+/**
+ * Splits a sorted list into folder groups (keeping the sort inside each), folders in name order. With `base` (the open
+ * folder), labels start at that folder's name, like "hero/idle" inside characters/hero.
+ */
+export function groupByFolder(list: Asset[], roots: Root[], base: FolderFilter | null = null): Group[] {
+  const rootName = new Map(roots.map((r) => [r.id, baseName(r.path)]));
+  const multi = roots.length > 1 && !base;
+  const trim = base?.path ? folderOf(base.path) : "";
   const groups = new Map<string, Group>();
   for (const a of list) {
     const folder = folderOf(a.relPath);
     const key = `${a.rootId}:${folder}`;
     let g = groups.get(key);
     if (!g) {
-      const label = [multi ? rootName.get(a.rootId) : "", folder].filter(Boolean).join("/") || rootName.get(a.rootId) || "/";
+      const rel = trim && folder.startsWith(trim + "/") ? folder.slice(trim.length + 1) : folder;
+      const label = [multi ? rootName.get(a.rootId) : "", rel].filter(Boolean).join("/") || rootName.get(a.rootId) || "/";
       g = { key, label, items: [], bytes: 0 };
       groups.set(key, g);
     }
