@@ -106,7 +106,7 @@ export function CollectionsView({ items }: { items: Asset[] }) {
                   }}
                   className="group flex min-w-0 cursor-pointer flex-col gap-[7px]"
                 >
-                  <div className={clsx("relative aspect-square rounded-xl outline-offset-2", isSel && "outline-2 outline-accent")}>
+                  <div className={clsx("relative aspect-square overflow-hidden rounded-xl outline-offset-2", isSel && "outline-2 outline-accent")}>
                     <Thumb asset={a} pixelated={s.pixelated} className="h-full w-full rounded-xl" />
                     <button
                       type="button"

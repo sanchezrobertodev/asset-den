@@ -1,24 +1,30 @@
-// Thumbnail lookups, cached per file version for the session so scrolling back never re-asks the backend.
+// Thumbnails, scheduled so the cards on screen load first (see scheduler.ts) and cached per file version.
 
 import * as THREE from "three";
 import { api } from "../api";
 import type { Asset } from "../types";
 import { addLights, dispose, frame, loadModel } from "./models";
+import { createScheduler } from "./scheduler.ts";
 
-const cache = new Map<string, Promise<string | null>>();
-const key = (a: Asset) => `${a.id}:${a.mtime}:${a.size}`;
-
-export function thumbnailFor(a: Asset): Promise<string | null> {
-  const k = key(a);
-  let p = cache.get(k);
-  if (!p) {
-    p = api
+const thumbs = createScheduler(
+  (a: Asset) =>
+    api
       .thumbnail(a.id)
       .then((path) => path ?? (a.kind === "model" ? renderModelThumb(a) : null))
-      .catch(() => null);
-    cache.set(k, p);
-  }
-  return p;
+      .catch(() => null),
+  8,
+);
+
+/** Asks for a thumbnail; `onReady` gets its path (null when there's none). Returns a function that withdraws the request. */
+export function requestThumbnail(a: Asset, onReady: (path: string | null) => void): () => void {
+  return thumbs.request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
+}
+
+/** Promise form, for one-off uses like the drag icon. */
+export function thumbnailFor(a: Asset): Promise<string | null> {
+  return new Promise((resolve) => {
+    requestThumbnail(a, resolve);
+  });
 }
 
 // One shared offscreen renderer for model thumbnails, used one model at a time.

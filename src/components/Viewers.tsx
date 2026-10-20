@@ -249,7 +249,7 @@ function ModelView({ asset, full }: { asset: Asset; full: boolean }) {
   useEffect(() => wire.current(wireframe), [wireframe, info]);
 
   return (
-    <div className={clsx("stripes relative w-full overflow-hidden rounded-xl", full ? "aspect-[16/10] max-h-full max-w-[820px]" : "h-[200px]")}>
+    <div className={clsx("stripes relative w-full overflow-hidden rounded-xl", full ? "h-full" : "h-[200px]")}>
       <div ref={box} className="h-full w-full" />
       {(error || !info) && (
         <div className="pointer-events-none absolute inset-0">
@@ -383,7 +383,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
           src={fileUrl(asset.path)}
           controls
           autoPlay={full}
-          className={clsx("w-full rounded-xl bg-black object-contain", full ? "max-h-full max-w-[820px]" : "max-h-[200px]")}
+          className={clsx("w-full rounded-xl bg-black object-contain", full ? "h-full" : "max-h-[200px]")}
         >
           This video format can't be played here.
         </video>

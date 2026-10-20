@@ -2,7 +2,8 @@ import clsx from "clsx";
 import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { UpdateNotice } from "./AppUpdate";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { treeFor, type FolderNode } from "../lib/folders";
 import { baseName, bytes, kindLabel } from "../lib/format";
 import type { Theme } from "../lib/prefs";
@@ -94,6 +95,10 @@ export function Sidebar() {
   ];
   const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : Monitor;
   const updatesSupported = useAppUpdate((u) => u.supported);
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    getVersion().then(setVersion, () => {});
+  }, []);
 
   return (
     <aside aria-label="Library" className="flex min-h-0 flex-col border-r border-line px-2.5">
@@ -146,31 +151,33 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="flex flex-none flex-col gap-2 px-3 py-4">
+      <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
         <UpdateNotice />
-        <div className="flex items-end justify-between gap-2">
-          <div className="flex min-w-0 flex-col gap-0.5 text-xs">
-            <span className="truncate text-fg-2">{s.roots.length === 1 ? baseName(s.roots[0].path) : `${s.roots.length} folders`}</span>
-            <span className="font-mono text-[11px] whitespace-nowrap text-faint">
-              {bytes(total)} · {s.assets.length.toLocaleString()} files
-            </span>
-          </div>
-          <div className="flex flex-none">
-            {updatesSupported && (
-              <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
-                <CircleArrowUp className="size-4" />
-              </IconButton>
-            )}
-            <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
-              <ThemeIcon className="size-4" />
-            </IconButton>
-          </div>
+        <div className="flex min-w-0 flex-col gap-0.5 text-xs">
+          <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>
+            {s.roots.length === 1 ? baseName(s.roots[0].path) : `${s.roots.length} folders`}
+          </span>
+          <span className="font-mono text-[11px] whitespace-nowrap text-faint">
+            {bytes(total)} · {s.assets.length.toLocaleString()} files
+          </span>
         </div>
         <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label="Library size by type">
           {KINDS.filter((k) => byKind.get(k)).map((k) => (
             <div key={k} data-kind={k} title={`${kindLabel[k]}: ${bytes(byKind.get(k)!)}`} className="k-bar" style={{ width: `${Math.max(0.6, (byKind.get(k)! / (total || 1)) * 100)}%` }} />
           ))}
         </div>
+      </div>
+      {/* App controls live in their own bar so they never squeeze the library name. */}
+      <div className="-mx-2.5 flex h-11 flex-none items-center gap-0.5 border-t border-line-soft px-3">
+        <span className="mr-auto font-mono text-[11px] text-faint">{version ? `Asset Den ${version}` : "Asset Den"}</span>
+        {updatesSupported && (
+          <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
+            <CircleArrowUp className="size-4" />
+          </IconButton>
+        )}
+        <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
+          <ThemeIcon className="size-4" />
+        </IconButton>
       </div>
     </aside>
   );
