@@ -124,7 +124,8 @@ export function Modal({
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
-    panel.current?.querySelector<HTMLElement>("[data-autofocus], button")?.focus();
+    // The marked default action wins over the first button in the page (the close ×).
+    (panel.current?.querySelector<HTMLElement>("[data-autofocus]") ?? panel.current?.querySelector<HTMLElement>("button"))?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();

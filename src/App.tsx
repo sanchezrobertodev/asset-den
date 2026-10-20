@@ -1,5 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useMemo } from "react";
+import { useAppUpdate } from "./appUpdate";
+import { UpdateDialog } from "./components/AppUpdate";
 import { AssetBrowser } from "./components/AssetBrowser";
 import { CollectionsView } from "./components/CollectionsView";
 import { DuplicatesView } from "./components/DuplicatesView";
@@ -71,7 +73,9 @@ export default function App() {
 
   useEffect(() => {
     void useStore.getState().init();
-    return onSystemThemeChange(() => applyTheme(useStore.getState().theme));
+    void useAppUpdate.getState().init();
+    const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme));
+    return off;
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
@@ -215,6 +219,7 @@ export default function App() {
 
       {s.full && active && <FullView list={s.view === "collections" ? visible : order} />}
       {s.palette && <Palette />}
+      <UpdateDialog />
       <Toast />
       {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
         <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs text-faint">

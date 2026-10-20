@@ -416,6 +416,13 @@ fn open_default(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(
     app.opener().open_path(a.path, None::<&str>).map_err(err)
 }
 
+/// Whether the update feed has entries for this platform. `make release` only publishes Windows builds, and a
+/// platform missing from `latest.json` would get an error on every check, so other platforms don't check at all.
+#[tauri::command]
+fn app_updates_supported() -> bool {
+    cfg!(all(target_os = "windows", target_arch = "x86_64"))
+}
+
 #[tauri::command]
 fn drag_icon(state: State<'_, AppState>) -> String {
     state.drag_icon.display().to_string()
@@ -427,6 +434,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_drag::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let data = app.path().app_data_dir()?;
             let cache = app.path().app_cache_dir()?;
@@ -483,7 +492,8 @@ pub fn run() {
             copy_collection,
             reveal,
             open_default,
-            drag_icon
+            drag_icon,
+            app_updates_supported
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,7 +3,7 @@
 
 CARGO_MANIFEST := --manifest-path src-tauri/Cargo.toml
 
-.PHONY: check install typecheck ui ui-test test lint fmt fmt-check dev build
+.PHONY: check install typecheck ui ui-test test lint fmt fmt-check dev build release release-dry
 
 ## check: run before every push. Frontend typecheck, bundle and tests, rustfmt, clippy, Rust tests
 check: ui ui-test fmt-check lint test
@@ -38,6 +38,14 @@ fmt-check:
 dev:
 	npm run tauri dev
 
-## build: installers for the current OS (see README)
+## build: installers for the current OS, signed for updates when ~/.tauri/asset-den.key exists (see README)
 build:
-	npm run tauri build
+	node scripts/release.mjs --build-only
+
+## release: build, sign and publish the Windows installer and update feed to asset-den-releases
+release:
+	node scripts/release.mjs
+
+## release-dry: the same build and feed in release/v<version>/, without uploading anything
+release-dry:
+	node scripts/release.mjs --dry-run

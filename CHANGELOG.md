@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-19
+
 ### Changed
 
 - New look and layout from the Claude Design redesign: warm dark palette with a matching light theme, Geist fonts,
@@ -16,6 +18,9 @@ All notable changes to Asset Den are documented here. The format follows
 
 ### Added
 
+- In-app updates (Windows): **Check for updates** in the sidebar (and the search palette) looks for a new version, shows what's new
+  and installs it with **Install & restart**. Asset Den also checks quietly on launch. Updates are signed and verified
+  before they install.
 - Folder navigation: an expandable folder tree in the sidebar, a header breadcrumb with jump menus (subfolders and
   recent folders), subfolder chips, an **Include subfolders** toggle, and <kbd>Alt+↑</kbd> for the parent folder.
 - Search palette (<kbd>Ctrl/⌘ K</kbd>, <kbd>/</kbd>) for assets, folders and actions, with `type:`, `in:`, `#tag` and `size:` filters.

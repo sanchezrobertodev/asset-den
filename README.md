@@ -66,6 +66,29 @@ The installers land in `src-tauri/target/release/bundle/`:
 
 To build all three OSes at once, run the **Build** workflow by hand from the repository's Actions tab.
 
+## Updates
+
+On Windows, installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public
+repo holding only installers and the update feed, quietly on launch, and whenever you press **Check for updates** in
+the sidebar footer or the search palette. A new version shows its CHANGELOG notes, and **Install & restart** downloads
+it, verifies its signature and relaunches. The first version with the updater (0.2.0) has to be installed by hand. macOS and Linux
+builds hide **Check for updates** until the feed carries signed builds for them, so they never hit a missing-platform
+error.
+
+### Publishing a release (Windows)
+
+1. Bump the version in `src-tauri/tauri.conf.json`, `package.json` and `src-tauri/Cargo.toml`.
+2. Move the Unreleased notes in `CHANGELOG.md` under `## [x.y.z] - date`. That section becomes the release notes and
+   the in-app "What's new".
+3. Run `make release-dry` to build, sign and write `release/vx.y.z/` (installer, `latest.json`, notes) without uploading.
+4. Run `make release` to do the same and publish a GitHub release (tag `vx.y.z`) in asset-den-releases.
+
+Updates are signed with `~/.tauri/asset-den.key`, created with `npx tauri signer generate`, whose public half is in
+`tauri.conf.json`. **Back it up somewhere safe and never commit it:** installed copies only accept updates signed with
+it, so losing it means users must reinstall by hand. `make build` signs too when the key is present, and otherwise
+builds plain installers with a warning. The GitHub workflow builds plain, unsigned-for-updates installers for all three
+OSes, so macOS and Linux updates need that workflow to sign them too (a future step).
+
 ## Develop
 
 ```bash
