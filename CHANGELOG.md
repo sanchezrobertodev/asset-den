@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-20
+
 ### Fixed
 
 - Thumbnails at the bottom of a big library load right away after a fast scroll. Only cards on screen ask for a
