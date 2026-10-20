@@ -197,6 +197,8 @@ export const useStore = create<State>((set, get) => {
           activeId: s.activeId !== null && ids.has(s.activeId) ? s.activeId : null,
           colSel: collections.some((c) => c.id === s.colSel) ? s.colSel : (collections[0]?.id ?? null),
           dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter((id) => ids.has(id)) })).filter((g) => g.ids.length > 1) ?? null,
+          // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
+          sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => ids.has(Number(id)))),
         }));
       } catch (e) {
         get().setError(e);
