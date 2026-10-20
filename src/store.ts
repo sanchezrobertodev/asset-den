@@ -243,6 +243,8 @@ export const useStore = create<State>((set, get) => {
           ...keepOnly(s, (id) => ids.has(id)),
         }));
       } catch (e) {
+        // Keeping a gap would retry the failing load at once, forever. The next delta finds the gap and retries.
+        incoming = [];
         get().setError(e);
       } finally {
         loading--;

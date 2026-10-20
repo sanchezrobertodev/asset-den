@@ -18,7 +18,8 @@ export function deltasAfter(seq: number, received: AssetsDelta[]): AssetsDelta[]
 
 /**
  * `assets` with `deltas` applied in order: changed rows replaced in place, new rows appended, removed rows dropped.
- * `gone` is the ids that ended up removed. Returns the same array when nothing changed.
+ * `gone` is every id removed along the way, including ones SQLite reused for a new file (that row is appended as new),
+ * so state tied to the old file can be cleared. Returns the same array when nothing changed.
  */
 export function applyDeltas(assets: Asset[], deltas: AssetsDelta[]): { assets: Asset[]; gone: Set<number> } {
   const fresh = new Map<number, Asset>();
@@ -28,10 +29,7 @@ export function applyDeltas(assets: Asset[], deltas: AssetsDelta[]): { assets: A
       fresh.delete(id);
       gone.add(id);
     }
-    for (const a of d.upserted) {
-      gone.delete(a.id);
-      fresh.set(a.id, a);
-    }
+    for (const a of d.upserted) fresh.set(a.id, a);
   }
   if (!fresh.size && !gone.size) return { assets, gone };
   const out: Asset[] = [];

@@ -36,14 +36,15 @@ const all = [asset(1, "a.png"), asset(2, "b.png"), asset(3, "c.png")];
   assert.equal(all.length, 3, "input is not mutated");
 }
 
-// Later deltas win: added then removed is gone; removed then re-added (a reused id) is back.
+// Later deltas win: added then removed is gone; a removed id reused for a new file comes back as a new row, and
+// still counts as gone so the old file's selection and settings are cleared.
 {
   const { assets, gone } = applyDeltas(all, [delta(1, [asset(5, "e.png")]), delta(2, [], [5, 1]), delta(3, [asset(1, "again.png")])]);
   assert.deepEqual(
     assets.map((a) => a.relPath),
-    ["again.png", "b.png", "c.png"],
+    ["b.png", "c.png", "again.png"],
   );
-  assert.deepEqual([...gone], [5]);
+  assert.deepEqual([...gone], [5, 1]);
 }
 
 // Nothing to do keeps the same array, so memoized views don't recompute.
