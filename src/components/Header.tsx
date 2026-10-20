@@ -16,8 +16,16 @@ export function Header() {
   const { view, query, folder, setPalette, importFolder } = useStore();
   return (
     <div className="flex h-[60px] flex-none items-center gap-3.5 border-b border-line-soft px-7">
-      {view === "library" && folder ? (
-        <Breadcrumbs />
+      {(view === "library" || view === "favorites") && folder ? (
+        <div className="flex min-w-0 flex-none items-center gap-1.5">
+          {view === "favorites" && (
+            <>
+              <h1 className="text-[17px] font-semibold tracking-[-.01em]">Favorites</h1>
+              <span className="text-muted">in</span>
+            </>
+          )}
+          <Breadcrumbs />
+        </div>
       ) : (
         <h1 className="flex-none text-[17px] font-semibold tracking-[-.01em]">{titles[view]}</h1>
       )}

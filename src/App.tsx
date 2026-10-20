@@ -12,7 +12,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Button, Kbd } from "./components/ui";
 import { activeFilterCount, groupByFolder, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
-import { baseName } from "./lib/format";
+import { baseName, folderOf } from "./lib/format";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { useStore } from "./store";
 
@@ -115,7 +115,7 @@ export default function App() {
         st.setPalette(true);
         return;
       }
-      if (e.altKey && e.key === "ArrowUp" && st.folder?.path) {
+      if (e.altKey && e.key === "ArrowUp" && st.folder?.path && (st.view === "library" || st.view === "favorites")) {
         e.preventDefault();
         st.setFolder(parentOf(st.folder));
         return;
@@ -158,6 +158,11 @@ export default function App() {
 
   const scanning = Object.keys(s.scanning).length > 0;
   const filtered = s.query || s.kinds.length > 0 || s.folder !== null || activeFilterCount(s.filters) > 0;
+  // Whether the open folder holds any files itself, before any filter; decides which empty state fits.
+  const hasDirectFiles = useMemo(
+    () => !!s.folder && s.assets.some((a) => a.rootId === s.folder!.rootId && folderOf(a.relPath) === s.folder!.path),
+    [s.assets, s.folder],
+  );
 
   return (
     <div className="relative grid h-full grid-cols-[220px_minmax(0,1fr)] overflow-hidden bg-bg text-fg">
@@ -183,7 +188,7 @@ export default function App() {
                   <AssetBrowser assets={order} groups={groups} />
                 ) : scanning && !s.assets.length ? (
                   <Empty title="Scanning…" body="Assets appear here as soon as they're indexed." />
-                ) : s.folder && !s.subfolders ? (
+                ) : s.folder && !s.subfolders && !hasDirectFiles ? (
                   <Empty
                     title={`No files directly in ${s.folder.path ? baseName(s.folder.path) : "this folder"}`}
                     body="Its assets are in subfolders."
