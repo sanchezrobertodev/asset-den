@@ -73,13 +73,9 @@ export default function App() {
 
   useEffect(() => {
     void useStore.getState().init();
-    // Quietly look for a new version once the library is up; failures (offline, no release yet) stay silent.
-    const t = setTimeout(() => void useAppUpdate.getState().check({ quiet: true }), 4000);
+    void useAppUpdate.getState().init();
     const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme));
-    return () => {
-      clearTimeout(t);
-      off();
-    };
+    return off;
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;

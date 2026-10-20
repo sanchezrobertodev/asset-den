@@ -54,6 +54,8 @@ export const api = {
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
+  /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */
+  appUpdatesSupported: () => invoke<boolean>("app_updates_supported"),
   /** Asks the release feed for a newer, signed version of Asset Den. null when up to date. */
   checkAppUpdate: async (): Promise<AppUpdate | null> => {
     const update = await check();

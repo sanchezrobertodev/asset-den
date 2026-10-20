@@ -5,6 +5,8 @@ import { api, errorText, type AppUpdate, type DownloadProgress } from "./api";
 export type AppUpdatePhase = "idle" | "checking" | "upToDate" | "available" | "installing" | "error";
 
 interface AppUpdateState {
+  /** null until known; false where the feed has no build for this platform (no checks, no UI). */
+  supported: boolean | null;
   phase: AppUpdatePhase;
   update: AppUpdate | null;
   progress: DownloadProgress | null;
@@ -13,6 +15,8 @@ interface AppUpdateState {
   installFailed: boolean;
   dialogOpen: boolean;
 
+  /** Asks the backend whether this platform gets updates, then schedules the quiet launch check if it does. */
+  init: () => Promise<void>;
   /** `quiet` (the launch check) keeps failures (offline, no release yet) out of sight. */
   check: (opts?: { quiet?: boolean }) => Promise<void>;
   install: () => Promise<void>;
@@ -20,6 +24,7 @@ interface AppUpdateState {
 }
 
 export const useAppUpdate = create<AppUpdateState>((set, get) => ({
+  supported: null,
   phase: "idle",
   update: null,
   progress: null,
@@ -27,9 +32,19 @@ export const useAppUpdate = create<AppUpdateState>((set, get) => ({
   installFailed: false,
   dialogOpen: false,
 
+  init: async () => {
+    try {
+      set({ supported: await api.appUpdatesSupported() });
+    } catch {
+      set({ supported: false });
+    }
+    // Look once the library is up; a quiet check keeps failures (offline, no release yet) silent.
+    if (get().supported) setTimeout(() => void get().check({ quiet: true }), 4000);
+  },
+
   check: async (opts) => {
-    const { phase } = get();
-    if (phase === "checking" || phase === "installing") return;
+    const { phase, supported } = get();
+    if (!supported || phase === "checking" || phase === "installing") return;
     set({ phase: "checking", error: null, installFailed: false });
     try {
       const update = await api.checkAppUpdate();

@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
-import { openUpdates } from "../appUpdate";
+import { openUpdates, useAppUpdate } from "../appUpdate";
 import { UpdateNotice } from "./AppUpdate";
 import { useMemo, type ReactNode } from "react";
 import { treeFor, type FolderNode } from "../lib/folders";
@@ -93,6 +93,7 @@ export function Sidebar() {
     { view: "insights", label: "Insights" },
   ];
   const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : Monitor;
+  const updatesSupported = useAppUpdate((u) => u.supported);
 
   return (
     <aside aria-label="Library" className="flex min-h-0 flex-col border-r border-line px-2.5">
@@ -155,9 +156,11 @@ export function Sidebar() {
             </span>
           </div>
           <div className="flex flex-none">
-            <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
-              <CircleArrowUp className="size-4" />
-            </IconButton>
+            {updatesSupported && (
+              <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
+                <CircleArrowUp className="size-4" />
+              </IconButton>
+            )}
             <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
               <ThemeIcon className="size-4" />
             </IconButton>

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { openUpdates } from "../appUpdate";
+import { openUpdates, useAppUpdate } from "../appUpdate";
 import { matchesQuery, parseQuery } from "../lib/filter";
 import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
@@ -104,12 +104,12 @@ export function Palette() {
         s.setLayout("grid");
         s.go("library");
       }],
-      ["Check for updates", openUpdates],
       ["Clear search and filters", () => {
         s.clearFilters();
         s.go("library");
       }],
     ];
+    if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
     const words = parsed.text;
     const onlyText = hasQuery && !parsed.types && !parsed.folder && !parsed.tags.length;
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];

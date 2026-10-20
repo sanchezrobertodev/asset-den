@@ -18,7 +18,7 @@ All notable changes to Asset Den are documented here. The format follows
 
 ### Added
 
-- In-app updates: **Check for updates** in the sidebar (and the search palette) looks for a new version, shows what's new
+- In-app updates (Windows): **Check for updates** in the sidebar (and the search palette) looks for a new version, shows what's new
   and installs it with **Install & restart**. Asset Den also checks quietly on launch. Updates are signed and verified
   before they install.
 - Folder navigation: an expandable folder tree in the sidebar, a header breadcrumb with jump menus (subfolders and

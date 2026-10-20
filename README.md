@@ -68,10 +68,12 @@ To build all three OSes at once, run the **Build** workflow by hand from the rep
 
 ## Updates
 
-Installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public
+On Windows, installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public
 repo holding only installers and the update feed, quietly on launch, and whenever you press **Check for updates** in
 the sidebar footer or the search palette. A new version shows its CHANGELOG notes, and **Install & restart** downloads
-it, verifies its signature and relaunches. The first version with the updater (0.2.0) has to be installed by hand.
+it, verifies its signature and relaunches. The first version with the updater (0.2.0) has to be installed by hand. macOS and Linux
+builds hide **Check for updates** until the feed carries signed builds for them, so they never hit a missing-platform
+error.
 
 ### Publishing a release (Windows)
 
