@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import type { AssetsDelta } from "./lib/delta";
 import type { Asset, Collection, DupGroup, Root, ScanProgress, TextPreview } from "./types";
 
 export interface AppUpdate {
@@ -26,7 +27,8 @@ export const api = {
   addRoot: (path: string) => invoke<Root>("add_root", { path }),
   removeRoot: (id: number) => invoke<void>("remove_root", { id }),
   rescan: (id: number) => invoke<void>("rescan", { id }),
-  listAssets: () => invoke<Asset[]>("list_assets"),
+  /** Every asset, with the number of the last delta it includes. */
+  listAssets: () => invoke<{ seq: number; assets: Asset[] }>("list_assets"),
   thumbnail: (id: number) => invoke<string | null>("thumbnail", { id }),
   saveThumbnail: (id: number, png: Uint8Array) => invoke<string>("save_thumbnail", { id, png: Array.from(png) }),
   preview: (id: number) => invoke<string>("preview", { id }),
@@ -51,7 +53,9 @@ export const api = {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;
   },
+  /** A scan or a batch of file events finished; its changes came before as deltas. */
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),
+  onAssetsDelta: (cb: (d: AssetsDelta) => void): Promise<UnlistenFn> => listen<AssetsDelta>("assets-delta", (e) => cb(e.payload)),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */

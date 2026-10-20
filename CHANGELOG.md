@@ -5,6 +5,12 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Big libraries stay responsive while files change. Scans and file events now send only the files that changed
+  instead of the whole library, so a rescan where nothing changed costs the UI nothing, a new file appears in about half
+  a second, and importing a large folder no longer freezes the window.
+
 ## [0.2.1] - 2026-10-20
 
 ### Fixed

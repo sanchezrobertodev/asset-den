@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, errorText } from "./api";
+import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
 import { noFilters, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
@@ -85,6 +86,11 @@ interface State extends Prefs {
 const prefs = loadPrefs();
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let toastSeq = 0;
+/** Number of the last delta `assets` includes; -1 until the first full load. */
+let seq = -1;
+/** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
+let loading = 0;
+let incoming: AssetsDelta[] = [];
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -117,6 +123,50 @@ export const useStore = create<State>((set, get) => {
     };
   };
   const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
+  /** Forgets selection, the active asset and duplicate entries for assets that are gone. */
+  const keepOnly = (s: State, has: (id: number) => boolean): Partial<State> => ({
+    selected: new Set([...s.selected].filter(has)),
+    activeId: s.activeId !== null && has(s.activeId) ? s.activeId : null,
+    dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter(has) })).filter((g) => g.ids.length > 1) ?? null,
+  });
+  /** Patches `assets` with the deltas received so far, or reloads everything if one went missing. True if it patched. */
+  const applyIncoming = () => {
+    if (loading || seq < 0) return false;
+    const next = deltasAfter(seq, incoming);
+    if (!next) {
+      void get().reload();
+      return false;
+    }
+    incoming = [];
+    if (!next.length) return false;
+    seq = next[next.length - 1].seq;
+    set((s) => {
+      const { assets, gone } = applyDeltas(s.assets, next);
+      return gone.size ? { assets, ...keepOnly(s, (id) => !gone.has(id)) } : { assets };
+    });
+    return true;
+  };
+  // A scan sends a delta per batch: apply the first right away, then at most once a second, or less often when an
+  // update takes long to render (big libraries: every update re-sorts the whole list), so the UI stays responsive.
+  let last = 0;
+  let gap = 1000;
+  let queued: ReturnType<typeof setTimeout> | null = null;
+  const flush = () => {
+    if (queued) return;
+    const wait = last + gap - Date.now();
+    if (wait > 0) {
+      queued = setTimeout(() => {
+        queued = null;
+        flush();
+      }, wait);
+      return;
+    }
+    last = Date.now();
+    const t = performance.now();
+    if (!applyIncoming()) return;
+    // Two frames later the update has rendered; wait at least 4x that long before the next one.
+    requestAnimationFrame(() => requestAnimationFrame(() => (gap = Math.max(1000, 4 * (performance.now() - t)))));
+  };
 
   return {
     ...prefs,
@@ -142,60 +192,56 @@ export const useStore = create<State>((set, get) => {
     recentFolders: [],
 
     init: async () => {
-      // While a scan runs, show new batches right away, then at most once a second, never two reloads at once.
-      let last = 0;
-      let busy = false;
-      let queued: ReturnType<typeof setTimeout> | null = null;
-      const refresh = async () => {
-        if (busy || queued) return;
-        const wait = last + 1000 - Date.now();
-        if (wait > 0) {
-          queued = setTimeout(() => {
-            queued = null;
-            void refresh();
-          }, wait);
-          return;
-        }
-        busy = true;
-        last = Date.now();
-        await get().reload();
-        busy = false;
-      };
-      await api.onScanProgress((p) => {
+      await api.onAssetsDelta((d) => {
+        incoming.push(d);
+        flush();
+      });
+      await api.onScanProgress((p) =>
         set((s) => {
           const scanning = { ...s.scanning };
           if (p.done) delete scanning[p.rootId];
           else scanning[p.rootId] = p.count;
           return { scanning };
-        });
-        if (!p.done) void refresh();
-      });
+        }),
+      );
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
-        // Bursts of file events arrive close together; reload once, then re-check duplicates.
+        // A scan or a burst of file events ended: catch up once, then refresh collections and re-check duplicates.
         if (pending) clearTimeout(pending);
-        pending = setTimeout(() => void get().reload().then(() => get().findDuplicates()), 150);
+        pending = setTimeout(async () => {
+          applyIncoming();
+          try {
+            set({ collections: await api.listCollections() });
+          } catch (e) {
+            get().setError(e);
+          }
+          await get().findDuplicates();
+        }, 150);
       });
       await get().reload();
       void get().findDuplicates();
     },
 
     reload: async () => {
+      loading++;
       try {
-        const [roots, assets, collections] = await Promise.all([api.listRoots(), api.listAssets(), api.listCollections()]);
-        const ids = new Set(assets.map((a) => a.id));
+        const [roots, list, collections] = await Promise.all([api.listRoots(), api.listAssets(), api.listCollections()]);
+        seq = list.seq;
+        const ids = new Set(list.assets.map((a) => a.id));
         set((s) => ({
           roots,
-          assets,
+          assets: list.assets,
           collections,
-          selected: new Set([...s.selected].filter((id) => ids.has(id))),
-          activeId: s.activeId !== null && ids.has(s.activeId) ? s.activeId : null,
           colSel: collections.some((c) => c.id === s.colSel) ? s.colSel : (collections[0]?.id ?? null),
-          dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter((id) => ids.has(id)) })).filter((g) => g.ids.length > 1) ?? null,
+          ...keepOnly(s, (id) => ids.has(id)),
         }));
       } catch (e) {
         get().setError(e);
+      } finally {
+        loading--;
       }
+      // Deltas that arrived during the load, minus the ones it already had.
+      applyIncoming();
     },
 
     importFolder: async () => {
