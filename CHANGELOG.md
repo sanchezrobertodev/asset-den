@@ -8,7 +8,8 @@ All notable changes to Asset Den are documented here. The format follows
 ### Fixed
 
 - Thumbnails at the bottom of a big library load right away after a fast scroll. Only cards on screen ask for a
-  thumbnail, the newest first, and cards scrolled past withdraw their request. Thumbnails also use every CPU core.
+  thumbnail, the newest first, and cards that leave the screen withdraw their request. This also covers long lists
+  that show every item at once (collections, duplicates, the filmstrip). Thumbnails use every CPU core.
 - Tall images (portraits, character art) no longer stretch their grid card past its square.
 - The full-screen 3D viewport and video fill the screen on large monitors instead of stopping at 820 px.
 - Theme and **Check for updates** moved to their own bar at the bottom of the sidebar, next to the app version, so long

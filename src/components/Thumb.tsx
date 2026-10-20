@@ -1,7 +1,8 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fileUrl } from "../api";
+import { watchOnScreen } from "../lib/onScreen";
 import { fontFamily, requestThumbnail } from "../lib/thumbs";
 import type { Asset } from "../types";
 
@@ -33,16 +34,24 @@ export function Thumb({
   const [src, setSrc] = useState<string | null>(null);
   const [family, setFamily] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [onScreen, setOnScreen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => (box.current ? watchOnScreen(box.current, setOnScreen) : undefined), []);
 
   useEffect(() => {
-    setSrc(null);
+    setSrc(asset.kind === "image" && asset.ext === "svg" ? fileUrl(asset.path) : null);
     setFamily(null);
     setFailed(false);
+  }, [asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);
+
+  // Ask only while the card is on screen (or about to be), and withdraw when it leaves: a fast scroll or a long
+  // non-virtualized list (collections, duplicates, filmstrip) then costs only the thumbnails you can actually see.
+  useEffect(() => {
+    if (!onScreen || (asset.kind === "image" && asset.ext === "svg")) return;
     let live = true;
-    // Withdrawn on unmount, so cards a fast scroll passes never cost a thumbnail.
     let withdraw = () => {};
-    if (asset.kind === "image" && asset.ext === "svg") setSrc(fileUrl(asset.path));
-    else if (asset.kind === "image" || asset.kind === "model")
+    if (asset.kind === "image" || asset.kind === "model")
       withdraw = requestThumbnail(asset, (p) => live && (p ? setSrc(convertFileSrc(p)) : setFailed(true)));
     else if (asset.kind === "font")
       void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : setFailed(true)));
@@ -50,11 +59,13 @@ export function Thumb({
       live = false;
       withdraw();
     };
-  }, [asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onScreen, asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);
 
   const picture = src && !failed;
   return (
     <div
+      ref={box}
       data-kind={asset.kind}
       className={clsx(
         "flex items-center justify-center overflow-hidden",
