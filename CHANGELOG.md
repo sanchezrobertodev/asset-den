@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-20
+
 ### Added
 
 - **Animate** plays an image as a sprite sheet, in the side panel and in full screen. It guesses the grid from the
