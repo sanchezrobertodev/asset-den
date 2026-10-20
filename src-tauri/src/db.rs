@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OptionalExtension, Result, params};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 const SCHEMA: &str = "
 PRAGMA journal_mode = WAL;
@@ -36,6 +36,12 @@ CREATE TABLE IF NOT EXISTS collection_assets (
   collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
   asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
   PRIMARY KEY (collection_id, asset_id)
+);
+CREATE TABLE IF NOT EXISTS sprite_sheets (
+  asset_id INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+  cols INTEGER NOT NULL,
+  rows INTEGER NOT NULL,
+  fps INTEGER NOT NULL
 );
 ";
 
@@ -245,5 +251,41 @@ pub fn set_in_collection(conn: &Connection, collection: i64, ids: &[i64], member
     for id in ids {
         conn.execute(sql, params![collection, id])?;
     }
+    Ok(())
+}
+
+/// How an image is sliced into animation frames. Keyed by asset id like tags, so it survives rescans and renames.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub struct SpriteSheet {
+    pub cols: u32,
+    pub rows: u32,
+    pub fps: u32,
+}
+
+pub fn sprite_sheet(conn: &Connection, id: i64) -> Result<Option<SpriteSheet>> {
+    conn.query_row(
+        "SELECT cols, rows, fps FROM sprite_sheets WHERE asset_id = ?1",
+        [id],
+        |r| {
+            Ok(SpriteSheet {
+                cols: r.get(0)?,
+                rows: r.get(1)?,
+                fps: r.get(2)?,
+            })
+        },
+    )
+    .optional()
+}
+
+pub fn set_sprite_sheet(conn: &Connection, id: i64, s: SpriteSheet) -> std::result::Result<(), String> {
+    if !(1..=1024).contains(&s.cols) || !(1..=1024).contains(&s.rows) || !(1..=60).contains(&s.fps) {
+        return Err("Use 1 to 1024 columns and rows, and 1 to 60 fps.".into());
+    }
+    conn.execute(
+        "INSERT INTO sprite_sheets (asset_id, cols, rows, fps) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT (asset_id) DO UPDATE SET cols = ?2, rows = ?3, fps = ?4",
+        params![id, s.cols, s.rows, s.fps],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }

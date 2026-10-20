@@ -25,7 +25,7 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   `in:sprites`, `#player` and `size:>1mb`. Its first result applies the search to the grid.
 - **Side panel** (<kbd>Space</kbd>) and **full screen** (<kbd>Enter</kbd>) previews:
   - images: zoom and pan, pixel-art scaling, transparency checkerboard (PNG, JPG, GIF, WebP, BMP, SVG, and
-    TGA/PSD/TIFF via a decoded preview)
+    TGA/PSD/TIFF via a decoded preview), and **Animate** to play a sprite sheet with a remembered grid and fps
   - audio: waveform and playback, plus play-on-hover in the grid
   - 3D models: orbit, wireframe, triangle counts, the first animation (GLB/glTF, FBX, OBJ, STL), with auto-rendered
     thumbnails
@@ -115,7 +115,7 @@ to build installers for every OS.
 - Which audio and video formats play depends on the OS webview. Windows (WebView2) plays the most; on Linux, install
   the GStreamer plugins for MP4/H.264.
 - A file renamed while the app is closed shows up as a new file on the next scan, so its tags don't follow it.
-- Video thumbnails, sprite-sheet slicing and syntax highlighting are not built yet.
+- Video thumbnails and syntax highlighting are not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
   `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.
 
