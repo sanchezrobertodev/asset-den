@@ -26,6 +26,7 @@ ui-test:
 	node --experimental-strip-types src/lib/sprites.test.ts
 	node --experimental-strip-types src/lib/delta.test.ts
 	node --experimental-strip-types src/lib/mtl.test.ts
+	node scripts/feed.test.mjs
 
 test:
 	cargo test $(CARGO_MANIFEST)
@@ -46,7 +47,8 @@ dev:
 build:
 	node scripts/release.mjs --build-only
 
-## release: build, sign and publish the Windows installer and update feed to asset-den-releases
+## release: build, sign and publish the Windows installer and its update-feed entries to asset-den-releases
+## (macOS and Linux come from the Release workflow; see README)
 release:
 	node scripts/release.mjs
 

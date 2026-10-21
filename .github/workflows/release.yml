@@ -1,56 +1,53 @@
-name: Build
+name: Release
 
-# Manual only: day-to-day checks run locally with `make check`. Start it from the Actions tab (or
-# `gh workflow run Build`) to build Windows, macOS and Linux installers, e.g. for a release.
+# Manual only: day-to-day checks run locally with `make check`, and macOS minutes are expensive on a private repo.
+# Builds the signed macOS (universal) and Linux bundles of one version and adds them, with their update-feed entries,
+# to that version's release in asset-den-releases. Windows comes from `make release`; either can go first (see README).
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, without the "v". Must match tauri.conf.json on the branch you run this from.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version }}
 
 jobs:
-  test:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Linux build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: cargo test --manifest-path src-tauri/Cargo.toml
-
   bundle:
-    needs: test
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - platform: windows-latest
-            args: ""
-          - platform: macos-latest
-            args: "--target universal-apple-darwin"
-          - platform: ubuntu-22.04
-            args: ""
-    runs-on: ${{ matrix.platform }}
-    permissions:
-      contents: write
+          - os: macos-latest
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target universal-apple-darwin --bundles app,dmg
+          - os: ubuntu-22.04
+            targets: ""
+            args: --bundles appimage,deb
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: Check the version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          actual=$(node -p 'require("./src-tauri/tauri.conf.json").version')
+          if [ "$actual" != "$VERSION" ]; then
+            echo "::error::tauri.conf.json on ${GITHUB_REF_NAME} is $actual, not $VERSION"
+            exit 1
+          fi
       - name: Linux build dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.targets }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -59,25 +56,41 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
-        id: tauri
+      - name: Build and sign for updates
+        run: npx tauri build ${{ matrix.args }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # Updates are signed locally by make release; CI builds plain installers.
-          args: ${{ matrix.args }} --config src-tauri/tauri.no-updater.conf.json
-          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Asset Den {0}', github.ref_name) || '' }}
-          releaseDraft: true
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Ad-hoc code signature, no Apple account: Apple Silicon won't run an app without one.
+          APPLE_SIGNING_IDENTITY: "-"
       - uses: actions/upload-artifact@v7
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
-          name: asset-den-${{ matrix.platform }}
+          name: bundles-${{ runner.os }}
           path: |
-            src-tauri/target/**/release/bundle/**/*.msi
-            src-tauri/target/**/release/bundle/**/*.exe
-            src-tauri/target/**/release/bundle/**/*.dmg
-            src-tauri/target/**/release/bundle/**/*.AppImage
-            src-tauri/target/**/release/bundle/**/*.deb
-            src-tauri/target/**/release/bundle/**/*.rpm
-          if-no-files-found: ignore
+            src-tauri/target/**/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/**/release/bundle/macos/*.app.tar.gz.sig
+            src-tauri/target/**/release/bundle/dmg/*.dmg
+            src-tauri/target/**/release/bundle/appimage/*.AppImage
+            src-tauri/target/**/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/**/release/bundle/deb/*.deb
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bundles-*
+          path: bundles
+          merge-multiple: true
+      - name: Add to asset-den-releases
+        run: node scripts/release.mjs --add-platforms bundles
+        env:
+          # Fine-grained token with Contents read/write on asset-den-releases only.
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}

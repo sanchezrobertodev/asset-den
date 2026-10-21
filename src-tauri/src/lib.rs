@@ -467,11 +467,18 @@ fn open_default(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(
     app.opener().open_path(a.path, None::<&str>).map_err(err)
 }
 
-/// Whether the update feed has entries for this platform. `make release` only publishes Windows builds, and a
-/// platform missing from `latest.json` would get an error on every check, so other platforms don't check at all.
+/// Whether this install can update itself from the feed: Windows x64, macOS (one universal build) and the Linux
+/// AppImage. Anything else would get a missing-platform error on every check, so it doesn't check at all.
 #[tauri::command]
 fn app_updates_supported() -> bool {
-    cfg!(all(target_os = "windows", target_arch = "x86_64"))
+    if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        // AppImages set APPIMAGE to their own path; a .deb install is the package manager's to update.
+        return std::env::var_os("APPIMAGE").is_some();
+    }
+    cfg!(any(
+        all(target_os = "windows", target_arch = "x86_64"),
+        target_os = "macos"
+    ))
 }
 
 #[tauri::command]

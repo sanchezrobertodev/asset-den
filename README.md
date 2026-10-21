@@ -58,51 +58,74 @@ Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side 
 
 ## Install
 
-**Windows:** download `AssetDen_<version>_x64-setup.exe` from the
-[latest release](https://github.com/sanchezrobertodev/asset-den-releases/releases/latest) and run it. It installs per
-user, without admin rights. The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**.
-From then on the app updates itself (see [Updates](#updates)).
+Download the file for your OS from the
+[latest release](https://github.com/sanchezrobertodev/asset-den-releases/releases/latest). From then on the app
+updates itself (see [Updates](#updates)).
 
-**macOS and Linux** have no published builds yet, so build the installer on the OS you want it for. Building needs
-Node 22+, Rust stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for that OS.
+| OS | File | Notes |
+|---|---|---|
+| Windows | `AssetDen_<version>_x64-setup.exe` | Installs per user, without admin rights. The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**. |
+| macOS | `AssetDen_<version>_universal.dmg` | Apple Silicon and Intel. Drag the app to Applications. It isn't signed with an Apple Developer ID or notarized, so Gatekeeper blocks the first launch: open **System Settings → Privacy & Security** and choose **Open Anyway** (or run `xattr -dr com.apple.quarantine "/Applications/Asset Den.app"`). Updates installed by the app don't ask again. |
+| Linux | `AssetDen_<version>_amd64.AppImage` or `AssetDen_<version>_amd64.deb` | The AppImage runs anywhere (`chmod +x` it first) and updates itself. The `.deb` installs system-wide and doesn't update itself: install the next `.deb` by hand. Install the GStreamer plugins for MP4/H.264 video previews. |
+
+### Build it yourself
+
+Building needs Node 22+, Rust stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
 ```bash
 make install
 make build
 ```
 
-The installers land in `src-tauri/target/release/bundle/`:
-
-| OS | Installer | Notes |
-|---|---|---|
-| Windows | `nsis/Asset Den_<version>_x64-setup.exe` (per-user, no admin) or `msi/…_x64_en-US.msi` | The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**. |
-| macOS | `dmg/Asset Den_<version>_<arch>.dmg` | Unsigned: the first time, right-click the app and choose **Open**. |
-| Linux | `appimage/…AppImage`, `deb/…deb` or `rpm/…rpm` | Install the GStreamer plugins for MP4/H.264 video previews. |
-
-To build all three OSes at once, run the **Build** workflow by hand from the repository's Actions tab.
+The installers land in `src-tauri/target/release/bundle/` (`nsis/` or `msi/` on Windows, `dmg/` on macOS,
+`appimage/`, `deb/` or `rpm/` on Linux). A build without the signing key can't install updates from the feed.
 
 ## Updates
 
-On Windows, installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public
-repo holding only installers and the update feed, quietly on launch, and whenever you press **Check for updates** in
-the sidebar footer or the search palette. A new version shows its CHANGELOG notes, and **Install & restart** downloads
-it, verifies its signature and relaunches. The first version with the updater (0.2.0) has to be installed by hand. macOS and Linux
-builds hide **Check for updates** until the feed carries signed builds for them, so they never hit a missing-platform
-error.
+Installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public repo
+holding only installers and the update feed, quietly on launch, and whenever you press **Check for updates** in the
+sidebar footer or the search palette. A new version shows its CHANGELOG notes, and **Install & restart** downloads it,
+verifies its signature and relaunches.
 
-### Publishing a release (Windows)
+Windows x64, macOS (both architectures) and the Linux AppImage update themselves. A `.deb` install, or a platform the
+feed has no build for, hides **Check for updates**, so it never hits a missing-platform error. The first version with
+the updater has to be installed by hand: 0.2.0 on Windows, and the first release with macOS and Linux builds there.
+
+### Publishing a release
+
+Every release carries all three OSes in one GitHub release and one `latest.json`. Windows is built and signed on a
+Windows PC with `make release`; macOS and Linux are built by the **Release** workflow on GitHub Actions. Each merges its
+entries into the release's `latest.json` instead of replacing it, so they can run in either order.
 
 1. Bump the version in `src-tauri/tauri.conf.json`, `package.json` and `src-tauri/Cargo.toml`.
 2. Move the Unreleased notes in `CHANGELOG.md` under `## [x.y.z] - date`. That section becomes the release notes and
-   the in-app "What's new".
-3. Run `make release-dry` to build, sign and write `release/vx.y.z/` (installer, `latest.json`, notes) without uploading.
-4. Run `make release` to do the same and publish a GitHub release (tag `vx.y.z`) in asset-den-releases.
+   the in-app "What's new". Push the commit.
+3. Run the **Release** workflow from the Actions tab on that branch, with the version (`x.y.z`), or
+   `gh workflow run Release --ref master -f version=x.y.z`. It builds the universal macOS `.app` and `.dmg` and the
+   Linux AppImage and `.deb`, signs the update bundles, and adds them to release `vx.y.z` in asset-den-releases,
+   creating it as a draft if it doesn't exist yet.
+4. Run `make release-dry` to build, sign and write `release/vx.y.z/` (installer, `latest.json`, notes) without
+   uploading, then `make release` to upload the Windows installer, merge its feed entries and publish the release as
+   latest.
+
+Running the workflow first is the smooth order: the draft stays invisible to installed copies until `make release`
+publishes it with every platform in the feed. If `make release` goes first, macOS and Linux copies get a "platform not
+found" error from **Check for updates** (the launch check stays quiet) until the workflow finishes. Re-running either
+replaces only its own files and feed entries. Don't run both at the same moment: the second could overwrite the
+first's feed entries.
 
 Updates are signed with `~/.tauri/asset-den.key`, created with `npx tauri signer generate`, whose public half is in
 `tauri.conf.json`. **Back it up somewhere safe and never commit it:** installed copies only accept updates signed with
 it, so losing it means users must reinstall by hand. `make build` signs too when the key is present, and otherwise
-builds plain installers with a warning. The GitHub workflow builds plain, unsigned-for-updates installers for all three
-OSes, so macOS and Linux updates need that workflow to sign them too (a future step).
+builds plain installers with a warning.
+
+The workflow needs three repository secrets in asset-den (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | The contents of `~/.tauri/asset-den.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Its password. Skip it if the key has none: GitHub doesn't store empty secrets, and an unset one reads as empty. |
+| `RELEASES_TOKEN` | A fine-grained personal access token limited to asset-den-releases, with **Contents: Read and write** |
 
 ## Develop
 
@@ -112,8 +135,8 @@ npm run tauri dev
 ```
 
 Run `make check` before every push. It typechecks and bundles the frontend, then runs rustfmt, clippy (warnings are
-errors) and the Rust tests. These local checks replace CI on push: the GitHub workflow only runs when started by hand,
-to build installers for every OS.
+errors) and the Rust tests. These local checks replace CI on push: the only GitHub workflow is **Release**, started by
+hand to publish the macOS and Linux builds.
 
 ## Where things live
 
