@@ -4,7 +4,7 @@ A desktop asset browser for game developers on Windows, macOS and Linux. Point i
 indexes every sprite, sound, model, font, video and data file so you can find, preview, tag and drag them into your
 engine.
 
-![Asset Den browsing a sample library](docs/screenshot-grid.png)
+![Asset Den browsing a sample library: folder tree, type chips, and image, video and 3D thumbnails](docs/screenshot-library.webp)
 
 **Your files are left alone.** Tags, favorites and collections live in the app's own database, and removing a folder
 from the library only forgets it. The one exception is on the Duplicates page: when you choose to, Asset Den moves the
@@ -28,19 +28,29 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
     TGA/PSD/TIFF via a decoded preview), and **Animate** to play a sprite sheet with a remembered grid and fps
   - audio: waveform and playback, plus play-on-hover in the grid
   - 3D models: orbit, wireframe, triangle counts, the first animation (GLB/glTF, FBX, OBJ, STL), with auto-rendered
-    thumbnails
+    thumbnails. OBJ files load the materials and textures from their `.mtl`
   - fonts: a specimen with editable sample text
-  - video and text
+  - video, with a frame from the video as its grid thumbnail, and text
 - **Organize**: tags, favorites and collections. Rename a collection in place, or copy its files into a folder for a
   build or a handoff. Most changes show a toast with **Undo**.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
 - **Duplicates**: identical files side by side. Keep the one you want, then mark the rest as not duplicates or move
   them to the Trash, with tags, favorites and collections merged into the kept file.
 - **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
+- **Updates** (Windows): the app checks for a new version on launch and installs it in place. See [Updates](#updates).
+- **Themes**: dark, light, or follow the system, from the sidebar footer.
 
-![Duplicates review](docs/screenshot-duplicates.png)
+![Side panel on an OBJ model with its .mtl texture, tags and collections](docs/screenshot-model-panel.webp)
 
-![Full-screen preview with filmstrip](docs/screenshot-quickview.png)
+![Animate playing a sprite sheet in the side panel](docs/screenshot-animate.webp)
+
+![Duplicates review](docs/screenshot-duplicates.webp)
+
+![Insights: storage by type, largest files and folders](docs/screenshot-insights.webp)
+
+![The light theme](docs/screenshot-light.webp)
+
+The screenshots show a small sample library generated for them: procedural sprites, tiles, sounds, models and videos.
 
 Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side panel · <kbd>Enter</kbd> full screen ·
 <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and
@@ -48,8 +58,13 @@ Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side 
 
 ## Install
 
-There are no published releases yet, so build the installer on the OS you want it for. It needs Node 22+, Rust
-stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for that OS.
+**Windows:** download `AssetDen_<version>_x64-setup.exe` from the
+[latest release](https://github.com/sanchezrobertodev/asset-den-releases/releases/latest) and run it. It installs per
+user, without admin rights. The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**.
+From then on the app updates itself (see [Updates](#updates)).
+
+**macOS and Linux** have no published builds yet, so build the installer on the OS you want it for. Building needs
+Node 22+, Rust stable and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for that OS.
 
 ```bash
 make install
@@ -111,11 +126,11 @@ to build installers for every OS.
 ## Known limits
 
 - PSD previews use the flattened composite. Some layered or 16-bit files fall back to an icon.
-- OBJ files are shown without their `.mtl` materials. FBX textures with absolute paths from another machine won't load.
-- Which audio and video formats play depends on the OS webview. Windows (WebView2) plays the most; on Linux, install
-  the GStreamer plugins for MP4/H.264.
+- FBX textures with absolute paths from another machine won't load.
+- Which audio and video formats play, and which videos get a frame thumbnail, depends on the OS webview. Windows
+  (WebView2) plays the most; on Linux, install the GStreamer plugins for MP4/H.264.
 - A file renamed while the app is closed shows up as a new file on the next scan, so its tags don't follow it.
-- Video thumbnails and syntax highlighting are not built yet.
+- Syntax highlighting for text and code is not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
   `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.
 
