@@ -1,13 +1,9 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import WaveSurfer from "wavesurfer.js";
+import { lazy, Suspense, useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import { bytes } from "../lib/format";
-import { addLights, dispose, frame, loadModel, stats } from "../lib/models";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
 import { fontFamily } from "../lib/thumbs";
 import { useStore } from "../store";
@@ -17,7 +13,7 @@ import { isTiny } from "./Thumb";
 /** Formats the webview shows natively; the rest get a PNG preview from the backend. */
 const NATIVE_IMAGE = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico"]);
 
-function Note({ children, busy }: { children: ReactNode; busy?: boolean }) {
+export function Note({ children, busy }: { children: ReactNode; busy?: boolean }) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center text-muted">
       {busy && <LoaderCircle aria-hidden className="size-5 animate-spin" />}
@@ -27,9 +23,9 @@ function Note({ children, busy }: { children: ReactNode; busy?: boolean }) {
 }
 
 const chipBox = "rounded-md bg-active px-2 py-1 font-mono text-[11px] whitespace-nowrap";
-const chip = `${chipBox} text-fg-2`;
+export const chip = `${chipBox} text-fg-2`;
 /** A chip that toggles something; accent text while on. */
-const toggleChip = (on: boolean) => clsx(chipBox, "font-sans", on ? "text-accent" : "text-fg-2");
+export const toggleChip = (on: boolean) => clsx(chipBox, "font-sans", on ? "text-accent" : "text-fg-2");
 
 function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolean; full: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -308,174 +304,6 @@ function SpriteView({
   );
 }
 
-function AudioView({ asset, full }: { asset: Asset; full: boolean }) {
-  const box = useRef<HTMLDivElement>(null);
-  const ws = useRef<WaveSurfer | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [time, setTime] = useState({ now: 0, total: 0 });
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!box.current) return;
-    setError(null);
-    setPlaying(false);
-    const css = getComputedStyle(document.documentElement);
-    const w = WaveSurfer.create({
-      container: box.current,
-      url: fileUrl(asset.path),
-      height: full ? 180 : 90,
-      waveColor: css.getPropertyValue("--line-x").trim(),
-      progressColor: css.getPropertyValue("--accent").trim(),
-      cursorWidth: 0,
-      barWidth: full ? 4 : 3,
-      barGap: full ? 3 : 2,
-      barRadius: 1,
-    });
-    ws.current = w;
-    w.on("ready", (d) => {
-      setTime({ now: 0, total: d });
-      if (full) void w.play().catch(() => {});
-    });
-    w.on("timeupdate", (t) => setTime((x) => ({ ...x, now: t })));
-    w.on("play", () => setPlaying(true));
-    w.on("pause", () => setPlaying(false));
-    w.on("error", (e) => setError(errorText(e)));
-    return () => w.destroy();
-  }, [asset.id, asset.path, asset.mtime, full]);
-
-  const fmt = (s: number) => (s < 10 && s % 1 ? `0:0${s.toFixed(1)}` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`);
-  if (error) return <Note>Can't play this file here: {error}</Note>;
-  return (
-    <div className={clsx("flex w-full flex-col", full ? "max-w-[760px] gap-[26px]" : "gap-[18px]")}>
-      <div ref={box} className="w-full" />
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void ws.current?.playPause()}
-          aria-label={playing ? "Pause" : "Play"}
-          className={clsx("flex items-center justify-center rounded-full bg-accent text-accent-fg", full ? "size-[46px]" : "size-[38px]")}
-        >
-          {playing ? <Pause aria-hidden className="size-4 fill-current" /> : <Play aria-hidden className="size-4 fill-current" />}
-        </button>
-        <span className={clsx("font-mono text-fg-2", full ? "text-[13px]" : "text-xs")}>
-          {fmt(time.now)} / {fmt(time.total)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ModelView({ asset, full }: { asset: Asset; full: boolean }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [wireframe, setWireframe] = useState(false);
-  const [info, setInfo] = useState<{ vertices: number; triangles: number; clips: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const wire = useRef<(on: boolean) => void>(() => {});
-  const reset = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    setInfo(null);
-    setError(null);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    el.appendChild(renderer.domElement);
-    const scene = new THREE.Scene();
-    addLights(scene);
-    const camera = new THREE.PerspectiveCamera(40, 1);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    const clock = new THREE.Clock();
-    let mixer: THREE.AnimationMixer | null = null;
-    let object: THREE.Object3D | null = null;
-    let raf = 0;
-    let live = true;
-
-    const resize = () => {
-      const { clientWidth: w, clientHeight: h } = el;
-      renderer.setSize(w, h);
-      camera.aspect = w / Math.max(1, h);
-      camera.updateProjectionMatrix();
-    };
-    const ro = new ResizeObserver(resize);
-    ro.observe(el);
-    resize();
-    const loop = () => {
-      raf = requestAnimationFrame(loop);
-      mixer?.update(clock.getDelta());
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    loop();
-
-    loadModel(asset)
-      .then(({ object: o, animations }) => {
-        if (!live) return dispose(o);
-        object = o;
-        scene.add(o);
-        const r = frame(camera, o, controls.target);
-        reset.current = () => frame(camera, o, controls.target);
-        const css = getComputedStyle(document.documentElement);
-        const grid = new THREE.GridHelper(r * 4, 20, new THREE.Color(css.getPropertyValue("--line-x").trim()), new THREE.Color(css.getPropertyValue("--line").trim()));
-        grid.position.y = new THREE.Box3().setFromObject(o).min.y;
-        scene.add(grid);
-        if (animations.length) {
-          mixer = new THREE.AnimationMixer(o);
-          mixer.clipAction(animations[0]).play();
-        }
-        wire.current = (on) =>
-          o.traverse((c) => {
-            const m = (c as THREE.Mesh).material;
-            for (const mat of Array.isArray(m) ? m : m ? [m] : []) (mat as THREE.MeshStandardMaterial).wireframe = on;
-          });
-        setInfo({ ...stats(o), clips: animations.length });
-      })
-      .catch((e) => live && setError(errorText(e)));
-
-    return () => {
-      live = false;
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      controls.dispose();
-      if (object) dispose(object);
-      renderer.dispose();
-      renderer.domElement.remove();
-    };
-  }, [asset.id, asset.path, asset.mtime]);
-
-  useEffect(() => wire.current(wireframe), [wireframe, info]);
-
-  return (
-    <div className={clsx("stripes relative w-full overflow-hidden rounded-xl", full ? "h-full" : "h-[200px]")}>
-      <div ref={box} className="h-full w-full" />
-      {(error || !info) && (
-        <div className="pointer-events-none absolute inset-0">
-          {error ? <Note>Couldn't load this model: {error}</Note> : <Note busy>Loading model…</Note>}
-        </div>
-      )}
-      {info && (
-        <div className="absolute bottom-2.5 left-2.5 flex flex-wrap items-center gap-1.5">
-          <span className={chip}>
-            {info.triangles.toLocaleString()} tris · {info.vertices.toLocaleString()} verts
-            {info.clips > 0 && ` · ${info.clips} anim`}
-          </span>
-          {full && (
-            <>
-              <button type="button" aria-pressed={wireframe} onClick={() => setWireframe((w) => !w)} className={toggleChip(wireframe)}>
-                Wireframe
-              </button>
-              <button type="button" onClick={() => reset.current()} className={clsx(chip, "font-sans")}>
-                Reset view
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const PANGRAM = "The quick brown fox jumps over the lazy dog";
 
 function FontView({ asset, full }: { asset: Asset; full: boolean }) {
@@ -563,6 +391,10 @@ function TextView({ asset, full }: { asset: Asset; full: boolean }) {
   );
 }
 
+// three.js and wavesurfer are most of the bundle, so these load on first use.
+const AudioView = lazy(() => import("./AudioView"));
+const ModelView = lazy(() => import("./ModelView"));
+
 /** The preview for one asset. `full` is the full-screen stage; otherwise the compact side-panel stage. */
 export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixelated: boolean; full?: boolean }) {
   switch (asset.kind) {
@@ -570,9 +402,23 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
       // Keyed so per-asset state (zoom, Animate) never leaks into the next asset.
       return <ImageView key={asset.id} asset={asset} pixelated={pixelated} full={full} />;
     case "audio":
-      return <AudioView asset={asset} full={full} />;
+      return (
+        <Suspense fallback={<Note busy>Loading audio…</Note>}>
+          <AudioView asset={asset} full={full} />
+        </Suspense>
+      );
     case "model":
-      return <ModelView asset={asset} full={full} />;
+      return (
+        <Suspense
+          fallback={
+            <div className={clsx("stripes w-full rounded-xl", full ? "h-full" : "h-[200px]")}>
+              <Note busy>Loading model…</Note>
+            </div>
+          }
+        >
+          <ModelView asset={asset} full={full} />
+        </Suspense>
+      );
     case "font":
       return <FontView asset={asset} full={full} />;
     case "video":
