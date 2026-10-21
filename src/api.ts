@@ -30,7 +30,9 @@ export const api = {
   /** Every asset, with the number of the last delta it includes. */
   listAssets: () => invoke<{ seq: number; assets: Asset[] }>("list_assets"),
   thumbnail: (id: number) => invoke<string | null>("thumbnail", { id }),
-  saveThumbnail: (id: number, png: Uint8Array) => invoke<string>("save_thumbnail", { id, png: Array.from(png) }),
+  /** Saves a thumbnail rendered from `a` as it was when rendering started; refused if the file has changed since. */
+  saveThumbnail: (a: Asset, png: Uint8Array) =>
+    invoke<string>("save_thumbnail", { id: a.id, size: a.size, mtime: a.mtime, png: Array.from(png) }),
   preview: (id: number) => invoke<string>("preview", { id }),
   readText: (id: number) => invoke<TextPreview>("read_text", { id }),
   setFavorite: (ids: number[], favorite: boolean) => invoke<void>("set_favorite", { ids, favorite }),

@@ -36,14 +36,16 @@ export async function loadModel(asset: Asset): Promise<LoadedModel> {
       const texturesDone = new Promise<void>((r) => (textures.onLoad = r));
       let hasTextures = false;
       textures.onStart = () => (hasTextures = true);
-      const materials = await loadMtl(mtlCandidates(asset.path, text));
-      if (materials) {
-        materials.setManager(textures);
-        materials.preload();
-        loader.setMaterials(materials);
-      }
+      const libs = await loadMtls(mtlCandidates(asset.path, text));
+      for (const m of libs) m.setManager(textures);
+      // OBJLoader only calls create(name): take each material from the first library that defines it, so every
+      // library keeps resolving textures against its own folder. Textures start loading during parse.
+      if (libs.length)
+        loader.setMaterials({
+          create: (name: string) => (libs.find((m) => name in m.materialsInfo) ?? libs[0]).create(name),
+        } as MTLLoader.MaterialCreator);
       const o = loader.parse(text);
-      if (!materials)
+      if (!libs.length)
         o.traverse((c) => {
           if ((c as THREE.Mesh).isMesh) (c as THREE.Mesh).material = defaultMaterial();
         });
@@ -61,18 +63,14 @@ export async function loadModel(asset: Asset): Promise<LoadedModel> {
   }
 }
 
-/** The first .mtl that loads, or null: a missing or broken one just leaves the OBJ with the neutral material. */
-async function loadMtl(paths: string[]): Promise<MTLLoader.MaterialCreator | null> {
-  for (const p of paths) {
-    try {
-      // Textures resolve against the .mtl's folder, which fileUrl keeps as real "/" segments.
-      const m = await new MTLLoader().loadAsync(fileUrl(p));
-      if (Object.keys(m.materialsInfo).length) return m;
-    } catch {
-      // try the next candidate
-    }
-  }
-  return null;
+/** The .mtl files that load, in priority order: missing or broken ones are skipped, and with none the OBJ keeps the
+ * neutral material. */
+async function loadMtls(paths: string[]): Promise<MTLLoader.MaterialCreator[]> {
+  const libs = await Promise.all(
+    // Textures resolve against each .mtl's folder, which fileUrl keeps as real "/" segments.
+    paths.map((p) => new MTLLoader().loadAsync(fileUrl(p)).catch(() => null)),
+  );
+  return libs.filter((m): m is MTLLoader.MaterialCreator => !!m && Object.keys(m.materialsInfo).length > 0);
 }
 
 export function addLights(scene: THREE.Scene) {

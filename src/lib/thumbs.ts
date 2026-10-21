@@ -49,7 +49,7 @@ function renderModelThumb(a: Asset): Promise<string | null> {
     const blob = await new Promise<Blob | null>((r) => renderer!.domElement.toBlob(r, "image/png"));
     dispose(object);
     if (!blob) return null;
-    return api.saveThumbnail(a.id, new Uint8Array(await blob.arrayBuffer()));
+    return api.saveThumbnail(a, new Uint8Array(await blob.arrayBuffer()));
   });
   queue = job.catch(() => {});
   return job.catch(() => null);
@@ -82,7 +82,7 @@ function renderVideoThumb(a: Asset): Promise<string | null> {
     canvas.height = Math.round(v.videoHeight * scale);
     canvas.getContext("2d")!.drawImage(v, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
-    return blob && api.saveThumbnail(a.id, new Uint8Array(await blob.arrayBuffer()));
+    return blob && api.saveThumbnail(a, new Uint8Array(await blob.arrayBuffer()));
   })();
   const timeout = new Promise<null>((r) => setTimeout(() => r(null), VIDEO_TIMEOUT_MS));
   return Promise.race([grab, timeout])

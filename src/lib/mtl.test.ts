@@ -16,6 +16,12 @@ assert.deepEqual(mtlCandidates("C:\\art\\box.obj", "mtllib mats/my box.mtl\n")[0
 // Absolute paths from another machine: the file name next to the OBJ.
 assert.deepEqual(mtlCandidates("C:\\art\\box.obj", "mtllib D:\\work\\out\\box_mat.mtl\n")[0], "C:\\art\\box_mat.mtl");
 assert.deepEqual(mtlCandidates("/x/box.obj", "mtllib /Users/bob/box_mat.mtl\n")[0], "/x/box_mat.mtl");
+// Every mtllib line, in order, then the base name; duplicates dropped.
+assert.deepEqual(mtlCandidates("/x/box.obj", "mtllib a.mtl\nv 0 0 0\nmtllib sub/b.mtl\nmtllib A.MTL\n"), [
+  "/x/a.mtl",
+  "/x/sub/b.mtl",
+  "/x/box.mtl",
+]);
 // "mtllib" only counts at the start of a line.
 assert.deepEqual(mtlCandidates("/x/box.obj", "# mtllib nope.mtl\n"), ["/x/box.mtl"]);
 
