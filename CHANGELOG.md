@@ -5,6 +5,13 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- macOS and Linux builds are published with each release: a universal macOS `.dmg` (Apple Silicon and Intel), a Linux
+  AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
+  updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
+  it opens.
+
 ## [0.2.3] - 2026-10-21
 
 ### Added
