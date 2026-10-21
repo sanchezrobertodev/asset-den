@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-21
+
 ### Added
 
 - Video cards show a frame from the video (about 10% in, at most 1 second) instead of an icon. Frames are grabbed by
@@ -13,8 +15,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ### Fixed
 
-- OBJ models show their materials and textures in the 3D viewer and in thumbnails, from the .mtl their `mtllib` line
-  names or the .mtl with the same name next to them. A missing or broken .mtl falls back to the neutral grey material.
+- OBJ models show their materials and textures in the 3D viewer and in thumbnails, from the .mtl files their `mtllib`
+  lines name or the .mtl with the same name next to them. A missing or broken .mtl falls back to the neutral grey material.
   Existing OBJ thumbnails are rendered again once, automatically.
 
 ## [0.2.2] - 2026-10-20
