@@ -8,6 +8,8 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
+  // three.js core is one ~740 kB chunk that only loads on the first 3D preview or model thumbnail.
+  build: { chunkSizeWarningLimit: 800 },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

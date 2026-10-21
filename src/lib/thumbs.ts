@@ -1,9 +1,8 @@
 // Thumbnails, scheduled so the cards on screen load first (see scheduler.ts) and cached per file version.
 
-import * as THREE from "three";
+import type { WebGLRenderer } from "three";
 import { api, fileUrl } from "../api";
 import type { Asset } from "../types";
-import { addLights, dispose, frame, loadModel } from "./models";
 import { createScheduler } from "./scheduler.ts";
 
 const cachedOr = (render: (a: Asset) => Promise<string | null> | null) => (a: Asset) =>
@@ -32,11 +31,13 @@ export function thumbnailFor(a: Asset): Promise<string | null> {
 }
 
 // One shared offscreen renderer for model thumbnails, used one model at a time.
-let renderer: THREE.WebGLRenderer | null = null;
+let renderer: WebGLRenderer | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
 function renderModelThumb(a: Asset): Promise<string | null> {
   const job = queue.then(async () => {
+    // Loaded on the first model thumbnail so three.js stays out of the startup bundle.
+    const [THREE, { addLights, dispose, frame, loadModel }] = await Promise.all([import("three"), import("./models")]);
     renderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setSize(256, 256, false);
     const scene = new THREE.Scene();

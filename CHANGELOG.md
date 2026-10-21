@@ -12,6 +12,11 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 
+### Changed
+
+- The app starts with a third of the code it loaded before: the 3D viewer, model thumbnails and the audio waveform
+  load their libraries (three.js, wavesurfer.js) the first time they're needed.
+
 ## [0.2.3] - 2026-10-21
 
 ### Added
