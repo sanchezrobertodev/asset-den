@@ -1,10 +1,12 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { fileUrl } from "../api";
 import type { Asset } from "../types";
+import { mtlCandidates } from "./mtl.ts";
 
 export interface LoadedModel {
   object: THREE.Object3D;
@@ -26,11 +28,29 @@ export async function loadModel(asset: Asset): Promise<LoadedModel> {
       return { object: o, animations: o.animations };
     }
     case "obj": {
-      // shortcut: ignores .mtl materials; geometry only, shown with a neutral material.
-      const o = await new OBJLoader().loadAsync(url);
-      o.traverse((c) => {
-        if ((c as THREE.Mesh).isMesh) (c as THREE.Mesh).material = defaultMaterial();
-      });
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Can't read ${asset.path}`);
+      const text = await res.text();
+      const loader = new OBJLoader();
+      const textures = new THREE.LoadingManager();
+      const texturesDone = new Promise<void>((r) => (textures.onLoad = r));
+      let hasTextures = false;
+      textures.onStart = () => (hasTextures = true);
+      const libs = await loadMtls(mtlCandidates(asset.path, text));
+      for (const m of libs) m.setManager(textures);
+      // OBJLoader only calls create(name): take each material from the first library that defines it, so every
+      // library keeps resolving textures against its own folder. Textures start loading during parse.
+      if (libs.length)
+        loader.setMaterials({
+          create: (name: string) => (libs.find((m) => name in m.materialsInfo) ?? libs[0]).create(name),
+        } as MTLLoader.MaterialCreator);
+      const o = loader.parse(text);
+      if (!libs.length)
+        o.traverse((c) => {
+          if ((c as THREE.Mesh).isMesh) (c as THREE.Mesh).material = defaultMaterial();
+        });
+      // Thumbnails render once, so wait for the textures (failed ones count as done too).
+      if (hasTextures) await texturesDone;
       return { object: o, animations: [] };
     }
     case "stl": {
@@ -41,6 +61,16 @@ export async function loadModel(asset: Asset): Promise<LoadedModel> {
     default:
       throw new Error(`Can't preview .${asset.ext} models`);
   }
+}
+
+/** The .mtl files that load, in priority order: missing or broken ones are skipped, and with none the OBJ keeps the
+ * neutral material. */
+async function loadMtls(paths: string[]): Promise<MTLLoader.MaterialCreator[]> {
+  const libs = await Promise.all(
+    // Textures resolve against each .mtl's folder, which fileUrl keeps as real "/" segments.
+    paths.map((p) => new MTLLoader().loadAsync(fileUrl(p)).catch(() => null)),
+  );
+  return libs.filter((m): m is MTLLoader.MaterialCreator => !!m && Object.keys(m.materialsInfo).length > 0);
 }
 
 export function addLights(scene: THREE.Scene) {

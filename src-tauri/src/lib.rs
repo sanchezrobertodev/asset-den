@@ -225,10 +225,13 @@ async fn thumbnail(state: State<'_, AppState>, id: i64) -> Result<Option<String>
     Ok(Some(made.display().to_string()))
 }
 
+/// Stores a thumbnail the frontend rendered from the file version `size`/`mtime`; refused if the file changed since.
 #[tauri::command]
-fn save_thumbnail(state: State<'_, AppState>, id: i64, png: Vec<u8>) -> Result<String, String> {
+fn save_thumbnail(state: State<'_, AppState>, id: i64, size: i64, mtime: i64, png: Vec<u8>) -> Result<String, String> {
     let a = asset(&state, id)?;
-    let out = state.thumbs_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+    let out = state
+        .thumbs_dir
+        .join(thumbs::rendered_name(&a.path, (a.size, a.mtime), (size, mtime))?);
     thumbs::save_png(&png, &out)?;
     Ok(out.display().to_string())
 }

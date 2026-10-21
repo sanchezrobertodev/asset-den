@@ -17,7 +17,7 @@ const sizes = {
 };
 
 /**
- * Square preview: the real thumbnail on a checkerboard for images and models, "Aa" in the font itself for fonts,
+ * Square preview: the real thumbnail on a checkerboard for images, models and videos, "Aa" in the font itself for fonts,
  * and the design's striped tile with the extension for everything else.
  */
 export function Thumb({
@@ -51,7 +51,7 @@ export function Thumb({
     if (!onScreen || (asset.kind === "image" && asset.ext === "svg")) return;
     let live = true;
     let withdraw = () => {};
-    if (asset.kind === "image" || asset.kind === "model")
+    if (asset.kind === "image" || asset.kind === "model" || asset.kind === "video")
       withdraw = requestThumbnail(asset, (p) => live && (p ? setSrc(convertFileSrc(p)) : setFailed(true)));
     else if (asset.kind === "font")
       void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : setFailed(true)));

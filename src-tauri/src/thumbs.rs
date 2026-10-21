@@ -9,8 +9,23 @@ const PREVIEW_MAX: u32 = 4096;
 
 /// Cache file name for a given version of a file: changes when the file does.
 pub fn cache_name(path: &str, size: i64, mtime: i64) -> String {
-    let h = blake3::hash(format!("{path}|{size}|{mtime}").as_bytes());
+    // OBJ thumbnails from before .mtl support are grey: a new name makes them render again.
+    let v = if path.to_ascii_lowercase().ends_with(".obj") {
+        "|mtl"
+    } else {
+        ""
+    };
+    let h = blake3::hash(format!("{path}|{size}|{mtime}{v}").as_bytes());
     format!("{}.png", &h.to_hex()[..32])
+}
+
+/// Cache file name for a thumbnail the frontend rendered from version `rendered` (size, mtime) of the file. Errors when
+/// the file has changed since, so a frame of the old contents is never stored under the new version's name.
+pub fn rendered_name(path: &str, current: (i64, i64), rendered: (i64, i64)) -> Result<String, String> {
+    if current != rendered {
+        return Err("The file changed while its thumbnail was rendered".into());
+    }
+    Ok(cache_name(path, current.0, current.1))
 }
 
 fn decode(path: &Path, ext: &str) -> Result<DynamicImage, String> {
@@ -75,5 +90,8 @@ mod tests {
         assert_eq!((t.width(), t.height()), (256, 128));
         assert_ne!(cache_name("a", 1, 2), cache_name("a", 1, 3));
         assert!(save_png(b"not a png", &dir.path().join("x.png")).is_err());
+        assert_eq!(rendered_name("a", (1, 2), (1, 2)), Ok(cache_name("a", 1, 2)));
+        assert!(rendered_name("a", (1, 3), (1, 2)).is_err());
+        assert!(rendered_name("a", (5, 2), (1, 2)).is_err());
     }
 }
