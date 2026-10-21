@@ -1,23 +1,27 @@
 // Thumbnails, scheduled so the cards on screen load first (see scheduler.ts) and cached per file version.
 
 import * as THREE from "three";
-import { api } from "../api";
+import { api, fileUrl } from "../api";
 import type { Asset } from "../types";
 import { addLights, dispose, frame, loadModel } from "./models";
 import { createScheduler } from "./scheduler.ts";
 
+const cachedOr = (render: (a: Asset) => Promise<string | null> | null) => (a: Asset) =>
+  api
+    .thumbnail(a.id)
+    .then((path) => path ?? render(a))
+    .catch(() => null);
+
 const thumbs = createScheduler(
-  (a: Asset) =>
-    api
-      .thumbnail(a.id)
-      .then((path) => path ?? (a.kind === "model" ? renderModelThumb(a) : null))
-      .catch(() => null),
+  cachedOr((a) => (a.kind === "model" ? renderModelThumb(a) : null)),
   8,
 );
+// Videos get their own short queue: decoding a frame is heavy, and slow ones mustn't hold up image thumbnails.
+const videoThumbs = createScheduler(cachedOr(renderVideoThumb), 2);
 
 /** Asks for a thumbnail; `onReady` gets its path (null when there's none). Returns a function that withdraws the request. */
 export function requestThumbnail(a: Asset, onReady: (path: string | null) => void): () => void {
-  return thumbs.request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
+  return (a.kind === "video" ? videoThumbs : thumbs).request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
 }
 
 /** Promise form, for one-off uses like the drag icon. */
@@ -49,6 +53,45 @@ function renderModelThumb(a: Asset): Promise<string | null> {
   });
   queue = job.catch(() => {});
   return job.catch(() => null);
+}
+
+const VIDEO_TIMEOUT_MS = 15000;
+
+/** Grabs a frame ~10% in (at most 1 s) with a hidden <video>; null on an unsupported codec, an error or a timeout. */
+function renderVideoThumb(a: Asset): Promise<string | null> {
+  const v = document.createElement("video");
+  v.muted = true;
+  v.preload = "auto";
+  v.crossOrigin = "anonymous"; // the asset protocol is another origin; without this the canvas can't be read
+  const next = (event: string) =>
+    new Promise<void>((resolve, reject) => {
+      v.addEventListener(event, () => resolve(), { once: true });
+      v.addEventListener("error", () => reject(v.error), { once: true });
+    });
+  const grab = (async () => {
+    const loaded = next("loadeddata");
+    v.src = fileUrl(a.path);
+    await loaded;
+    if (!v.videoWidth || !v.videoHeight) return null;
+    const seeked = next("seeked");
+    v.currentTime = Math.min(1, (v.duration || 0) * 0.1);
+    await seeked;
+    const scale = Math.min(1, 256 / Math.max(v.videoWidth, v.videoHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(v.videoWidth * scale);
+    canvas.height = Math.round(v.videoHeight * scale);
+    canvas.getContext("2d")!.drawImage(v, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
+    return blob && api.saveThumbnail(a.id, new Uint8Array(await blob.arrayBuffer()));
+  })();
+  const timeout = new Promise<null>((r) => setTimeout(() => r(null), VIDEO_TIMEOUT_MS));
+  return Promise.race([grab, timeout])
+    .catch(() => null)
+    .finally(() => {
+      // Frees the decoder right away instead of at garbage collection.
+      v.removeAttribute("src");
+      v.load();
+    });
 }
 
 const fonts = new Map<number, Promise<string | null>>();

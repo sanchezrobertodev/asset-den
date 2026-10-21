@@ -5,6 +5,18 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Video cards show a frame from the video (about 10% in, at most 1 second) instead of an icon. Frames are grabbed by
+  the window two at a time, only for cards on screen, and cached like other thumbnails; a video the webview can't play
+  keeps the icon.
+
+### Fixed
+
+- OBJ models show their materials and textures in the 3D viewer and in thumbnails, from the .mtl their `mtllib` line
+  names or the .mtl with the same name next to them. A missing or broken .mtl falls back to the neutral grey material.
+  Existing OBJ thumbnails are rendered again once, automatically.
+
 ## [0.2.2] - 2026-10-20
 
 ### Added

@@ -9,7 +9,13 @@ const PREVIEW_MAX: u32 = 4096;
 
 /// Cache file name for a given version of a file: changes when the file does.
 pub fn cache_name(path: &str, size: i64, mtime: i64) -> String {
-    let h = blake3::hash(format!("{path}|{size}|{mtime}").as_bytes());
+    // OBJ thumbnails from before .mtl support are grey: a new name makes them render again.
+    let v = if path.to_ascii_lowercase().ends_with(".obj") {
+        "|mtl"
+    } else {
+        ""
+    };
+    let h = blake3::hash(format!("{path}|{size}|{mtime}{v}").as_bytes());
     format!("{}.png", &h.to_hex()[..32])
 }
 
