@@ -549,6 +549,29 @@ pub mod tests {
     }
 
     #[test]
+    fn user_ignored_folders_leave_on_rescan() {
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        fs::create_dir_all(r.join("Exports-zz/old")).unwrap();
+        fs::write(r.join("Exports-zz/old/a.png"), "x").unwrap();
+        fs::write(r.join("b.png"), "x").unwrap();
+        assert_eq!(scan(&mut conn, root, r), 2);
+
+        assert!(db::set_ignored_folders(&conn, &["art/old".into()]).is_err());
+        let names = db::set_ignored_folders(&conn, &[" exports-ZZ ".into(), "EXPORTS-zz".into(), "".into()]).unwrap();
+        assert_eq!(names, ["exports-ZZ"]);
+        // The list is process-wide and tests run in parallel: only this test sets it, with a name no other test uses.
+        crate::kind::set_extra_ignored(&names);
+        scan(&mut conn, root, r);
+        let skipped = rels(&conn);
+        crate::kind::set_extra_ignored(&[]);
+        assert_eq!(skipped, ["b.png"]);
+
+        scan(&mut conn, root, r);
+        assert_eq!(rels(&conn), ["Exports-zz/old/a.png", "b.png"]);
+    }
+
+    #[test]
     fn refresh_adds_and_removes() {
         let (dir, conn, root) = setup();
         let r = dir.path();

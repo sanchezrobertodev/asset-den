@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { UpdateNotice } from "./AppUpdate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -147,7 +147,11 @@ export function Sidebar() {
         </div>
         <div role="tree" aria-label="Folders" className="flex flex-col gap-px">
           <FolderTree />
-          {!s.roots.length && <p className="px-3 py-1 text-xs text-faint">No folders yet.</p>}
+          {!s.roots.length && (
+            <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
+              + Import a folder
+            </button>
+          )}
         </div>
       </div>
 
@@ -169,7 +173,9 @@ export function Sidebar() {
       </div>
       {/* App controls live in their own bar so they never squeeze the library name. */}
       <div className="-mx-2.5 flex h-11 flex-none items-center gap-0.5 border-t border-line-soft px-3">
-        <span className="mr-auto font-mono text-[11px] text-faint">{version ? `Asset Den ${version}` : "Asset Den"}</span>
+        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? `Asset Den ${version}` : undefined}>
+          {version ? `v${version}` : ""}
+        </span>
         {updatesSupported && (
           <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
             <CircleArrowUp className="size-4" />
@@ -177,6 +183,12 @@ export function Sidebar() {
         )}
         <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
           <ThemeIcon className="size-4" />
+        </IconButton>
+        <IconButton label="Keyboard shortcuts (?)" className="size-7" onClick={() => s.setModal("shortcuts")}>
+          <Keyboard className="size-4" />
+        </IconButton>
+        <IconButton label="Settings" className="size-7" onClick={() => s.setModal("settings")}>
+          <Settings className="size-4" />
         </IconButton>
       </div>
     </aside>

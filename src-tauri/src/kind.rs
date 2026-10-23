@@ -1,3 +1,5 @@
+use std::sync::RwLock;
+
 /// What kind of asset a file is, decided by its extension alone.
 pub fn kind_of(ext: &str) -> &'static str {
     match ext {
@@ -22,14 +24,23 @@ pub fn decodable(ext: &str) -> bool {
     DECODABLE.contains(&ext)
 }
 
-/// Engine sidecar files, OS junk, hidden files and dependency folders are never indexed.
+/// Folder names the user chose to skip (Settings > Library), lowercased. Process-wide so scans and watcher events
+/// see the current list without passing it through every path check.
+static EXTRA_IGNORED: RwLock<Vec<String>> = RwLock::new(Vec::new());
+
+pub fn set_extra_ignored(names: &[String]) {
+    *EXTRA_IGNORED.write().unwrap() = names.iter().map(|n| n.to_lowercase()).collect();
+}
+
+/// Engine sidecar files, OS junk, hidden files, dependency folders and the user's ignored names are never indexed.
 pub fn ignored_name(name: &str) -> bool {
-    let n = name.to_ascii_lowercase();
+    let n = name.to_lowercase();
     n.starts_with('.')
         || n.ends_with(".meta")
         || n.ends_with(".import")
         || n.ends_with(".uid")
         || matches!(n.as_str(), "thumbs.db" | "desktop.ini" | "node_modules")
+        || EXTRA_IGNORED.read().unwrap().contains(&n)
 }
 
 /// True when any component of a `/`-separated relative path is ignored.

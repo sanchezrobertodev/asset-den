@@ -10,15 +10,20 @@ import { BrowseBar, Header } from "./components/Header";
 import { InsightsView } from "./components/InsightsView";
 import { Palette } from "./components/Palette";
 import { Peek } from "./components/Peek";
+import { SettingsDialog } from "./components/Settings";
+import { ShortcutsDialog } from "./components/Shortcuts";
 import { Sidebar } from "./components/Sidebar";
 import { Button, Kbd } from "./components/ui";
+import { Welcome } from "./components/Welcome";
 import { activeFilterCount, groupByFolder, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
 import { baseName, folderOf } from "./lib/format";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
+import { shortcut } from "./lib/shortcuts";
 import { useStore } from "./store";
 
-const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
+/** The library's hint bar, in order. */
+const HINTS = ["peek", "full", "move", "favorite", "search"].map(shortcut);
 
 function typing(t: EventTarget | null) {
   const el = t as HTMLElement | null;
@@ -104,6 +109,8 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
+      // A dialog handles its own keys (Escape closes it).
+      if (st.modal) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         st.setPalette(!st.palette);
@@ -112,6 +119,11 @@ export default function App() {
       if (st.palette) return;
       if (typing(e.target)) {
         if (e.key === "Escape") (e.target as HTMLElement).blur();
+        return;
+      }
+      if (e.key === "?") {
+        e.preventDefault();
+        st.setModal("shortcuts");
         return;
       }
       if (e.key === "/") {
@@ -174,21 +186,16 @@ export default function App() {
       <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
         <section className="flex min-h-0 min-w-0 flex-col">
           <Header />
-          {browse && (
+          {browse && !s.roots.length && (
+            <div className="min-h-0 flex-1">
+              <Welcome />
+            </div>
+          )}
+          {browse && s.roots.length > 0 && (
             <>
               <BrowseBar count={visible.length} folders={groups?.length ?? 0} scopeAssets={scopeAssets} />
               <div className="min-h-0 flex-1">
-                {!s.roots.length ? (
-                  <Empty
-                    title="Import your first asset folder"
-                    body="Asset Den indexes the sprites, sounds, models, fonts and videos in it and keeps watching for changes."
-                    action={
-                      <Button variant="accent" size="lg" onClick={() => void s.importFolder()}>
-                        Import a folder
-                      </Button>
-                    }
-                  />
-                ) : visible.length ? (
+                {visible.length ? (
                   <AssetBrowser assets={order} groups={groups} />
                 ) : scanning && !s.assets.length ? (
                   <Empty title="Scanning…" body="Assets appear here as soon as they're indexed." />
@@ -219,24 +226,19 @@ export default function App() {
 
       {s.full && active && <FullView list={s.view === "collections" ? visible : order} />}
       {s.palette && <Palette />}
+      {s.modal === "shortcuts" && <ShortcutsDialog />}
+      {s.modal === "settings" && <SettingsDialog />}
       <UpdateDialog />
       <Toast />
       {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
         <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs text-faint">
+          {HINTS.map((h) => (
+            <span key={h.id}>
+              <Kbd>{h.keys}</Kbd> {h.hint}
+            </span>
+          ))}
           <span>
-            <Kbd>Space</Kbd> quick view
-          </span>
-          <span>
-            <Kbd>↵</Kbd> full screen
-          </span>
-          <span>
-            <Kbd>← →</Kbd> move
-          </span>
-          <span>
-            <Kbd>F</Kbd> favorite
-          </span>
-          <span>
-            <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd> search
+            <Kbd>?</Kbd> all shortcuts
           </span>
         </div>
       )}

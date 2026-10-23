@@ -14,6 +14,8 @@ export interface Prefs {
   grouped: boolean;
   /** With a folder open, also show its subfolders' files. */
   subfolders: boolean;
+  /** Look for a new version of Asset Den shortly after launch. */
+  checkUpdates: boolean;
 }
 
 const defaults: Prefs = {
@@ -24,6 +26,7 @@ const defaults: Prefs = {
   pixelated: false,
   grouped: true,
   subfolders: true,
+  checkUpdates: true,
 };
 
 const KEY = "assetden.prefs.v2";

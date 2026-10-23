@@ -486,6 +486,77 @@ fn drag_icon(state: State<'_, AppState>) -> String {
     state.drag_icon.display().to_string()
 }
 
+#[tauri::command]
+fn ignored_folders(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    with_db(&state, db::ignored_folders)
+}
+
+/// Saves the user's ignored folder names. Scans and file events skip them from now on; rows already indexed under
+/// them leave the library on the next rescan.
+#[tauri::command]
+fn set_ignored_folders(state: State<'_, AppState>, names: Vec<String>) -> Result<Vec<String>, String> {
+    let names = db::set_ignored_folders(&state.db.lock().unwrap(), &names)?;
+    kind::set_extra_ignored(&names);
+    Ok(names)
+}
+
+/// Total size of the files directly in `dirs`.
+fn files_size(dirs: &[PathBuf]) -> u64 {
+    dirs.iter()
+        .filter_map(|d| std::fs::read_dir(d).ok())
+        .flatten()
+        .filter_map(|e| e.ok()?.metadata().ok())
+        .filter(|m| m.is_file())
+        .map(|m| m.len())
+        .sum()
+}
+
+/// Deletes the files directly in `dirs`, keeping the folders and anything inside subfolders.
+fn delete_files(dirs: &[PathBuf]) -> std::io::Result<()> {
+    for d in dirs {
+        for e in std::fs::read_dir(d)? {
+            let e = e?;
+            if e.file_type()?.is_file() {
+                match std::fs::remove_file(e.path()) {
+                    Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err),
+                    _ => {}
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Bytes used by the app's own thumbnail and preview caches.
+#[tauri::command]
+async fn cache_size(state: State<'_, AppState>) -> Result<u64, String> {
+    let dirs = [state.thumbs_dir.clone(), state.previews_dir.clone()];
+    tauri::async_runtime::spawn_blocking(move || files_size(&dirs))
+        .await
+        .map_err(err)
+}
+
+/// Empties the app's own thumbnail and preview caches; they are rebuilt on demand. Never touches asset files.
+#[tauri::command]
+async fn clear_thumbnail_cache(state: State<'_, AppState>) -> Result<(), String> {
+    let dirs = [state.thumbs_dir.clone(), state.previews_dir.clone()];
+    tauri::async_runtime::spawn_blocking(move || delete_files(&dirs))
+        .await
+        .map_err(err)?
+        .map_err(|e| format!("Couldn't clear the thumbnail cache: {e}"))
+}
+
+/// Opens the public releases page (installers and release notes) in the browser.
+#[tauri::command]
+fn open_releases(app: AppHandle) -> Result<(), String> {
+    app.opener()
+        .open_url(
+            "https://github.com/sanchezrobertodev/asset-den-releases/releases",
+            None::<&str>,
+        )
+        .map_err(err)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -510,6 +581,8 @@ pub fn run() {
 
             let conn = db::open(&data.join("asset-den.db"))?;
             let roots = db::roots(&conn)?;
+            // Before the catch-up scans below, so they skip the user's ignored folders too.
+            kind::set_extra_ignored(&db::ignored_folders(&conn)?);
             app.manage(AppState {
                 db: Mutex::new(conn),
                 thumbs_dir,
@@ -557,7 +630,12 @@ pub fn run() {
             reveal,
             open_default,
             drag_icon,
-            app_updates_supported
+            app_updates_supported,
+            ignored_folders,
+            set_ignored_folders,
+            cache_size,
+            clear_thumbnail_cache,
+            open_releases
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -593,6 +671,23 @@ mod tests {
         assert_eq!(std::fs::read_to_string(dest.join("hero.png")).unwrap(), "old");
         assert_eq!(std::fs::read_to_string(dest.join("hero (2).png")).unwrap(), "new");
         assert!(dest.join("hero (3).png").exists());
+    }
+
+    #[test]
+    fn clearing_the_cache_only_deletes_its_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let (thumbs, previews) = (dir.path().join("thumbs"), dir.path().join("previews"));
+        std::fs::create_dir_all(thumbs.join("sub")).unwrap();
+        std::fs::create_dir_all(&previews).unwrap();
+        std::fs::write(thumbs.join("a.png"), "1234").unwrap();
+        std::fs::write(thumbs.join("sub/keep.png"), "x").unwrap();
+        std::fs::write(previews.join("b.png"), "12").unwrap();
+        std::fs::write(dir.path().join("drag-icon.png"), "x").unwrap();
+        let dirs = [thumbs.clone(), previews.clone()];
+        assert_eq!(super::files_size(&dirs), 6);
+        super::delete_files(&dirs).unwrap();
+        assert_eq!(super::files_size(&dirs), 0);
+        assert!(thumbs.join("sub/keep.png").exists() && dir.path().join("drag-icon.png").exists());
     }
 
     #[test]

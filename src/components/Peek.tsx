@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { api, errorText } from "../api";
 import { ago, baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
@@ -21,6 +21,47 @@ export async function revealAsset(a: Asset) {
     await api.reveal(a.id);
   } catch (e) {
     useStore.getState().setError(errorText(e));
+  }
+}
+
+/**
+ * Catches a viewer that throws while rendering (a broken file, a lazy chunk that fails to load) so the rest of the
+ * panel keeps working. Resets when another asset, or a new version of the file, is shown.
+ */
+export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidUpdate(prev: { asset: Asset }) {
+    const a = this.props.asset;
+    if (this.state.failed && (prev.asset.id !== a.id || prev.asset.mtime !== a.mtime)) this.setState({ failed: false });
+  }
+
+  render() {
+    const a = this.props.asset;
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div role="alert" className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
+        <TriangleAlert aria-hidden className="size-5 text-muted" />
+        <div className="flex flex-col gap-1">
+          <span className="font-medium text-fg">Couldn't preview this file</span>
+          <span className="text-xs text-muted">It may be damaged or use a format variant Asset Den can't read.</span>
+        </div>
+        <div className="flex gap-2">
+          {a.kind !== "other" && (
+            <Button size="sm" onClick={() => void openAsset(a)}>
+              Open
+            </Button>
+          )}
+          <Button size="sm" onClick={() => void revealAsset(a)}>
+            Show in folder
+          </Button>
+        </div>
+      </div>
+    );
   }
 }
 
@@ -211,7 +252,9 @@ export function Peek({ list }: { list: Asset[] }) {
             onDoubleClick={() => s.setFull(true)}
             className={clsx("flex h-[250px] flex-none items-center justify-center border-b border-line-soft px-[22px] py-4", a.kind === "image" ? "checker" : "bg-bg")}
           >
-            <Viewer asset={a} pixelated={s.pixelated} />
+            <PreviewBoundary asset={a}>
+              <Viewer asset={a} pixelated={s.pixelated} />
+            </PreviewBoundary>
           </div>
           <PeekBody a={a} />
         </>

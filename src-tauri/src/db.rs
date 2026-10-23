@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS sprite_sheets (
   rows INTEGER NOT NULL,
   fps INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ignored_folders (name TEXT PRIMARY KEY COLLATE NOCASE);
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -185,6 +186,36 @@ pub fn clean_tag(tag: &str) -> std::result::Result<String, String> {
         return Err("Tags must be 1 to 64 characters, without control characters.".into());
     }
     Ok(t.to_lowercase())
+}
+
+/// Folder names the user chose to skip while scanning (Settings > Library), on top of [`crate::kind::ignored_name`].
+pub fn ignored_folders(conn: &Connection) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare("SELECT name FROM ignored_folders ORDER BY name COLLATE NOCASE")?;
+    stmt.query_map([], |r| r.get(0))?.collect()
+}
+
+/// Replaces the ignored folder names and returns them cleaned: trimmed, without repeats that differ only in case.
+/// Each must be a single folder name, not a path.
+pub fn set_ignored_folders(conn: &Connection, names: &[String]) -> std::result::Result<Vec<String>, String> {
+    let names: Vec<&str> = names.iter().map(|n| n.trim()).filter(|n| !n.is_empty()).collect();
+    if let Some(bad) = names
+        .iter()
+        .find(|n| n.chars().count() > 255 || n.contains(['/', '\\']) || n.chars().any(char::is_control))
+    {
+        return Err(format!(
+            "“{bad}” isn't a folder name. Enter one name, like Backup, not a path."
+        ));
+    }
+    let save = || -> Result<Vec<String>> {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute("DELETE FROM ignored_folders", [])?;
+        for n in &names {
+            tx.execute("INSERT OR IGNORE INTO ignored_folders (name) VALUES (?1)", [n])?;
+        }
+        tx.commit()?;
+        ignored_folders(conn)
+    };
+    save().map_err(|e| e.to_string())
 }
 
 pub fn add_tag(conn: &Connection, ids: &[i64], tag: &str) -> Result<()> {

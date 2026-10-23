@@ -108,6 +108,8 @@ export function Palette() {
         s.clearFilters();
         s.go("library");
       }],
+      ["Settings", () => s.setModal("settings")],
+      ["Keyboard shortcuts", () => s.setModal("shortcuts")],
     ];
     if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
     const words = parsed.text;
