@@ -6,7 +6,7 @@ import { ago, baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Button, IconButton, KindPill, Label } from "./ui";
-import { Viewer } from "./Viewers";
+import { PreviewFailure, Viewer } from "./Viewers";
 
 export async function openAsset(a: Asset) {
   try {
@@ -25,19 +25,20 @@ export async function revealAsset(a: Asset) {
 }
 
 /**
- * Catches a viewer that throws while rendering (a broken file, a lazy chunk that fails to load) so the rest of the
- * panel keeps working. Resets when another asset, or a new version of the file, is shown.
+ * Shows "Couldn't preview this file" when a viewer fails, whether while rendering (a lazy chunk that fails to load, a
+ * bug) or while loading the file, which viewers report through usePreviewFailure. The rest of the panel keeps working.
+ * Resets when another asset, or a new version of the file, is shown.
  */
-export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNode }, { failed: boolean; message: string | null }> {
+  state = { failed: false, message: null as string | null };
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(e: unknown) {
+    return { failed: true, message: e instanceof PreviewFailure ? e.message : null };
   }
 
   componentDidUpdate(prev: { asset: Asset }) {
     const a = this.props.asset;
-    if (this.state.failed && (prev.asset.id !== a.id || prev.asset.mtime !== a.mtime)) this.setState({ failed: false });
+    if (this.state.failed && (prev.asset.id !== a.id || prev.asset.mtime !== a.mtime)) this.setState({ failed: false, message: null });
   }
 
   render() {
@@ -48,7 +49,9 @@ export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNo
         <TriangleAlert aria-hidden className="size-5 text-muted" />
         <div className="flex flex-col gap-1">
           <span className="font-medium text-fg">Couldn't preview this file</span>
-          <span className="text-xs text-muted">It may be damaged or use a format variant Asset Den can't read.</span>
+          <span className="max-w-[440px] text-xs text-muted [overflow-wrap:anywhere]">
+            {this.state.message ?? "It may be damaged or use a format variant Asset Den can't read."}
+          </span>
         </div>
         <div className="flex gap-2">
           {a.kind !== "other" && (

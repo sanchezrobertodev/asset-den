@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
-import { lazy, Suspense, useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import { bytes } from "../lib/format";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
@@ -22,6 +22,24 @@ export function Note({ children, busy }: { children: ReactNode; busy?: boolean }
   );
 }
 
+/** A viewer's own load failure (decode, codec, unreadable file). PreviewBoundary shows its message. */
+export class PreviewFailure extends Error {}
+
+/**
+ * Shows the preview fallback from async code (a load that rejects, an element's error event). Error boundaries only
+ * catch errors thrown while rendering, so this throws from a state update, on the next render.
+ */
+export function usePreviewFailure() {
+  const [, set] = useState();
+  return useCallback(
+    (message: string) =>
+      set(() => {
+        throw new PreviewFailure(message);
+      }),
+    [],
+  );
+}
+
 const chipBox = "rounded-md bg-active px-2 py-1 font-mono text-[11px] whitespace-nowrap";
 export const chip = `${chipBox} text-fg-2`;
 /** A chip that toggles something; accent text while on. */
@@ -29,7 +47,7 @@ export const toggleChip = (on: boolean) => clsx(chipBox, "font-sans", on ? "text
 
 function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolean; full: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const fail = usePreviewFailure();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [fit, setFit] = useState<number | null>(null);
@@ -49,7 +67,6 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
-    setError(null);
     setFit(null);
     if (NATIVE_IMAGE.has(asset.ext)) {
       setSrc(fileUrl(asset.path));
@@ -60,11 +77,11 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
     api
       .preview(asset.id)
       .then((p) => live && setSrc(convertFileSrc(p)))
-      .catch((e) => live && setError(errorText(e)));
+      .catch((e) => live && fail(errorText(e)));
     return () => {
       live = false;
     };
-  }, [asset.id, asset.ext, asset.path, asset.mtime]);
+  }, [asset.id, asset.ext, asset.path, asset.mtime, fail]);
 
   const measure = () => {
     const el = img.current;
@@ -77,7 +94,6 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
   };
   const onMove = (e: PointerEvent) => drag.current && setPan({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y });
 
-  if (error) return <Note>Couldn't decode this image: {error}</Note>;
   if (!src) return <Note busy>Decoding…</Note>;
   const toggle = (
     <button
@@ -118,7 +134,7 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
           alt={asset.name}
           draggable={false}
           onLoad={measure}
-          onError={() => setError("the webview can't display it")}
+          onError={() => fail("The webview can't display this image.")}
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           className={clsx(
             "absolute inset-0 m-auto max-h-full max-w-full object-contain shadow-[0_8px_30px_rgba(0,0,0,.45)]",
@@ -183,22 +199,21 @@ function SpriteView({
   const setPixelated = useStore((s) => s.setPixelated);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const fail = usePreviewFailure();
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(() => !matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [loop, setLoop] = useState(true);
 
   useEffect(() => {
     setImg(null);
-    setError(null);
     const i = new Image();
     i.onload = () => setImg(i);
-    i.onerror = () => setError("the webview can't display it");
+    i.onerror = () => fail("The webview can't display this image.");
     i.src = src;
     return () => {
       i.onload = i.onerror = null;
     };
-  }, [src]);
+  }, [src, fail]);
 
   const w = img?.naturalWidth ?? 0;
   const h = img?.naturalHeight ?? 0;
@@ -239,7 +254,6 @@ function SpriteView({
     ctx.drawImage(img, (at % sheet.cols) * size.w, Math.floor(at / sheet.cols) * size.h, size.w, size.h, 0, 0, size.w, size.h);
   }, [img, sheet, at, size.w, size.h]);
 
-  if (error) return <Note>Couldn't decode this image: {error}</Note>;
   if (!img || !sheet) return <Note busy>Slicing…</Note>;
   const stepBy = (d: number) => {
     setPlaying(false);
@@ -307,18 +321,18 @@ function SpriteView({
 const PANGRAM = "The quick brown fox jumps over the lazy dog";
 
 function FontView({ asset, full }: { asset: Asset; full: boolean }) {
-  const [family, setFamily] = useState<string | null | undefined>(undefined);
+  const [family, setFamily] = useState<string | undefined>(undefined);
   const [sample, setSample] = useState(PANGRAM);
+  const fail = usePreviewFailure();
   useEffect(() => {
     setFamily(undefined);
     let live = true;
-    void fontFamily(asset, fileUrl(asset.path)).then((f) => live && setFamily(f));
+    void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : fail("This font couldn't be loaded.")));
     return () => {
       live = false;
     };
-  }, [asset]);
+  }, [asset, fail]);
   if (family === undefined) return <Note busy>Loading font…</Note>;
-  if (family === null) return <Note>This font couldn't be loaded.</Note>;
   return (
     <div className={clsx("flex w-full flex-col", full ? "max-w-[820px] gap-4" : "gap-2")} style={{ fontFamily: family }}>
       <span className={clsx("leading-none", full ? "text-[140px]" : "text-[64px]")}>Aa</span>
@@ -341,10 +355,9 @@ function FontView({ asset, full }: { asset: Asset; full: boolean }) {
 
 function TextView({ asset, full }: { asset: Asset; full: boolean }) {
   const [text, setText] = useState<{ text: string; truncated: boolean } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const fail = usePreviewFailure();
   useEffect(() => {
     setText(null);
-    setError(null);
     let live = true;
     api
       .readText(asset.id)
@@ -359,12 +372,11 @@ function TextView({ asset, full }: { asset: Asset; full: boolean }) {
         }
         setText(t);
       })
-      .catch((e) => live && setError(errorText(e)));
+      .catch((e) => live && fail(errorText(e)));
     return () => {
       live = false;
     };
-  }, [asset.id, asset.ext, asset.mtime]);
-  if (error) return <Note>Couldn't read this file: {error}</Note>;
+  }, [asset.id, asset.ext, asset.mtime, fail]);
   if (!text) return <Note busy>Reading…</Note>;
   const lines = text.text.split("\n");
   const shown = full ? lines.slice(0, 5000) : lines.slice(0, 9);
@@ -397,6 +409,7 @@ const ModelView = lazy(() => import("./ModelView"));
 
 /** The preview for one asset. `full` is the full-screen stage; otherwise the compact side-panel stage. */
 export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixelated: boolean; full?: boolean }) {
+  const fail = usePreviewFailure();
   switch (asset.kind) {
     case "image":
       // Keyed so per-asset state (zoom, Animate) never leaks into the next asset.
@@ -428,6 +441,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
           src={fileUrl(asset.path)}
           controls
           autoPlay={full}
+          onError={() => fail("This video format can't be played here.")}
           className={clsx("w-full rounded-xl bg-black object-contain", full ? "h-full" : "max-h-[200px]")}
         >
           This video format can't be played here.

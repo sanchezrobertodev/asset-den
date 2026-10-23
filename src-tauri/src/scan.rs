@@ -10,7 +10,7 @@ use rusqlite::{Connection, OptionalExtension, Result, params};
 use walkdir::WalkDir;
 
 use crate::db::abs_path;
-use crate::kind::{DECODABLE, ignored_name, ignored_rel, kind_of};
+use crate::kind::{DECODABLE, ignored_dir, ignored_name, ignored_rel, kind_of};
 
 /// `path` relative to `root`, with `/` separators. None when it's outside the root or ignored.
 pub fn rel_of(root: &Path, path: &Path) -> Option<String> {
@@ -23,7 +23,7 @@ pub fn rel_of(root: &Path, path: &Path) -> Option<String> {
         return None;
     }
     let rel = parts.join("/");
-    (!ignored_rel(&rel)).then_some(rel)
+    (!ignored_rel(&rel, || path.is_dir())).then_some(rel)
 }
 
 fn ext_of(name: &str) -> String {
@@ -131,7 +131,15 @@ fn walk(dir: &Path) -> impl Iterator<Item = (PathBuf, Metadata)> {
     WalkDir::new(dir)
         .follow_links(false)
         .into_iter()
-        .filter_entry(|e| e.depth() == 0 || !ignored_name(&e.file_name().to_string_lossy()))
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            e.depth() == 0
+                || !if e.file_type().is_dir() {
+                    ignored_dir(&name)
+                } else {
+                    ignored_name(&name)
+                }
+        })
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
         .filter_map(|e| e.metadata().ok().map(|m| (e.into_path(), m)))
@@ -553,22 +561,44 @@ pub mod tests {
         let (dir, mut conn, root) = setup();
         let r = dir.path();
         fs::create_dir_all(r.join("Exports-zz/old")).unwrap();
+        fs::create_dir_all(r.join("art-zz")).unwrap();
+        fs::create_dir_all(r.join("b")).unwrap();
         fs::write(r.join("Exports-zz/old/a.png"), "x").unwrap();
+        fs::write(r.join("art-zz/c.png"), "x").unwrap();
+        // A file named like an ignored folder.
+        fs::write(r.join("b/exports-zz"), "x").unwrap();
         fs::write(r.join("b.png"), "x").unwrap();
-        assert_eq!(scan(&mut conn, root, r), 2);
+        assert_eq!(scan(&mut conn, root, r), 4);
 
         assert!(db::set_ignored_folders(&conn, &["art/old".into()]).is_err());
-        let names = db::set_ignored_folders(&conn, &[" exports-ZZ ".into(), "EXPORTS-zz".into(), "".into()]).unwrap();
-        assert_eq!(names, ["exports-ZZ"]);
-        // The list is process-wide and tests run in parallel: only this test sets it, with a name no other test uses.
+        let names = db::set_ignored_folders(
+            &conn,
+            &[
+                " exports-ZZ ".into(),
+                "EXPORTS-zz".into(),
+                "Backup-zz".into(),
+                "".into(),
+            ],
+        )
+        .unwrap();
+        assert_eq!(names, ["Backup-zz", "exports-ZZ"]);
+        // The list is process-wide and tests run in parallel: only this test sets it, with names no other test uses.
         crate::kind::set_extra_ignored(&names);
+        // A folder renamed to an ignored name leaves at once; folders already indexed leave on the next scan.
+        fs::rename(r.join("art-zz"), r.join("backup-zz")).unwrap();
+        rename_path(&conn, root, r, &r.join("art-zz"), &r.join("backup-zz"), &mut vec![]).unwrap();
+        let renamed = rels(&conn);
         scan(&mut conn, root, r);
         let skipped = rels(&conn);
         crate::kind::set_extra_ignored(&[]);
-        assert_eq!(skipped, ["b.png"]);
+        assert_eq!(renamed, ["Exports-zz/old/a.png", "b.png", "b/exports-zz"]);
+        assert_eq!(skipped, ["b.png", "b/exports-zz"]);
 
         scan(&mut conn, root, r);
-        assert_eq!(rels(&conn), ["Exports-zz/old/a.png", "b.png"]);
+        assert_eq!(
+            rels(&conn),
+            ["Exports-zz/old/a.png", "b.png", "b/exports-zz", "backup-zz/c.png"]
+        );
     }
 
     #[test]
