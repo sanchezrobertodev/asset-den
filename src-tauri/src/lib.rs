@@ -1,3 +1,4 @@
+mod audio;
 mod db;
 mod dupes;
 mod kind;
@@ -452,6 +453,111 @@ async fn copy_collection(state: State<'_, AppState>, id: i64, dest: String) -> R
     Ok(CopyResult { copied, failed })
 }
 
+/// Writes each cell of a `cols`×`rows` grid over `img` to `dest` as `<stem>_000.png`, `<stem>_001.png`… in reading
+/// order. Frames are floor(width / cols) × floor(height / rows), as in the sprite view, so a remainder is dropped.
+/// With `skip_empty`, fully transparent frames are left out (the others keep their numbers). Never replaces a file.
+/// Returns the files written and the frames that failed.
+fn write_frames(
+    img: &image::DynamicImage,
+    stem: &str,
+    cols: u32,
+    rows: u32,
+    skip_empty: bool,
+    dest: &Path,
+) -> (Vec<PathBuf>, Vec<String>) {
+    let (fw, fh) = (img.width() / cols, img.height() / rows);
+    let digits = (cols * rows - 1).max(1).ilog10() as usize + 1;
+    let mut failed = Vec::new();
+    let mut written = Vec::new();
+    for i in 0..cols * rows {
+        let frame = img.crop_imm((i % cols) * fw, (i / cols) * fh, fw, fh);
+        if skip_empty && frame.to_rgba8().pixels().all(|p| p[3] == 0) {
+            continue;
+        }
+        let name = format!("{stem}_{i:0w$}.png", w = digits.max(3));
+        let target = free_path(dest, &name);
+        let r = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .map_err(err)
+            .and_then(|f| {
+                frame
+                    .write_to(&mut std::io::BufWriter::new(f), image::ImageFormat::Png)
+                    .map_err(|e| {
+                        let _ = std::fs::remove_file(&target); // our own half-written file
+                        err(e)
+                    })
+            });
+        match r {
+            Ok(()) => written.push(target),
+            Err(e) => failed.push(format!("{name}: {e}")),
+        }
+    }
+    (written, failed)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportResult {
+    written: usize,
+    failed: Vec<String>,
+    /// The first frame written, to show in the file manager.
+    first: Option<String>,
+}
+
+/// Saves each frame of a sprite sheet as its own PNG in `dest`, cut from the original file (not the size-capped
+/// preview). The original is only read.
+#[tauri::command]
+async fn export_frames(
+    state: State<'_, AppState>,
+    id: i64,
+    cols: u32,
+    rows: u32,
+    skip_empty: bool,
+    dest: String,
+) -> Result<ExportResult, String> {
+    let a = asset(&state, id)?;
+    if !kind::decodable(&a.ext) {
+        return Err(format!("Asset Den can't cut frames from .{} files.", a.ext));
+    }
+    let dest = PathBuf::from(dest);
+    if !dest.is_dir() {
+        return Err(format!("{} is not a folder.", dest.display()));
+    }
+    let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+    let (written, failed) = tauri::async_runtime::spawn_blocking(move || {
+        let img = thumbs::decode(Path::new(&a.path), &a.ext)?;
+        if cols == 0 || rows == 0 || cols > img.width() || rows > img.height() {
+            return Err(format!(
+                "A {cols}×{rows} grid doesn't fit this {}×{} image.",
+                img.width(),
+                img.height()
+            ));
+        }
+        let stem = Path::new(&a.name)
+            .file_stem()
+            .map_or("frame".into(), |s| s.to_string_lossy().into_owned());
+        Ok(write_frames(&img, &stem, cols, rows, skip_empty, &dest))
+    })
+    .await
+    .map_err(err)??;
+    Ok(ExportResult {
+        written: written.len(),
+        failed,
+        first: written.first().map(|p| p.display().to_string()),
+    })
+}
+
+/// Shows a file or folder in the system file manager (selected in its parent). Never opens or runs it.
+#[tauri::command]
+fn reveal_path(app: AppHandle, path: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err(format!("{path} no longer exists."));
+    }
+    app.opener().reveal_item_in_dir(path).map_err(err)
+}
+
 #[tauri::command]
 fn reveal(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
     app.opener().reveal_item_in_dir(asset(&state, id)?.path).map_err(err)
@@ -554,7 +660,9 @@ pub fn run() {
             trash_duplicates,
             rename_collection,
             copy_collection,
+            export_frames,
             reveal,
+            reveal_path,
             open_default,
             drag_icon,
             app_updates_supported
@@ -587,12 +695,54 @@ mod tests {
             height: None,
             favorite: false,
             tags: vec![],
+            duration_ms: None,
+            sample_rate: None,
+            channels: None,
+            bits: None,
         };
         let (copied, failed) = super::copy_into(&[a.clone(), a], &dest);
         assert_eq!((copied, failed.len()), (2, 0));
         assert_eq!(std::fs::read_to_string(dest.join("hero.png")).unwrap(), "old");
         assert_eq!(std::fs::read_to_string(dest.join("hero (2).png")).unwrap(), "new");
         assert!(dest.join("hero (3).png").exists());
+    }
+
+    #[test]
+    fn frames_are_cut_and_never_overwrite() {
+        use image::{DynamicImage, Rgba, RgbaImage};
+        let dir = tempfile::tempdir().unwrap();
+        // 3×2 grid of 10×8 frames plus a 2px / 1px remainder; frame 4 is fully transparent.
+        let mut img = RgbaImage::from_pixel(32, 17, Rgba([200, 0, 0, 255]));
+        for y in 8..16 {
+            for x in 10..20 {
+                img.put_pixel(x, y, Rgba([0, 0, 0, 0]));
+            }
+        }
+        let img = DynamicImage::ImageRgba8(img);
+        std::fs::write(dir.path().join("hero_000.png"), "old").unwrap();
+
+        let (written, failed) = super::write_frames(&img, "hero", 3, 2, false, dir.path());
+        assert_eq!((written.len(), failed.len()), (6, 0));
+        assert_eq!(written[0], dir.path().join("hero_000 (2).png"));
+        assert_eq!(std::fs::read_to_string(dir.path().join("hero_000.png")).unwrap(), "old");
+        let first = image::open(dir.path().join("hero_000 (2).png")).unwrap();
+        assert_eq!((first.width(), first.height()), (10, 8));
+        let empty = image::open(dir.path().join("hero_004.png")).unwrap().to_rgba8();
+        assert!(empty.pixels().all(|p| p[3] == 0));
+
+        // Skipping empty frames leaves out frame 4; the rest go next to the first export.
+        let (written, _) = super::write_frames(&img, "hero", 3, 2, true, dir.path());
+        assert_eq!(written.len(), 5);
+        assert!(dir.path().join("hero_005 (2).png").exists() && !dir.path().join("hero_004 (2).png").exists());
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 12);
+
+        // Big grids get wider numbers so names sort.
+        let (written, _) = super::write_frames(&img, "big", 32, 17, false, dir.path());
+        assert_eq!(written.len(), 544);
+        assert!(dir.path().join("big_543.png").exists());
+        let (written, _) = super::write_frames(&DynamicImage::new_rgba8(100, 20), "wide", 100, 20, false, dir.path());
+        assert_eq!(written.len(), 2000);
+        assert!(dir.path().join("wide_1999.png").exists() && dir.path().join("wide_0000.png").exists());
     }
 
     #[test]

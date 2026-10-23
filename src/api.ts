@@ -47,10 +47,14 @@ export const api = {
     invoke<void>("set_in_collection", { collection, ids, member }),
   renameCollection: (id: number, name: string) => invoke<string>("rename_collection", { id, name }),
   copyCollection: (id: number, dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { id, dest }),
+  /** Cuts a sprite sheet's frames into PNGs in `dest`; existing files are never replaced. */
+  exportFrames: (id: number, cols: number, rows: number, skipEmpty: boolean, dest: string) =>
+    invoke<{ written: number; failed: string[]; first: string | null }>("export_frames", { id, cols, rows, skipEmpty, dest }),
   findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
   setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
   trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),
   reveal: (id: number) => invoke<void>("reveal", { id }),
+  revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   openDefault: (id: number) => invoke<void>("open_default", { id }),
   dragIcon: () => invoke<string>("drag_icon"),
   pickFolder: async (title = "Import an asset folder") => {

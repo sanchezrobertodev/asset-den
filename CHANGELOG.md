@@ -11,6 +11,16 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- Audio files show their length, sample rate, channels and bit depth ("0:03.2 · 44.1 kHz · stereo · 16-bit") in the
+  side panel and full screen, and their length in the list view and on grid cards. They're read from the file headers
+  of WAV, OGG, MP3, FLAC, M4A, AAC and Opus files in the background after a scan (MP3s are counted frame by frame, so
+  VBR files without a Xing header get the right length); bit depth is only known for WAV and FLAC.
+- Filter audio by length: **Audio length** (min and max seconds) in the Filters panel, or `dur:<2s` / `dur:>30s` in
+  search (`ms`, `s` or `m`; seconds by default). Files whose length isn't known never match a length limit.
+- **Loop** in the audio player plays the file again from the start when it ends. The setting is remembered.
+- **Export frames…** in the full-screen sprite view saves each frame of the sheet as its own PNG (`walk_000.png`,
+  `walk_001.png`…) in a folder you pick, cut from the original image at the saved grid. Fully transparent frames can be
+  skipped. Existing files are never replaced: a taken name gets " (2)", and the sheet itself is only read.
 
 ### Changed
 

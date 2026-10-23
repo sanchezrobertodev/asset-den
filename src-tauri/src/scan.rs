@@ -122,6 +122,15 @@ pub fn upsert_file(
         ],
         |r| r.get(0),
     )?;
+    if with_dims && kind == "audio" {
+        crate::audio::store(
+            conn,
+            id,
+            size,
+            mtime,
+            &crate::audio::read_info(path, &ext).unwrap_or_default(),
+        )?;
+    }
     touched.push(id);
     Ok(true)
 }
@@ -179,6 +188,7 @@ pub fn scan_root(
         report(&conn, count, &gone);
     }
     fill_dimensions(db, root_id, root, |conn, ids| report(conn, count, ids))?;
+    crate::audio::fill_audio(db, root_id, root, |conn, ids| report(conn, count, ids))?;
     Ok(count)
 }
 

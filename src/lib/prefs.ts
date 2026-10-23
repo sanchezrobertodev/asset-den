@@ -14,6 +14,8 @@ export interface Prefs {
   grouped: boolean;
   /** With a folder open, also show its subfolders' files. */
   subfolders: boolean;
+  /** Audio previews start again when they end. */
+  audioLoop: boolean;
 }
 
 const defaults: Prefs = {
@@ -24,6 +26,7 @@ const defaults: Prefs = {
   pixelated: false,
   grouped: true,
   subfolders: true,
+  audioLoop: false,
 };
 
 const KEY = "assetden.prefs.v2";

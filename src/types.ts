@@ -18,6 +18,12 @@ export interface Asset {
   height: number | null;
   favorite: boolean;
   tags: string[];
+  /** Audio details from the file header; null when unknown or not audio. */
+  durationMs: number | null;
+  sampleRate: number | null;
+  channels: number | null;
+  /** Bit depth; lossy formats have none. */
+  bits: number | null;
 }
 
 /** How an image is sliced into animation frames, remembered per asset. */

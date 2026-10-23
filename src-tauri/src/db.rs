@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS sprite_sheets (
   rows INTEGER NOT NULL,
   fps INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS audio_info (
+  asset_id INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+  size INTEGER,
+  mtime INTEGER,
+  duration_ms INTEGER,
+  sample_rate INTEGER,
+  channels INTEGER,
+  bits INTEGER
+);
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -81,6 +90,11 @@ pub struct Asset {
     pub height: Option<i64>,
     pub favorite: bool,
     pub tags: Vec<String>,
+    /// Audio details, when read from the current version of the file.
+    pub duration_ms: Option<i64>,
+    pub sample_rate: Option<i64>,
+    pub channels: Option<i64>,
+    pub bits: Option<i64>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -123,8 +137,10 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
     let roots: HashMap<i64, String> = roots(conn)?.into_iter().map(|r| (r.id, r.path)).collect();
     let mut stmt = conn.prepare(
         "SELECT a.id, a.root_id, a.rel_path, a.name, a.ext, a.kind, a.size, a.mtime, a.width, a.height, a.favorite,
-                (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id)
-         FROM assets a WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
+                (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id),
+                i.duration_ms, i.sample_rate, i.channels, i.bits
+         FROM assets a LEFT JOIN audio_info i ON i.asset_id = a.id AND i.size = a.size AND i.mtime = a.mtime
+         WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
     )?;
     let only = only.map(|ids| serde_json::to_string(ids).unwrap_or_default());
     stmt.query_map([only], |r| {
@@ -149,6 +165,10 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
             tags: tags
                 .map(|t| t.split(TAG_SEP).map(String::from).collect())
                 .unwrap_or_default(),
+            duration_ms: r.get(12)?,
+            sample_rate: r.get(13)?,
+            channels: r.get(14)?,
+            bits: r.get(15)?,
         })
     })?
     .collect()

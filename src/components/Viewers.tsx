@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
+import { Download, Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import { bytes } from "../lib/format";
@@ -92,7 +92,9 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
     </button>
   );
   if (animating && sheet !== undefined)
-    return <SpriteView src={src} sheet={sheet} onSheet={(v) => void saveSheet(asset.id, v)} pixelated={pixelated} full={full} toggle={toggle} />;
+    return (
+      <SpriteView asset={asset} src={src} sheet={sheet} onSheet={(v) => void saveSheet(asset.id, v)} pixelated={pixelated} full={full} toggle={toggle} />
+    );
   const dims = asset.width && asset.height ? `${asset.width}×${asset.height}` : "";
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3">
@@ -164,8 +166,46 @@ function NumField({ label, value, min, max, onChange }: { label: string; value: 
   );
 }
 
+/** Saves each frame of the sheet as a PNG in a folder the user picks, cut from the original file. */
+function ExportFrames({ asset, sheet }: { asset: Asset; sheet: SpriteSheet }) {
+  const menu = useRef<HTMLDetailsElement>(null);
+  const [skipEmpty, setSkipEmpty] = useState(false);
+  const run = async () => {
+    if (menu.current) menu.current.open = false;
+    const { showToast, setError } = useStore.getState();
+    const dest = await api.pickFolder(`Export the frames of ${asset.name} to…`);
+    if (!dest) return;
+    try {
+      const r = await api.exportFrames(asset.id, sheet.cols, sheet.rows, skipEmpty, dest);
+      const what = `${r.written} ${r.written === 1 ? "frame" : "frames"}`;
+      if (r.failed.length) setError(`Exported ${what}. ${r.failed.length} failed: ${r.failed.slice(0, 3).join("; ")}`);
+      else if (!r.first) showToast("Every frame is empty, so nothing was exported.");
+      else showToast(`Exported ${what} to ${dest}`, () => api.revealPath(r.first!).catch(setError), "Show in folder");
+    } catch (e) {
+      setError(e);
+    }
+  };
+  return (
+    <details ref={menu} className="relative">
+      <summary className={clsx(toggleChip(false), "flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden")}>
+        <Download aria-hidden className="size-3" /> Export frames…
+      </summary>
+      <div className="absolute right-0 bottom-full z-30 mb-1.5 flex w-56 flex-col gap-2.5 rounded-xl border border-line-strong bg-field p-3 text-xs text-fg shadow-2xl">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={skipEmpty} onChange={(e) => setSkipEmpty(e.target.checked)} />
+          Skip fully transparent frames
+        </label>
+        <button type="button" onClick={() => void run()} className="h-7 rounded-md bg-accent px-2.5 font-semibold text-accent-fg">
+          Choose folder…
+        </button>
+      </div>
+    </details>
+  );
+}
+
 /** Plays an image as a grid of frames drawn on a canvas. The slicing is saved per asset through `onSheet`. */
 function SpriteView({
+  asset,
   src,
   sheet,
   onSheet,
@@ -173,6 +213,7 @@ function SpriteView({
   full,
   toggle,
 }: {
+  asset: Asset;
   src: string;
   sheet: SpriteSheet | null;
   onSheet: (s: SpriteSheet) => void;
@@ -297,6 +338,7 @@ function SpriteView({
             <button type="button" aria-pressed={pixelated} title="Pixel-art scaling" onClick={() => setPixelated(!pixelated)} className={pill(pixelated)}>
               <Grid3x3 aria-hidden className="size-3" /> Pixel
             </button>
+            <ExportFrames asset={asset} sheet={sheet} />
           </>
         )}
       </div>
