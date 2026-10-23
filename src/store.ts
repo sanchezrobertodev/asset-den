@@ -104,6 +104,8 @@ let seq = -1;
 /** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
 let loading = 0;
 let incoming: AssetsDelta[] = [];
+/** The last note save; each one waits for the one before. */
+let noteSaves: Promise<unknown> = Promise.resolve();
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -432,18 +434,19 @@ export const useStore = create<State>((set, get) => {
       });
     },
     setNote: async (id, note) => {
-      if ((get().notes[id] ?? "") === note.trim()) return;
-      try {
-        const saved = await api.setNote(id, note);
-        set((s) => {
-          const notes = { ...s.notes };
-          if (saved) notes[id] = saved;
-          else delete notes[id];
-          return { notes };
-        });
-      } catch (e) {
-        get().setError(e);
-      }
+      const text = note.trim();
+      if ((get().notes[id] ?? "") === text) return;
+      // Optimistic, so the next edit is compared with this one and not with a save still in flight; saves run one at a
+      // time in the order they were made, so the last edit is the one that sticks.
+      set((s) => {
+        const notes = { ...s.notes };
+        if (text) notes[id] = text;
+        else delete notes[id];
+        return { notes };
+      });
+      const run = noteSaves.then(() => api.setNote(id, note));
+      noteSaves = run.catch(() => {});
+      await write(() => run);
     },
 
     newCollection: async () => {

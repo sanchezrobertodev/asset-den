@@ -110,7 +110,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
           </button>
         )}
         <FilterButton />
-        {(s.query.trim() || activeFilterCount(s.filters) > 0) && <SaveSmart />}
+        {(s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
       </div>
       {exact && exact.children.length > 0 && (
         <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">

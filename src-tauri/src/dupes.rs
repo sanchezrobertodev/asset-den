@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use rusqlite::{Connection, Result, params};
 
-use crate::db::abs_path;
+use crate::db::{self, abs_path};
 
 const SAME_SIZE: &str = "SELECT size FROM assets WHERE size > 0 GROUP BY size HAVING count(*) > 1";
 
@@ -106,8 +106,9 @@ pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()>
            rating = max(rating, excluded.rating),
            note = CASE WHEN note IS NULL OR note = excluded.note THEN excluded.note
                        WHEN excluded.note IS NULL THEN note
-                       ELSE note || char(10) || char(10) || excluded.note END",
-        params![keep, remove],
+                       ELSE substr(note || char(10) || char(10) || excluded.note, 1, ?3) END",
+        // Cut at the note limit (the kept note is never cut, it's at most that long), so it stays editable.
+        params![keep, remove, db::NOTE_MAX as i64],
     )?;
     conn.execute(
         "INSERT OR IGNORE INTO collection_assets (collection_id, asset_id)
@@ -206,6 +207,29 @@ mod tests {
         merge_and_forget(&conn, keep, third).unwrap();
         assert_eq!(db::asset(&conn, keep).unwrap().rating, 4);
         assert_eq!(db::notes(&conn).unwrap()[&keep], merged);
+    }
+
+    #[test]
+    fn merged_notes_stay_editable() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "same").unwrap();
+        fs::write(r.join("b.png"), "same").unwrap();
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let ids: Vec<i64> = db::assets(&conn, None).unwrap().iter().map(|a| a.id).collect();
+        let (keep, remove) = (ids[0], ids[1]);
+        let kept_note = "k".repeat(db::NOTE_MAX - 10);
+        db::set_note(&conn, keep, &kept_note).unwrap();
+        db::set_note(&conn, remove, &"é".repeat(db::NOTE_MAX)).unwrap();
+        merge_and_forget(&conn, keep, remove).unwrap();
+
+        let merged = db::notes(&conn).unwrap().remove(&keep).unwrap();
+        assert_eq!(merged.chars().count(), db::NOTE_MAX);
+        assert!(merged.starts_with(&format!("{kept_note}\n\néééééééé")));
+        db::set_note(&conn, keep, &merged).unwrap(); // still saves as is
     }
 
     #[test]
