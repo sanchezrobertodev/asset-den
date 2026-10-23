@@ -4,6 +4,7 @@ import { toLab, type LabSwatch, type Swatch } from "./lib/colors";
 import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
 import { noFilters, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
+import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, SpriteSheet, ViewName } from "./types";
 
@@ -107,8 +108,13 @@ let loading = 0;
 let incoming: AssetsDelta[] = [];
 /** Colours reported while the palettes load, applied on top of what the load returns. */
 let paletteBacklog: [number, Swatch[]][] | null = null;
-/** Latest "Find similar" request; slower answers to earlier ones (slider drags) are dropped. */
-let similarReq = 0;
+/** "Find similar": answers to superseded (slider drags) or cancelled requests are dropped; re-asked as analysis goes on. */
+const similarAsk = latestRequest<{ id: number; max: number }>(2000);
+/** Ends "Find similar", including a request still on its way. */
+const noSimilar = () => {
+  similarAsk.cancel();
+  return { similar: null };
+};
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -230,6 +236,8 @@ export const useStore = create<State>((set, get) => {
         }),
       );
       await api.onImageFeatures(({ left, colors }) => {
+        // Images analysed since can match the open "Find similar"; its results were a snapshot.
+        similarAsk.again(({ id, max }) => void get().findSimilar(id, max));
         if (paletteBacklog) paletteBacklog.push(...colors);
         set((s) => {
           if (!s.palettes || paletteBacklog) return { analysing: left };
@@ -315,13 +323,13 @@ export const useStore = create<State>((set, get) => {
     },
     dismissToast: () => set({ toast: null }),
 
-    go: (view, extra = {}) => set({ view, full: false, palette: false, similar: null, ...extra, ...folderState(extra.folder) }),
+    go: (view, extra = {}) => set({ view, full: false, palette: false, ...noSimilar(), ...extra, ...folderState(extra.folder) }),
     setQuery: (query) => set({ query }),
     toggleKind: (k) =>
       set((s) => ({ kinds: k === "all" ? [] : s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
-    setFolder: (folder) => set({ folder, similar: null, ...folderState(folder) }),
+    setFolder: (folder) => set({ folder, ...noSimilar(), ...folderState(folder) }),
     setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
-    clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "", similar: null }),
+    clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "", ...noSimilar() }),
     setSort: (key) => {
       set((s) => ({ sort: { key, desc: s.sort.key === key ? !s.sort.desc : key === "mtime" || key === "size" } }));
       persist();
@@ -392,18 +400,20 @@ export const useStore = create<State>((set, get) => {
       }
     },
     findSimilar: async (id, max = 10) => {
-      const req = ++similarReq;
+      const current = similarAsk.start({ id, max });
       try {
         const { ids, pending } = await api.findSimilar(id, max);
-        if (req !== similarReq) return;
-        const name = nameOf(id);
-        if (get().similar?.id !== id) get().go("library", { query: "", kinds: [], folder: null });
-        set({ similar: { id, name, max, ids }, analysing: pending });
+        if (!current()) return;
+        // A new image opens the library on its results; a new slider position or a refresh keeps the view as it is.
+        const nav = get().similar?.id === id ? {} : { view: "library" as const, full: false, palette: false, query: "", kinds: [], folder: null };
+        set({ ...nav, similar: { id, name: nameOf(id), max, ids }, analysing: pending });
       } catch (e) {
+        if (!current()) return;
+        similarAsk.cancel(); // or every analysis batch would ask again and show the same error
         get().setError(e);
       }
     },
-    clearSimilar: () => set({ similar: null }),
+    clearSimilar: () => set(noSimilar()),
 
     select: (id, mode = "replace", order = []) =>
       set((s) => {

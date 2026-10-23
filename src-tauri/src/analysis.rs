@@ -322,9 +322,10 @@ pub fn analyse_and_store<G>(
             handles.into_iter().flat_map(|h| h.join().unwrap()).collect()
         });
         left -= batch.len();
+        // Images that couldn't be read get no colours, so a stale palette of an earlier version is dropped too.
         let colours = rows
             .iter()
-            .filter_map(|(id, _, _, f)| f.as_ref().map(|f| (*id, f.colors.clone())))
+            .map(|(id, _, _, f)| (*id, f.as_ref().map(|f| f.colors.clone()).unwrap_or_default()))
             .collect();
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
@@ -528,6 +529,7 @@ mod tests {
                 .unwrap()
         };
         let (hero, small, checker, red) = (id("hero.png"), id("hero-small.png"), id("checker.png"), id("red.png"));
+        let broken = id("broken.png");
 
         // The red square has a cached thumbnail that is blue: the thumbnail is what gets analysed.
         let todo = stale(&conn).unwrap();
@@ -545,10 +547,13 @@ mod tests {
             2,
             &thumbs_dir,
             || (),
-            |_, colors, left| reported.push((colors.len(), left)),
+            |_, colors, left| reported.push((colors, left)),
         )
         .unwrap();
-        assert_eq!(reported, vec![(4, 0)]); // the broken file has no colours
+        assert_eq!(reported.len(), 1);
+        assert_eq!((reported[0].0.len(), reported[0].1), (5, 0));
+        // The broken file is reported without colours, so the UI drops any it had for an earlier version.
+        assert!(reported[0].0.iter().any(|(id, c)| *id == broken && c.is_empty()));
         let conn = db.into_inner().unwrap();
         assert_eq!(pending(&conn).unwrap(), 0);
         let colors = colors(&conn).unwrap();
