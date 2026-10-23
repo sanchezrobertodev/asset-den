@@ -11,6 +11,15 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Ratings**: give assets 1 to 5 stars from the side panel, full screen, a multi-selection, or the keys
+  <kbd>1</kbd>–<kbd>5</kbd> (<kbd>0</kbd> clears). Filter by rating in **More filters** or search with `rating:>=4`,
+  `rating:3` or `rating:<2`.
+- **Notes**: a free-text note per asset in the side panel (saved as you type), shown in full screen. Search them with
+  `note:word`.
+- **Smart collections**: **Save as smart collection** next to the filters keeps the current search, type chips and
+  filters as a collection whose assets update as the library changes. Open one as a search, replace its search with
+  the current one, rename, copy or delete it like any collection.
+- Removing duplicates also keeps the higher rating and both notes on the kept file.
 
 ### Changed
 

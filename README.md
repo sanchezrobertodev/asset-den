@@ -6,7 +6,7 @@ engine.
 
 ![Asset Den browsing a sample library: folder tree, type chips, and image, video and 3D thumbnails](docs/screenshot-library.webp)
 
-**Your files are left alone.** Tags, favorites and collections live in the app's own database, and removing a folder
+**Your files are left alone.** Tags, favorites, ratings, notes and collections live in the app's own database, and removing a folder
 from the library only forgets it. The one exception is on the Duplicates page: when you choose to, Asset Den moves the
 extra copies of a file to your system's Trash (restorable there), after asking and after checking that they are still
 byte-for-byte identical. "Copy to folder…" only ever creates new files.
@@ -20,9 +20,10 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   jump to any subfolder or a recent folder. Subfolder chips drill down, <kbd>Alt+↑</kbd> goes to the parent, and
   **Include subfolders** switches between a folder's own files and everything below it.
 - **Browse**: a grid or list grouped by folder (or all together), type chips, sorting and a thumbnail-size slider.
-  **More filters** narrows by extension, image size, file size, date and tags.
+  **More filters** narrows by extension, image size, file size, date, tags and rating.
 - **Search** (<kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd>): one box for assets, folders and actions, with `type:audio`,
-  `in:sprites`, `#player` and `size:>1mb`. Its first result applies the search to the grid.
+  `in:sprites`, `#player`, `size:>1mb`, `rating:>=4` (or `rating:3`, `rating:<2`) and `note:redo`. Its first result
+  applies the search to the grid.
 - **Side panel** (<kbd>Space</kbd>) and **full screen** (<kbd>Enter</kbd>) previews:
   - images: zoom and pan, pixel-art scaling, transparency checkerboard (PNG, JPG, GIF, WebP, BMP, SVG, and
     TGA/PSD/TIFF via a decoded preview), and **Animate** to play a sprite sheet with a remembered grid and fps
@@ -31,11 +32,12 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
     thumbnails. OBJ files load the materials and textures from their `.mtl`
   - fonts: a specimen with editable sample text
   - video, with a frame from the video as its grid thumbnail, and text
-- **Organize**: tags, favorites and collections. Rename a collection in place, or copy its files into a folder for a
-  build or a handoff. Most changes show a toast with **Undo**.
+- **Organize**: tags, favorites, 1–5 star ratings, notes and collections. Rename a collection in place, or copy its
+  files into a folder for a build or a handoff. **Save as smart collection** turns the current search and filters into
+  a collection that keeps itself up to date. Most changes show a toast with **Undo**.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
 - **Duplicates**: identical files side by side. Keep the one you want, then mark the rest as not duplicates or move
-  them to the Trash, with tags, favorites and collections merged into the kept file.
+  them to the Trash, with tags, favorites, ratings, notes and collections merged into the kept file.
 - **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
 - **Updates** (Windows): the app checks for a new version on launch and installs it in place. See [Updates](#updates).
 - **Themes**: dark, light, or follow the system, from the sidebar footer.
@@ -53,7 +55,8 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
 The screenshots show a small sample library generated for them: procedural sprites, tiles, sounds, models and videos.
 
 Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side panel · <kbd>Enter</kbd> full screen ·
-<kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and
+<kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>1</kbd>–<kbd>5</kbd> rate, <kbd>0</kbd> clear ·
+<kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and
 <kbd>Ctrl+A</kbd> select · <kbd>Esc</kbd> step back.
 
 ## Install
@@ -142,7 +145,7 @@ hand to publish the macOS and Linux builds.
 
 | What | Where |
 |---|---|
-| Index, tags, favorites, collections | `asset-den.db` (SQLite) in the app data folder |
+| Index, tags, favorites, ratings, notes, collections | `asset-den.db` (SQLite) in the app data folder |
 | Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete) |
 | UI preferences | browser storage in the app's webview |
 

@@ -1,4 +1,4 @@
-import type { Asset, Collection, FolderFilter, Kind, Root, ViewName } from "../types";
+import type { Asset, Collection, CollectionRule, FolderFilter, Kind, Notes, Root, ViewName } from "../types";
 import { baseName, folderOf, kindLabel } from "./format.ts";
 import type { SortKey } from "./prefs";
 
@@ -17,6 +17,8 @@ export interface Filters {
   untagged: boolean;
   /** Has at least one of these tags. */
   anyTags: string[];
+  /** At least this many stars. */
+  minRating: number | null;
 }
 
 export const noFilters: Filters = {
@@ -31,13 +33,14 @@ export const noFilters: Filters = {
   days: null,
   untagged: false,
   anyTags: [],
+  minRating: null,
 };
 
 /** How many filter groups are active, for the badge on the Filters button. */
 export function activeFilterCount(f: Filters): number {
   const dims = f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square;
   const bytes = f.minBytes !== null || f.maxBytes !== null;
-  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0].filter(Boolean).length;
+  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0, f.minRating !== null].filter(Boolean).length;
 }
 
 export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean {
@@ -56,10 +59,11 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean 
   if (f.days !== null && a.mtime < now - f.days * 86_400_000) return false;
   if (f.untagged && a.tags.length) return false;
   if (f.anyTags.length && !a.tags.some((t) => f.anyTags.includes(t))) return false;
+  if (f.minRating !== null && a.rating < f.minRating) return false;
   return true;
 }
 
-/** A search like `type:audio in:sprites #player size:>1mb hero`, as used by the search bar and the ⌘K palette. */
+/** A search like `type:audio in:sprites #player size:>1mb rating:>=4 note:redo hero`, as used by the search bar and the ⌘K palette. */
 export interface Query {
   /** null = any type; an empty array = a `type:` that matched nothing. */
   types: Kind[] | null;
@@ -67,13 +71,17 @@ export interface Query {
   tags: string[];
   minBytes: number;
   maxBytes: number;
+  minRating: number;
+  maxRating: number;
+  /** Words the asset's note must contain. */
+  notes: string[];
   text: string[];
 }
 
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
 
 export function parseQuery(q: string): Query {
-  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, text: [] };
+  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minRating: 0, maxRating: 5, notes: [], text: [] };
   for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
     if (t.startsWith("type:")) {
       const s = t.slice(5);
@@ -90,16 +98,34 @@ export function parseQuery(q: string): Query {
       const b = parseFloat(m[2]) * UNITS[m[3] ?? "kb"];
       if (m[1] === "<") out.maxBytes = b;
       else out.minBytes = b;
+    } else if (t.startsWith("rating:")) {
+      // rating:3 is exactly 3 stars; rating:>=4, rating:<2 and so on compare.
+      const m = t.slice(7).match(/^(>=|<=|>|<)?([0-5])$/);
+      if (!m) continue;
+      const n = Number(m[2]);
+      if (!m[1]) [out.minRating, out.maxRating] = [n, n];
+      else if (m[1] === ">=") out.minRating = n;
+      else if (m[1] === ">") out.minRating = n + 1;
+      else if (m[1] === "<=") out.maxRating = n;
+      else out.maxRating = n - 1;
+    } else if (t.startsWith("note:")) {
+      if (t.length > 5) out.notes.push(t.slice(5));
     } else out.text.push(t);
   }
   return out;
 }
 
-export function matchesQuery(a: Asset, q: Query): boolean {
+/** `notes` is only read for `note:` words. */
+export function matchesQuery(a: Asset, q: Query, notes: Notes = {}): boolean {
   if (q.types && !q.types.includes(a.kind)) return false;
   if (q.folder && !folderOf(a.relPath).toLowerCase().split("/").some((seg) => seg.startsWith(q.folder!))) return false;
   if (!q.tags.every((t) => a.tags.some((g) => g.startsWith(t)))) return false;
   if (a.size < q.minBytes || a.size > q.maxBytes) return false;
+  if (a.rating < q.minRating || a.rating > q.maxRating) return false;
+  if (q.notes.length) {
+    const note = notes[a.id]?.toLowerCase();
+    if (!note || !q.notes.every((w) => note.includes(w))) return false;
+  }
   const hay = a.relPath.toLowerCase();
   return q.text.every((t) => hay.includes(t) || a.tags.includes(t));
 }
@@ -124,14 +150,30 @@ export interface Scope {
   filters: Filters;
   /** The open collection, for the Collections view. */
   collection: Collection | null;
+  notes: Notes;
+}
+
+/** Tests assets against a smart collection's saved search. */
+export function ruleMatcher(rule: CollectionRule, notes: Notes, now = Date.now()): (a: Asset) => boolean {
+  const q = parseQuery(rule.query);
+  const f = { ...noFilters, ...rule.filters };
+  return (a) => matchesFilters(a, f, now) && matchesQuery(a, q, notes);
+}
+
+/** Each smart collection's current members, by collection id. */
+export function smartMembers(collections: Collection[], assets: Asset[], notes: Notes): Map<number, Asset[]> {
+  const now = Date.now();
+  return new Map(collections.flatMap((c) => (c.rule ? [[c.id, assets.filter(ruleMatcher(c.rule, notes, now))] as const] : [])));
 }
 
 /** Assets the current view shows, after type chips, folder, search and Filters panel, sorted (unless `sort` is null). */
 export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; desc: boolean } | null): Asset[] {
-  const members = s.view === "collections" ? new Set(s.collection?.assetIds ?? []) : null;
-  const q = parseQuery(s.query);
   const now = Date.now();
+  const rule = s.view === "collections" && s.collection?.rule ? ruleMatcher(s.collection.rule, s.notes, now) : null;
+  const members = s.view === "collections" && !rule ? new Set(s.collection?.assetIds ?? []) : null;
+  const q = parseQuery(s.query);
   const out = assets.filter((a) => {
+    if (rule) return rule(a);
     if (members) return members.has(a.id);
     if (s.view === "favorites" && !a.favorite) return false;
     if (s.kinds.length && !s.kinds.includes(a.kind)) return false;
@@ -141,7 +183,7 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
         if (folderOf(a.relPath) !== s.folder.path) return false;
       } else if (s.folder.path && !a.relPath.startsWith(s.folder.path + "/")) return false;
     }
-    return matchesFilters(a, s.filters, now) && matchesQuery(a, q);
+    return matchesFilters(a, s.filters, now) && matchesQuery(a, q, s.notes);
   });
   if (!sort) return out;
   const dir = sort.desc ? -1 : 1;

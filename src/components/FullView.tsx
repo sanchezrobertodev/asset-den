@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { bytes } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { DuplicateBanner, MetaRows, openAsset, revealAsset } from "./Peek";
+import { DuplicateBanner, MetaRows, openAsset, revealAsset, Stars } from "./Peek";
 import { Thumb } from "./Thumb";
 import { Button, IconButton, KindPill, Kbd, Label } from "./ui";
 import { Viewer } from "./Viewers";
@@ -37,11 +37,12 @@ export function FullView({ list }: { list: Asset[] }) {
         <span className="min-w-0 truncate text-[15px] font-semibold">{a.name}</span>
         <span className="text-muted">{bytes(a.size)}</span>
         <span className="ml-2 font-mono text-xs text-faint">{i >= 0 ? `${i + 1} of ${list.length.toLocaleString()}` : ""}</span>
+        <Stars value={a.rating} onChange={(n) => void s.setRating([a.id], n)} className="ml-auto" />
         <IconButton
           label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
           aria-pressed={a.favorite}
           bordered
-          className={clsx("ml-auto size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
+          className={clsx("size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
           onClick={() => void s.setFavorite([a.id], !a.favorite)}
         >
           {a.favorite ? "★" : "☆"}
@@ -101,11 +102,21 @@ export function FullView({ list }: { list: Asset[] }) {
               {!s.collections.some((c) => c.assetIds.includes(a.id)) && <span className="text-faint">Not in a collection</span>}
             </div>
           </div>
+          <div className="flex flex-col gap-2">
+            <Label>Note</Label>
+            {s.notes[a.id] ? (
+              <p className="text-[13px] whitespace-pre-wrap text-fg-2 [overflow-wrap:anywhere]">{s.notes[a.id]}</p>
+            ) : (
+              <span className="text-faint">No note</span>
+            )}
+          </div>
           <div className="mt-auto grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-muted">
             <Kbd>← →</Kbd>
             <span>Previous / next</span>
             <Kbd>F</Kbd>
             <span>Favorite</span>
+            <Kbd>1–5</Kbd>
+            <span>Rate (0 clears)</span>
             <Kbd>Esc</Kbd>
             <span>Back to side panel</span>
           </div>

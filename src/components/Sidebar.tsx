@@ -1,9 +1,10 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Sparkles, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { UpdateNotice } from "./AppUpdate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { smartMembers } from "../lib/filter";
 import { treeFor, type FolderNode } from "../lib/folders";
 import { baseName, bytes, kindLabel } from "../lib/format";
 import type { Theme } from "../lib/prefs";
@@ -85,6 +86,7 @@ export function Sidebar() {
     }
     return { favorites, byKind, total };
   }, [s.assets]);
+  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes), [s.collections, s.assets, s.notes]);
 
   const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
     { view: "library", label: "Library", count: s.assets.length },
@@ -130,10 +132,14 @@ export function Sidebar() {
           {s.collections.map((c, i) => (
             <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
               <span className="flex min-w-0 items-center gap-2">
-                <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
+                {c.rule ? (
+                  <Sparkles aria-label="Smart collection" className="size-3 flex-none" style={{ color: collColor(i) }} />
+                ) : (
+                  <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
+                )}
                 <span className="truncate">{c.name}</span>
               </span>
-              <span className="font-mono text-[11px] text-faint">{c.assetIds.length}</span>
+              <span className="font-mono text-[11px] text-faint">{(smart.get(c.id)?.length ?? c.assetIds.length).toLocaleString()}</span>
             </Row>
           ))}
           {!s.collections.length && <p className="px-3 py-1 text-xs text-faint">Group assets for a level or a pack.</p>}

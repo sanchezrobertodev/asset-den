@@ -89,7 +89,8 @@ pub fn set_ignored(conn: &Connection, hash: &str, ignored: bool) -> Result<()> {
     conn.execute(sql, [hash]).map(|_| ())
 }
 
-/// Moves a removed copy's tags, favorite and collection memberships onto the copy that's kept, then drops its row.
+/// Moves a removed copy's tags, favorite, rating (the higher one), note (both, if they differ) and collection
+/// memberships onto the copy that's kept, then drops its row.
 pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()> {
     conn.execute(
         "INSERT OR IGNORE INTO asset_tags (asset_id, tag) SELECT ?1, tag FROM asset_tags WHERE asset_id = ?2",
@@ -97,6 +98,15 @@ pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()>
     )?;
     conn.execute(
         "UPDATE assets SET favorite = 1 WHERE id = ?1 AND (SELECT favorite FROM assets WHERE id = ?2) = 1",
+        params![keep, remove],
+    )?;
+    conn.execute(
+        "INSERT INTO asset_meta (asset_id, rating, note) SELECT ?1, rating, note FROM asset_meta WHERE asset_id = ?2
+         ON CONFLICT (asset_id) DO UPDATE SET
+           rating = max(rating, excluded.rating),
+           note = CASE WHEN note IS NULL OR note = excluded.note THEN excluded.note
+                       WHEN excluded.note IS NULL THEN note
+                       ELSE note || char(10) || char(10) || excluded.note END",
         params![keep, remove],
     )?;
     conn.execute(
@@ -150,6 +160,7 @@ mod tests {
         let r = dir.path();
         fs::write(r.join("a.png"), "same").unwrap();
         fs::write(r.join("b.png"), "same").unwrap();
+        fs::write(r.join("c.png"), "same").unwrap();
         let mut conn = db::open_memory();
         conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
             .unwrap();
@@ -167,11 +178,15 @@ mod tests {
         set_ignored(&conn, &g.hash, false).unwrap();
         assert_eq!(groups(&conn).unwrap().len(), 1);
 
-        let (keep, remove) = (g.ids[0], g.ids[1]);
+        let (keep, remove, third) = (g.ids[0], g.ids[1], g.ids[2]);
         db::add_tag(&conn, &[keep], "a").unwrap();
         db::add_tag(&conn, &[remove], "b").unwrap();
         db::set_favorite(&conn, &[remove], true).unwrap();
-        let c = db::create_collection(&conn, "Level").unwrap();
+        db::set_rating(&conn, &[keep], 2).unwrap();
+        db::set_rating(&conn, &[remove], 4).unwrap();
+        db::set_note(&conn, keep, "keep note").unwrap();
+        db::set_note(&conn, remove, "copy note").unwrap();
+        let c = db::create_collection(&conn, "Level", None).unwrap();
         db::set_in_collection(&conn, c, &[remove], true).unwrap();
         merge_and_forget(&conn, keep, remove).unwrap();
 
@@ -179,8 +194,18 @@ mod tests {
         let mut tags = kept.tags.clone();
         tags.sort();
         assert_eq!((tags, kept.favorite), (vec!["a".to_string(), "b".to_string()], true));
+        assert_eq!(kept.rating, 4);
+        let merged = "keep note\n\ncopy note".to_string();
+        assert_eq!(db::notes(&conn).unwrap(), [(keep, merged.clone())].into());
         assert_eq!(db::collections(&conn).unwrap()[0].asset_ids, vec![keep]);
         assert!(db::asset(&conn, remove).is_err());
+
+        // The same note isn't repeated, and a lower rating doesn't lower the kept one.
+        db::set_rating(&conn, &[third], 1).unwrap();
+        db::set_note(&conn, third, &merged).unwrap();
+        merge_and_forget(&conn, keep, third).unwrap();
+        assert_eq!(db::asset(&conn, keep).unwrap().rating, 4);
+        assert_eq!(db::notes(&conn).unwrap()[&keep], merged);
     }
 
     #[test]

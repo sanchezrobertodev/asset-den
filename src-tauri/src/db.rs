@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS sprite_sheets (
   rows INTEGER NOT NULL,
   fps INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS asset_meta (
+  asset_id INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
+  note TEXT
+);
+CREATE TABLE IF NOT EXISTS collection_rules (
+  collection_id INTEGER PRIMARY KEY REFERENCES collections(id) ON DELETE CASCADE,
+  query TEXT NOT NULL,
+  filters TEXT NOT NULL /* JSON */
+);
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -81,6 +91,8 @@ pub struct Asset {
     pub height: Option<i64>,
     pub favorite: bool,
     pub tags: Vec<String>,
+    /// 0 (unrated) to 5 stars.
+    pub rating: u8,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -88,7 +100,16 @@ pub struct Asset {
 pub struct Collection {
     pub id: i64,
     pub name: String,
+    /// Empty for a smart collection: the UI computes its members from `rule`.
     pub asset_ids: Vec<i64>,
+    pub rule: Option<Rule>,
+}
+
+/// A smart collection's saved search: the search-bar query and the Filters panel state (a JSON object).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Rule {
+    pub query: String,
+    pub filters: serde_json::Value,
 }
 
 /// `rel` always uses `/`; join it component by component so paths use the OS separator.
@@ -123,8 +144,9 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
     let roots: HashMap<i64, String> = roots(conn)?.into_iter().map(|r| (r.id, r.path)).collect();
     let mut stmt = conn.prepare(
         "SELECT a.id, a.root_id, a.rel_path, a.name, a.ext, a.kind, a.size, a.mtime, a.width, a.height, a.favorite,
-                (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id)
-         FROM assets a WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
+                (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id), coalesce(m.rating, 0)
+         FROM assets a LEFT JOIN asset_meta m ON m.asset_id = a.id
+         WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
     )?;
     let only = only.map(|ids| serde_json::to_string(ids).unwrap_or_default());
     stmt.query_map([only], |r| {
@@ -149,6 +171,7 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
             tags: tags
                 .map(|t| t.split(TAG_SEP).map(String::from).collect())
                 .unwrap_or_default(),
+            rating: r.get(12)?,
         })
     })?
     .collect()
@@ -176,6 +199,43 @@ pub fn set_favorite(conn: &Connection, ids: &[i64], favorite: bool) -> Result<()
         conn.execute("UPDATE assets SET favorite = ?2 WHERE id = ?1", params![id, favorite])?;
     }
     Ok(())
+}
+
+pub fn set_rating(conn: &Connection, ids: &[i64], rating: u8) -> std::result::Result<(), String> {
+    if rating > 5 {
+        return Err("Ratings go from 0 to 5 stars.".into());
+    }
+    // Ids that are gone by now are skipped.
+    conn.execute(
+        "INSERT INTO asset_meta (asset_id, rating) SELECT value, ?2 FROM json_each(?1) WHERE value IN (SELECT id FROM assets)
+         ON CONFLICT (asset_id) DO UPDATE SET rating = excluded.rating",
+        params![serde_json::to_string(ids).unwrap_or_default(), rating],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub const NOTE_MAX: usize = 5000;
+
+/// Every note, by asset id. Only assets with a note are in it, so it stays small next to the asset list.
+pub fn notes(conn: &Connection) -> Result<HashMap<i64, String>> {
+    let mut stmt = conn.prepare("SELECT asset_id, note FROM asset_meta WHERE note IS NOT NULL")?;
+    stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect()
+}
+
+/// Saves a trimmed note; an empty one clears it. Returns what was stored.
+pub fn set_note(conn: &Connection, id: i64, note: &str) -> std::result::Result<Option<String>, String> {
+    let note = note.trim();
+    if note.chars().count() > NOTE_MAX {
+        return Err(format!("Notes can be up to {NOTE_MAX} characters."));
+    }
+    let note = (!note.is_empty()).then(|| note.to_string());
+    conn.execute(
+        "INSERT INTO asset_meta (asset_id, note) VALUES (?1, ?2) ON CONFLICT (asset_id) DO UPDATE SET note = ?2",
+        params![id, note],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(note)
 }
 
 /// Trims a user-typed tag; rejects empty, overlong and control-character tags.
@@ -209,17 +269,26 @@ pub fn remove_tag(conn: &Connection, ids: &[i64], tag: &str) -> Result<()> {
 
 pub fn collections(conn: &Connection) -> Result<Vec<Collection>> {
     let mut stmt = conn.prepare(
-        "SELECT c.id, c.name, (SELECT group_concat(asset_id) FROM collection_assets ca WHERE ca.collection_id = c.id)
-         FROM collections c ORDER BY c.name COLLATE NOCASE",
+        "SELECT c.id, c.name, (SELECT group_concat(asset_id) FROM collection_assets ca WHERE ca.collection_id = c.id),
+                r.query, r.filters
+         FROM collections c LEFT JOIN collection_rules r ON r.collection_id = c.id ORDER BY c.name COLLATE NOCASE",
     )?;
     stmt.query_map([], |r| {
         let ids: Option<String> = r.get(2)?;
+        let query: Option<String> = r.get(3)?;
+        let filters: Option<String> = r.get(4)?;
         Ok(Collection {
             id: r.get(0)?,
             name: r.get(1)?,
             asset_ids: ids
                 .map(|s| s.split(',').filter_map(|i| i.parse().ok()).collect())
                 .unwrap_or_default(),
+            rule: query.map(|query| Rule {
+                query,
+                filters: filters
+                    .and_then(|f| serde_json::from_str(&f).ok())
+                    .unwrap_or_else(|| serde_json::json!({})),
+            }),
         })
     })?
     .collect()
@@ -240,11 +309,32 @@ fn collection_name(conn: &Connection, name: &str, except: Option<i64>) -> std::r
     Ok(name.to_string())
 }
 
-pub fn create_collection(conn: &Connection, name: &str) -> std::result::Result<i64, String> {
+/// A plain collection, or a smart one with `rule`.
+pub fn create_collection(conn: &Connection, name: &str, rule: Option<&Rule>) -> std::result::Result<i64, String> {
     let name = collection_name(conn, name, None)?;
-    conn.execute("INSERT INTO collections (name) VALUES (?1)", [&name])
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO collections (name) VALUES (?1)", [&name])
         .map_err(|e| e.to_string())?;
-    Ok(conn.last_insert_rowid())
+    let id = tx.last_insert_rowid();
+    if let Some(rule) = rule {
+        set_rule(&tx, id, rule)?;
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+pub fn set_rule(conn: &Connection, id: i64, rule: &Rule) -> std::result::Result<(), String> {
+    let filters = rule.filters.to_string();
+    if rule.query.chars().count() > 500 || !rule.filters.is_object() || filters.len() > 20_000 {
+        return Err("That search can't be saved: the query is over 500 characters or the filters are invalid.".into());
+    }
+    conn.execute(
+        "INSERT INTO collection_rules (collection_id, query, filters) VALUES (?1, ?2, ?3)
+         ON CONFLICT (collection_id) DO UPDATE SET query = ?2, filters = ?3",
+        params![id, rule.query, filters],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub fn rename_collection(conn: &Connection, id: i64, name: &str) -> std::result::Result<String, String> {
@@ -300,4 +390,93 @@ pub fn set_sprite_sheet(conn: &Connection, id: i64, s: SpriteSheet) -> std::resu
     )
     .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn with_assets(n: i64) -> Connection {
+        let conn = open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES ('/r')", []).unwrap();
+        for i in 1..=n {
+            conn.execute(
+                "INSERT INTO assets (root_id, rel_path, name, ext, kind, size, mtime) VALUES (1, ?1, ?1, 'png', 'image', 1, 0)",
+                [format!("{i}.png")],
+            )
+            .unwrap();
+        }
+        conn
+    }
+
+    #[test]
+    fn ratings_and_notes() {
+        let conn = with_assets(3);
+        set_rating(&conn, &[1, 2, 99], 4).unwrap(); // 99 doesn't exist: skipped
+        set_rating(&conn, &[2], 0).unwrap();
+        assert!(set_rating(&conn, &[1], 6).is_err());
+        let ratings: Vec<u8> = assets(&conn, None).unwrap().iter().map(|a| a.rating).collect();
+        assert_eq!(ratings, vec![4, 0, 0]);
+
+        assert_eq!(
+            set_note(&conn, 1, "  needs a 2x version \n").unwrap().as_deref(),
+            Some("needs a 2x version")
+        );
+        set_note(&conn, 3, "temp").unwrap();
+        assert_eq!(set_note(&conn, 3, "   ").unwrap(), None);
+        assert!(set_note(&conn, 2, &"x".repeat(NOTE_MAX + 1)).is_err());
+        assert!(set_note(&conn, 99, "gone").is_err());
+        assert_eq!(notes(&conn).unwrap(), [(1, "needs a 2x version".to_string())].into());
+        assert_eq!(assets(&conn, Some(&[1])).unwrap()[0].rating, 4); // the note kept the rating
+
+        conn.execute("DELETE FROM assets WHERE id = 1", []).unwrap();
+        assert!(notes(&conn).unwrap().is_empty());
+    }
+
+    #[test]
+    fn smart_collection_rules() {
+        let conn = with_assets(1);
+        let rule = Rule {
+            query: "#player rating:>=4".into(),
+            filters: serde_json::json!({ "exts": ["png"], "minRating": null }),
+        };
+        let smart = create_collection(&conn, "Best", Some(&rule)).unwrap();
+        let plain = create_collection(&conn, "Level", None).unwrap();
+        let bad = Rule {
+            query: "x".into(),
+            filters: serde_json::json!([1]),
+        };
+        assert!(create_collection(&conn, "Bad", Some(&bad)).is_err());
+        assert!(
+            set_rule(
+                &conn,
+                plain,
+                &Rule {
+                    query: "q".repeat(501),
+                    filters: serde_json::json!({})
+                }
+            )
+            .is_err()
+        );
+
+        let cols = collections(&conn).unwrap();
+        assert_eq!(
+            cols.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            ["Best", "Level"]
+        ); // "Bad" rolled back
+        assert_eq!((cols[0].rule.as_ref(), cols[1].rule.as_ref()), (Some(&rule), None));
+
+        let edited = Rule {
+            query: "type:audio".into(),
+            filters: serde_json::json!({}),
+        };
+        set_rule(&conn, smart, &edited).unwrap();
+        assert_eq!(collections(&conn).unwrap()[0].rule, Some(edited));
+
+        conn.execute("DELETE FROM collections WHERE id = ?1", [smart]).unwrap();
+        let left: i64 = conn
+            .query_row("SELECT count(*) FROM collection_rules", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(left, 0);
+    }
 }
