@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppUpdate } from "./appUpdate";
 import { UpdateDialog } from "./components/AppUpdate";
 import { AssetBrowser } from "./components/AssetBrowser";
@@ -13,7 +13,7 @@ import { Peek } from "./components/Peek";
 import { SettingsDialog } from "./components/Settings";
 import { ShortcutsDialog } from "./components/Shortcuts";
 import { Sidebar } from "./components/Sidebar";
-import { Button, Kbd } from "./components/ui";
+import { Button, focusAssets, Kbd } from "./components/ui";
 import { Welcome } from "./components/Welcome";
 import { activeFilterCount, groupByFolder, parseQuery, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
@@ -23,43 +23,77 @@ import { shortcut } from "./lib/shortcuts";
 import { useStore } from "./store";
 
 /** The library's hint bar, in order. */
-const HINTS = ["peek", "full", "move", "favorite", "rate", "search"].map(shortcut);
+const HINTS = ["peek", "full", "move", "favorite", "rate", "unrate", "search"].map(shortcut);
 
 function typing(t: EventTarget | null) {
   const el = t as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
+/** Space and Enter press a focused button, and arrows move inside menus and radio groups, instead of the app shortcuts. */
+function ownsKey(t: EventTarget | null, key: string) {
+  const el = t instanceof HTMLElement ? t : null;
+  if (!el || el === document.body || el.closest("[data-assets]")) return false;
+  if (key === " " || key === "Enter")
+    return el.matches("button, a[href], summary, [role=button], [role=checkbox], [role=switch], [role=radio], [role=option], [role^=menuitem]");
+  return key.startsWith("Arrow") && !!el.closest("[role=radiogroup], [role=menu], [role=listbox], details");
+}
+
 function Toast() {
   const { toast, dismissToast } = useStore();
-  if (!toast) return null;
+  // Always mounted, so screen readers announce each message as it appears.
   return (
-    <div
-      role={toast.error ? "alert" : "status"}
-      className={clsx(
-        "absolute bottom-6 left-1/2 z-[80] flex max-w-[min(720px,90%)] -translate-x-1/2 items-center gap-3.5 rounded-[11px] bg-invert-bg py-2.5 pr-3 pl-4 text-invert-fg shadow-[0_16px_40px_-12px_rgba(0,0,0,.6)]",
-        toast.error && "border-l-4 border-danger",
-      )}
-    >
-      <span className="font-medium">{toast.message}</span>
-      {toast.undo && (
-        <button
-          type="button"
-          onClick={() => {
-            dismissToast();
-            void toast.undo!();
-          }}
-          className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
+    <div aria-live={toast?.error ? "assertive" : "polite"} className="pointer-events-none absolute inset-x-0 bottom-6 z-[80] flex justify-center">
+      {toast && (
+        <div
+          key={toast.id}
+          className={clsx(
+            "pointer-events-auto flex max-w-[min(720px,90%)] items-center gap-3.5 rounded-[11px] bg-invert-bg py-2.5 pr-3 pl-4 text-invert-fg shadow-[0_16px_40px_-12px_rgba(0,0,0,.6)]",
+            toast.error && "border-l-4 border-danger",
+          )}
         >
-          {toast.action ?? "Undo"}
-        </button>
-      )}
-      {toast.error && (
-        <button type="button" onClick={dismissToast} className="h-7 rounded-[7px] px-2 font-semibold opacity-70 hover:opacity-100">
-          Dismiss
-        </button>
+          <span className="font-medium">{toast.message}</span>
+          {toast.undo && (
+            <button
+              type="button"
+              onClick={() => {
+                dismissToast();
+                void toast.undo!();
+              }}
+              className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
+            >
+              {toast.action ?? "Undo"}
+            </button>
+          )}
+          {toast.error && (
+            <button type="button" onClick={dismissToast} className="h-7 rounded-[7px] px-2 font-semibold opacity-70 hover:opacity-100">
+              Dismiss
+            </button>
+          )}
+        </div>
       )}
     </div>
+  );
+}
+
+/** Tells screen readers when a scan starts and ends, without reading every count update. */
+function ScanStatus() {
+  const { scanning, roots } = useStore();
+  const names = Object.keys(scanning)
+    .map((id) => baseName(roots.find((r) => r.id === Number(id))?.path ?? ""))
+    .join(", ");
+  const [message, setMessage] = useState("");
+  useEffect(
+    () =>
+      setMessage((prev) =>
+        names ? `Scanning ${names}…` : prev ? `Scan finished. ${useStore.getState().assets.length.toLocaleString()} files in the library.` : "",
+      ),
+    [names],
+  );
+  return (
+    <p role="status" className="sr-only">
+      {message}
+    </p>
   );
 }
 
@@ -117,6 +151,13 @@ export default function App() {
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
   const peekOn = s.peek && !!active && (navigable || s.full);
 
+  // A link to another view (Insights rows, the duplicate banner, search actions) goes away with the old view: land on the new one.
+  const lastView = useRef(s.view);
+  useEffect(() => {
+    if (lastView.current !== s.view && document.activeElement === document.body) focusAssets();
+    lastView.current = s.view;
+  }, [s.view]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
@@ -129,7 +170,8 @@ export default function App() {
       }
       if (st.palette) return;
       if (typing(e.target)) {
-        if (e.key === "Escape") (e.target as HTMLElement).blur();
+        // Esc leaves the field for the asset list, where the shortcuts work again.
+        if (e.key === "Escape") focusAssets();
         return;
       }
       if (e.key === "?") {
@@ -153,7 +195,7 @@ export default function App() {
         else st.setSelected([]);
         return;
       }
-      if (!navigable && !st.full) return;
+      if ((!navigable && !st.full) || ownsKey(e.target, e.key)) return;
       const i = order.findIndex((a) => a.id === st.activeId);
       const ensureActive = () => {
         if (st.activeId === null && order.length) st.select(order[0].id);
@@ -196,9 +238,16 @@ export default function App() {
 
   return (
     <div className="relative grid h-full grid-cols-[220px_minmax(0,1fr)] overflow-hidden bg-bg text-fg">
+      <button
+        type="button"
+        onClick={focusAssets}
+        className="absolute top-2 left-2 z-[90] -translate-y-[200%] rounded-[9px] bg-invert-bg px-3 py-2 font-semibold text-invert-fg focus:translate-y-0"
+      >
+        Skip to the assets
+      </button>
       <Sidebar />
       <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
-        <section className="flex min-h-0 min-w-0 flex-col">
+        <main tabIndex={-1} className="flex min-h-0 min-w-0 flex-col focus-visible:outline-none">
           <Header />
           {browse && !s.roots.length && (
             <div className="min-h-0 flex-1">
@@ -240,7 +289,20 @@ export default function App() {
           {s.view === "collections" && <CollectionsView items={visible} />}
           {s.view === "duplicates" && <DuplicatesView />}
           {s.view === "insights" && <InsightsView />}
-        </section>
+          {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
+            <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
+              {HINTS.map((h) => (
+                <span key={h.id}>
+                  <Kbd>{h.keys}</Kbd> {h.hint}
+                </span>
+              ))}
+              <span>
+                <Kbd>?</Kbd> all shortcuts
+              </span>
+            </div>
+          )}
+          <ScanStatus />
+        </main>
         {peekOn && <Peek list={s.view === "collections" ? visible : order} />}
       </div>
 
@@ -250,18 +312,6 @@ export default function App() {
       {s.modal === "settings" && <SettingsDialog />}
       <UpdateDialog />
       <Toast />
-      {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
-        <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs text-faint">
-          {HINTS.map((h) => (
-            <span key={h.id}>
-              <Kbd>{h.keys}</Kbd> {h.hint}
-            </span>
-          ))}
-          <span>
-            <Kbd>?</Kbd> all shortcuts
-          </span>
-        </div>
-      )}
     </div>
   );
 }

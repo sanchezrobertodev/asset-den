@@ -7,7 +7,7 @@ import { useStore } from "../store";
 import type { Asset } from "../types";
 import { DuplicateBanner, MetaRows, openAsset, PreviewBoundary, revealAsset, Stars } from "./Peek";
 import { Thumb } from "./Thumb";
-import { Button, IconButton, KindPill, Kbd, Label } from "./ui";
+import { Button, IconButton, KindPill, Kbd, Label, trapTab } from "./ui";
 import { Viewer } from "./Viewers";
 
 /** How many filmstrip tiles to render on each side of the current one. */
@@ -18,7 +18,21 @@ export function FullView({ list }: { list: Asset[] }) {
   const s = useStore();
   const a = s.assets.find((x) => x.id === s.activeId);
   const strip = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
   const i = a ? list.findIndex((x) => x.id === a.id) : -1;
+
+  // Focus moves into the full view and back to where it was (the asset list) when it closes.
+  // Tab stays inside, also when focus had fallen out to the page (a control that went away).
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    dialog.current?.focus();
+    const onKey = (e: KeyboardEvent) => trapTab(e, dialog.current);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      prev?.focus();
+    };
+  }, []);
 
   useEffect(() => {
     strip.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: "nearest", inline: "center" });
@@ -30,7 +44,14 @@ export function FullView({ list }: { list: Asset[] }) {
   const tiles = list.slice(from, i + STRIP_SPAN + 1);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Full screen: ${a.name}`} className="absolute inset-0 z-40 grid grid-rows-[60px_minmax(0,1fr)_100px] bg-sunken">
+    <div
+      ref={dialog}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Full screen: ${a.name}`}
+      tabIndex={-1}
+      className="absolute inset-0 z-40 grid grid-rows-[60px_minmax(0,1fr)_100px] bg-sunken focus-visible:outline-none"
+    >
       <div className="flex items-center gap-3 border-b border-line-soft px-[18px]">
         <Button size="sm" className="text-fg-2" onClick={() => s.setFull(false)} aria-label="Close full screen (Esc)">
           <X aria-hidden className="size-4" /> <span className="font-mono text-[11px]">Esc</span>
@@ -41,7 +62,7 @@ export function FullView({ list }: { list: Asset[] }) {
         <span className="ml-2 font-mono text-xs text-faint">{i >= 0 ? `${i + 1} of ${list.length.toLocaleString()}` : ""}</span>
         <Stars value={a.rating} onChange={(n) => void s.setRating([a.id], n)} className="ml-auto" />
         <IconButton
-          label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
+          label="Favorite (F)"
           aria-pressed={a.favorite}
           bordered
           className={clsx("size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
@@ -125,7 +146,7 @@ export function FullView({ list }: { list: Asset[] }) {
         </aside>
       </div>
 
-      <div ref={strip} className="flex items-center gap-2.5 overflow-x-auto border-t border-line-soft px-[18px]">
+      <div ref={strip} role="group" aria-label="Filmstrip" className="flex items-center gap-2.5 overflow-x-auto border-t border-line-soft px-[18px]">
         {tiles.map((t) => (
           <button
             key={t.id}

@@ -160,14 +160,18 @@ function IgnoredFolders() {
           already are.
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
+      <div className="focus-ring-within flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
         {names.map((n) => (
           <span key={n} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] font-mono text-xs">
             {n}
             <button
               type="button"
               aria-label={`Stop ignoring ${n}`}
-              onClick={() => void save(names.filter((x) => x !== n))}
+              onClick={(e) => {
+                // The name goes away with its button; keep focus in the field.
+                e.currentTarget.closest("div")?.querySelector("input")?.focus();
+                void save(names.filter((x) => x !== n));
+              }}
               className="flex size-4 items-center justify-center rounded text-muted hover:bg-line-x hover:text-fg"
             >
               <X aria-hidden className="size-3" />

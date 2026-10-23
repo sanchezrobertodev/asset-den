@@ -1,9 +1,10 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Download, Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import { bytes } from "../lib/format";
+import { reducedMotion } from "../lib/prefs";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
 import { fontFamily } from "../lib/thumbs";
 import { useStore } from "../store";
@@ -59,6 +60,8 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
   // null follows the saved slicing: an asset animated before opens animated.
   const [animate, setAnimate] = useState<boolean | null>(null);
   const animating = animate ?? !!sheet;
+  // The toggle moves between the still and the sprite controls; keep keyboard focus on it when it does.
+  const refocus = useRef(false);
 
   useEffect(() => {
     if (useStore.getState().sheets[asset.id] === undefined) void loadSheet(asset.id);
@@ -98,9 +101,17 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
   const toggle = (
     <button
       type="button"
+      ref={(el) => {
+        if (!el || !refocus.current) return;
+        refocus.current = false;
+        el.focus();
+      }}
       aria-pressed={animating}
       disabled={sheet === undefined}
-      onClick={() => setAnimate(!animating)}
+      onClick={() => {
+        refocus.current = true;
+        setAnimate(!animating);
+      }}
       title="Play the image as a sprite sheet"
       className={clsx(toggleChip(animating), "disabled:opacity-50")}
     >
@@ -186,8 +197,17 @@ function NumField({ label, value, min, max, onChange }: { label: string; value: 
 function ExportFrames({ asset, sheet }: { asset: Asset; sheet: SpriteSheet }) {
   const menu = useRef<HTMLDetailsElement>(null);
   const [skipEmpty, setSkipEmpty] = useState(false);
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || !menu.current?.open) return;
+    // Close just this menu, not the full screen view behind it.
+    e.stopPropagation();
+    menu.current.open = false;
+    menu.current.querySelector("summary")?.focus();
+  };
   const run = async () => {
     if (menu.current) menu.current.open = false;
+    // The menu (and the focused button in it) closes; keep focus on its summary.
+    menu.current?.querySelector("summary")?.focus();
     const { showToast, setError } = useStore.getState();
     const dest = await api.pickFolder(`Export the frames of ${asset.name} to…`);
     if (!dest) return;
@@ -202,7 +222,7 @@ function ExportFrames({ asset, sheet }: { asset: Asset; sheet: SpriteSheet }) {
     }
   };
   return (
-    <details ref={menu} className="relative">
+    <details ref={menu} onKeyDown={onKeyDown} className="relative">
       <summary className={clsx(toggleChip(false), "flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden")}>
         <Download aria-hidden className="size-3" /> Export frames…
       </summary>
@@ -242,7 +262,7 @@ function SpriteView({
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const fail = usePreviewFailure();
   const [frame, setFrame] = useState(0);
-  const [playing, setPlaying] = useState(() => !matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [playing, setPlaying] = useState(() => !reducedMotion());
   const [loop, setLoop] = useState(true);
 
   useEffect(() => {
@@ -311,7 +331,8 @@ function SpriteView({
       <div className="relative min-h-0 w-full flex-1">
         <canvas
           ref={canvas}
-          aria-label={`Frame ${at + 1} of ${count}`}
+          role="img"
+          aria-label={`${asset.name}, frame ${at + 1} of ${count}`}
           className={clsx("absolute inset-0 h-full w-full object-contain", pixelated && "pixelated")}
         />
       </div>
@@ -384,7 +405,7 @@ function FontView({ asset, full }: { asset: Asset; full: boolean }) {
           value={sample}
           onChange={(e) => setSample(e.target.value)}
           onKeyDown={(e) => e.stopPropagation()}
-          className="border-0 bg-transparent p-0 text-[36px] text-fg outline-none"
+          className="border-0 bg-transparent p-0 text-[36px] text-fg"
           style={{ fontFamily: family }}
         />
       ) : (
@@ -482,7 +503,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
           key={asset.id}
           src={fileUrl(asset.path)}
           controls
-          autoPlay={full}
+          autoPlay={full && !reducedMotion()}
           onError={() => fail("This video format can't be played here.")}
           className={clsx("w-full rounded-xl bg-black object-contain", full ? "h-full" : "max-h-[200px]")}
         >

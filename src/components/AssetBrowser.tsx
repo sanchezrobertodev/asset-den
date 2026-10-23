@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, 
 import { api, errorText, fileUrl } from "../api";
 import type { Group } from "../lib/filter";
 import { ago, bytes, duration, folderOf } from "../lib/format";
+import { reducedMotion } from "../lib/prefs";
 import { thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -43,7 +44,8 @@ function hoverPlay(a: Asset | null) {
   if (hoverTimer) clearTimeout(hoverTimer);
   if (!hoverAudio) return;
   hoverAudio.pause();
-  if (!a) return;
+  // Reduced motion also means no media that starts by itself.
+  if (!a || reducedMotion()) return;
   hoverTimer = setTimeout(() => {
     hoverAudio.src = fileUrl(a.path);
     hoverAudio.volume = 0.6;
@@ -70,6 +72,41 @@ function useHandlers(assets: Asset[]) {
 }
 
 type Line = { type: "head"; group: Group; first: boolean } | { type: "items"; items: Asset[] };
+
+/** What a screen reader says for a card or row: the name first, then what the card shows. */
+function assetLabel(a: Asset) {
+  return [
+    a.name,
+    a.width && a.height ? `${a.width}×${a.height}` : null,
+    a.durationMs !== null ? duration(a.durationMs) : null,
+    bytes(a.size),
+    a.favorite ? "favorite" : null,
+    a.rating ? `${a.rating} ${a.rating === 1 ? "star" : "stars"}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/**
+ * The asset listbox takes focus itself and points at the active asset (aria-activedescendant); the app's arrow keys
+ * move it. Only an asset that is rendered (virtualized lists skip the rest) can be pointed at.
+ */
+function listboxProps(lines: Line[], rendered: number[], activeId: number | null) {
+  const shown = activeId !== null && rendered.some((i) => lines[i].type === "items" && lines[i].items.some((a) => a.id === activeId));
+  return {
+    role: "listbox",
+    "aria-multiselectable": true,
+    "aria-label": "Assets",
+    "data-assets": "",
+    tabIndex: 0,
+    "aria-activedescendant": shown ? `asset-${activeId}` : undefined,
+    // The ring goes on the active asset; with none, around the whole list.
+    className: clsx("group/list", shown ? "focus-visible:outline-none" : "-outline-offset-2"),
+  };
+}
+
+/** Focus ring on the active asset while the list has keyboard focus. */
+const activeRing = "group-focus-visible/list:ring-2 group-focus-visible/list:ring-fg";
 
 /** Flattens groups into virtualizer lines: an optional heading, then rows of `perRow` assets. */
 function lines(assets: Asset[], groups: Group[] | null, perRow: number): Line[] {
@@ -155,9 +192,10 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     },
     (line) => line >= 0 && v.scrollToIndex(line, { align: "auto" }),
   );
+  const lb = listboxProps(items, v.getVirtualItems().map((r) => r.index), activeId);
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto" role="listbox" aria-multiselectable aria-label="Assets">
+    <div ref={scrollRef} {...lb} className={clsx("h-full overflow-y-auto", lb.className)}>
       <div style={{ height: v.getTotalSize(), position: "relative" }}>
         {v.getVirtualItems().map((row) => {
           const l = items[row.index];
@@ -174,8 +212,10 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                     return (
                       <div
                         key={a.id}
+                        id={`asset-${a.id}`}
                         role="option"
                         aria-selected={isSel}
+                        aria-label={assetLabel(a)}
                         draggable
                         title={a.relPath}
                         {...handlers(a)}
@@ -186,11 +226,12 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                           className={clsx(
                             "relative aspect-square overflow-hidden rounded-xl outline-offset-2",
                             isSel ? "outline-2 outline-accent" : "outline-0",
+                            a.id === activeId && activeRing,
                           )}
                         >
                           <Thumb asset={a} pixelated={pixelated} className="h-full w-full rounded-xl" />
                           {a.favorite && (
-                            <span aria-label="Favorite" className="absolute top-2 right-2.5 text-sm text-star">
+                            <span aria-hidden className="absolute top-2 right-2.5 text-sm text-star">
                               ★
                             </span>
                           )}
@@ -239,6 +280,7 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     (i) => items.findIndex((l) => l.type === "items" && l.items[0].id === order[i].id),
     (line) => line >= 0 && v.scrollToIndex(line, { align: "auto" }),
   );
+  const lb = listboxProps(items, v.getVirtualItems().map((r) => r.index), activeId);
 
   return (
     <div className="flex h-full flex-col px-7">
@@ -254,7 +296,7 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
         <span>Folder</span>
         <span>Modified</span>
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto" role="listbox" aria-multiselectable aria-label="Assets">
+      <div ref={scrollRef} {...lb} className={clsx("min-h-0 flex-1 overflow-y-auto", lb.className)}>
         <div style={{ height: v.getTotalSize(), position: "relative" }}>
           {v.getVirtualItems().map((row) => {
             const l = items[row.index];
@@ -269,14 +311,17 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
             return (
               <div
                 key={row.key}
+                id={`asset-${a.id}`}
                 role="option"
                 aria-selected={isSel}
+                aria-label={assetLabel(a)}
                 draggable
                 {...handlers(a)}
                 style={{ top: row.start, height: ROW, gridTemplateColumns: COLS }}
                 className={clsx(
                   "absolute left-0 grid w-full cursor-pointer items-center border-b border-line-soft px-2.5 select-none",
                   isSel ? "bg-sel-row" : "hover:bg-hover",
+                  a.id === activeId && "group-focus-visible/list:inset-ring-2 group-focus-visible/list:inset-ring-fg",
                 )}
               >
                 <Thumb asset={a} size="row" pixelated={pixelated} className="size-8 rounded-[7px]" />

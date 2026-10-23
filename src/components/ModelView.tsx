@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { errorText } from "../api";
 import { addLights, dispose, frame, loadModel, stats } from "../lib/models";
+import { reducedMotion } from "../lib/prefs";
 import type { Asset } from "../types";
 import { chip, Note, toggleChip, usePreviewFailure } from "./Viewers";
 
@@ -11,6 +12,10 @@ import { chip, Note, toggleChip, usePreviewFailure } from "./Viewers";
 export default function ModelView({ asset, full }: { asset: Asset; full: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const [wireframe, setWireframe] = useState(false);
+  // Animated models play their first clip unless the OS asks for reduced motion; full screen can toggle it.
+  const [playClip, setPlayClip] = useState(() => !reducedMotion());
+  const playing = useRef(playClip);
+  playing.current = playClip;
   const [info, setInfo] = useState<{ vertices: number; triangles: number; clips: number } | null>(null);
   const fail = usePreviewFailure();
   const wire = useRef<(on: boolean) => void>(() => {});
@@ -45,7 +50,8 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
     resize();
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      mixer?.update(clock.getDelta());
+      const dt = clock.getDelta();
+      if (playing.current) mixer?.update(dt);
       controls.update();
       renderer.render(scene, camera);
     };
@@ -65,6 +71,7 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
         if (animations.length) {
           mixer = new THREE.AnimationMixer(o);
           mixer.clipAction(animations[0]).play();
+          mixer.update(0);
         }
         wire.current = (on) =>
           o.traverse((c) => {
@@ -107,6 +114,11 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
               <button type="button" aria-pressed={wireframe} onClick={() => setWireframe((w) => !w)} className={toggleChip(wireframe)}>
                 Wireframe
               </button>
+              {info.clips > 0 && (
+                <button type="button" aria-pressed={playClip} onClick={() => setPlayClip((p) => !p)} className={toggleChip(playClip)}>
+                  Animate
+                </button>
+              )}
               <button type="button" onClick={() => reset.current()} className={clsx(chip, "font-sans")}>
                 Reset view
               </button>

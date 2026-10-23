@@ -20,12 +20,12 @@
   --fg: #1a1916;
   --fg-2: #3d3a33;
   --muted: #625d52;
-  --faint: #757064;
-  --accent: oklch(0.52 0.15 152);
+  --faint: #67625a;
+  --accent: oklch(0.48 0.15 152);
   --accent-fg: #ffffff;
   --invert-bg: #1a1916;
   --invert-fg: #f7f5f0;
-  --star: #b7800a;
+  --star: #a87508;
   --warn-bg: oklch(0.94 0.05 75);
   --warn-fg: oklch(0.42 0.1 75);
   --danger: #b4321f;
@@ -58,7 +58,7 @@
   --fg: #efede8;
   --fg-2: #c9c5bb;
   --muted: #9a968d;
-  --faint: #7d796f;
+  --faint: #918d83;
   --accent: oklch(0.8 0.17 152);
   --accent-fg: #0c1a11;
   --invert-bg: #efede8;
@@ -140,7 +140,16 @@ body {
   overflow: hidden;
 }
 
-:focus-visible {
+/* In the base layer so a component can restyle or drop its own ring (outline-none, -outline-offset-2). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* A box around a bare input (tag fields, the hidden colour picker) shows the ring for it. */
+.focus-ring-within:has(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

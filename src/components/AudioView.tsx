@@ -3,6 +3,7 @@ import { Pause, Play, Repeat } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { errorText, fileUrl } from "../api";
+import { reducedMotion } from "../lib/prefs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { toggleChip, usePreviewFailure } from "./Viewers";
@@ -36,7 +37,7 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
     ws.current = w;
     w.on("ready", (d) => {
       setTime({ now: 0, total: d });
-      if (full) void w.play().catch(() => {});
+      if (full && !reducedMotion()) void w.play().catch(() => {});
     });
     w.on("timeupdate", (t) => setTime((x) => ({ ...x, now: t })));
     w.on("play", () => setPlaying(true));

@@ -1,11 +1,11 @@
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
-import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, errorText } from "../api";
 import { ago, audioDetails, baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { Button, IconButton, KindPill, Label } from "./ui";
+import { Button, focusAssets, IconButton, KindPill, Label } from "./ui";
 import { PreviewFailure, Viewer } from "./Viewers";
 
 export async function openAsset(a: Asset) {
@@ -132,6 +132,7 @@ export function MetaRows({ a }: { a: Asset }) {
 export function TagEditor({ items }: { items: Asset[] }) {
   const { addTag, removeTag } = useStore();
   const [draft, setDraft] = useState("");
+  const input = useRef<HTMLInputElement>(null);
   const ids = items.map((a) => a.id);
   // On a multi-selection, show the tags all of them share.
   const shared = items.reduce<string[]>((acc, a, i) => (i === 0 ? a.tags : acc.filter((t) => a.tags.includes(t))), []);
@@ -143,14 +144,18 @@ export function TagEditor({ items }: { items: Asset[] }) {
   return (
     <div className="flex flex-col gap-2">
       <Label>Tags</Label>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
+      <div className="focus-ring-within flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
         {shared.map((t) => (
           <span key={t} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] text-xs">
             #{t}
             <button
               type="button"
               aria-label={`Remove tag ${t}`}
-              onClick={() => void removeTag(ids, t)}
+              onClick={() => {
+                // The chip goes away with its button; keep focus in the tag field.
+                input.current?.focus();
+                void removeTag(ids, t);
+              }}
               className="flex size-4 items-center justify-center rounded text-muted hover:bg-line-x hover:text-fg"
             >
               <X aria-hidden className="size-3" />
@@ -158,6 +163,7 @@ export function TagEditor({ items }: { items: Asset[] }) {
           </span>
         ))}
         <input
+          ref={input}
           aria-label="Add tag"
           value={draft}
           maxLength={64}
@@ -166,7 +172,7 @@ export function TagEditor({ items }: { items: Asset[] }) {
           onKeyDown={(e) => {
             e.stopPropagation();
             if (e.key === "Enter") submit();
-            if (e.key === "Escape") e.currentTarget.blur();
+            if (e.key === "Escape") focusAssets();
             if (e.key === "Backspace" && !draft && shared.length) void removeTag(ids, shared[shared.length - 1]);
           }}
           className="h-6 min-w-[110px] flex-1 border-0 bg-transparent px-1 text-xs text-fg outline-none"
@@ -176,21 +182,36 @@ export function TagEditor({ items }: { items: Asset[] }) {
   );
 }
 
-/** Five stars; clicking the current rating clears it. */
+/** Five stars as a radio group: click or use the arrow keys. Picking the current rating again clears it. */
 export function Stars({ value, onChange, className }: { value: number; onChange: (n: number) => void; className?: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const onKeyDown = (e: KeyboardEvent) => {
+    const to = ({ ArrowRight: value + 1, ArrowUp: value + 1, ArrowLeft: value - 1, ArrowDown: value - 1, Home: 1, End: 5 } as Record<string, number>)[e.key];
+    if (to === undefined) return;
+    // Keep the arrows from also moving to another asset.
+    e.preventDefault();
+    e.stopPropagation();
+    const n = Math.min(5, Math.max(0, to));
+    if (n !== value) onChange(n);
+    box.current?.querySelectorAll<HTMLElement>("[role=radio]")[Math.max(n, 1) - 1]?.focus();
+  };
   return (
-    <div role="group" aria-label={value ? `Rating: ${value} of 5` : "Rating: none"} className={clsx("flex items-center", className)}>
+    <div ref={box} role="radiogroup" aria-label="Rating" onKeyDown={onKeyDown} className={clsx("flex items-center", className)}>
       {[1, 2, 3, 4, 5].map((n) => {
-        const label = value === n ? "Clear rating (0)" : `Rate ${n} ${n === 1 ? "star" : "stars"} (${n})`;
+        const hint = value === n ? "Clear rating (0)" : `Rate ${n} ${n === 1 ? "star" : "stars"} (${n})`;
         return (
           <button
             key={n}
             type="button"
-            aria-label={label}
-            title={label}
+            role="radio"
+            aria-checked={value === n}
+            aria-label={`${n} ${n === 1 ? "star" : "stars"}`}
+            title={hint}
+            // One tab stop for the group: the current rating, or the first star.
+            tabIndex={n === Math.max(value, 1) ? 0 : -1}
             onClick={() => onChange(value === n ? 0 : n)}
             className={clsx(
-              "flex size-[22px] items-center justify-center rounded text-[15px] leading-none hover:bg-active",
+              "flex size-6 items-center justify-center rounded text-[15px] leading-none hover:bg-active",
               n <= value ? "text-star" : "text-faint hover:text-muted",
             )}
           >
@@ -234,9 +255,9 @@ export function NoteEditor({ a }: { a: Asset }) {
         onBlur={flush}
         onKeyDown={(e) => {
           e.stopPropagation();
-          if (e.key === "Escape") e.currentTarget.blur();
+          if (e.key === "Escape") focusAssets();
         }}
-        className="min-h-[68px] resize-y rounded-[9px] border border-line-strong bg-card px-2.5 py-2 text-[13px] text-fg outline-none placeholder:text-muted focus:border-line-x"
+        className="min-h-[68px] resize-y rounded-[9px] border border-line-strong bg-card px-2.5 py-2 text-[13px] text-fg placeholder:text-muted"
       />
     </div>
   );
@@ -280,6 +301,13 @@ export function Peek({ list }: { list: Asset[] }) {
   const s = useStore();
   const selectedAssets = useMemo(() => s.assets.filter((a) => s.selected.has(a.id)), [s.assets, s.selected]);
   const a = s.assets.find((x) => x.id === s.activeId);
+  // Closing the panel (Esc) while focus is in it hands focus back to the asset list instead of dropping it.
+  useEffect(
+    () => () => {
+      if (document.activeElement === document.body) focusAssets();
+    },
+    [],
+  );
   if (!a) return null;
   const multi = selectedAssets.length > 1;
   const mixedRating = selectedAssets.some((x) => x.rating !== selectedAssets[0].rating);
@@ -315,7 +343,8 @@ export function Peek({ list }: { list: Asset[] }) {
             onClick={() => void s.setFavorite(selectedAssets.map((x) => x.id), !selectedAssets.every((x) => x.favorite))}
             className="self-start"
           >
-            {selectedAssets.every((x) => x.favorite) ? "★ Unfavorite all" : "☆ Favorite all"}
+            <span aria-hidden>{selectedAssets.every((x) => x.favorite) ? "★" : "☆"}</span>
+            {selectedAssets.every((x) => x.favorite) ? "Unfavorite all" : "Favorite all"}
           </Button>
           <div className="flex flex-col gap-2">
             <Label>Rating</Label>
@@ -381,7 +410,7 @@ function PeekBody({ a }: { a: Asset }) {
         <div className="flex flex-none items-center gap-1.5">
           <Stars value={a.rating} onChange={(n) => void setRating([a.id], n)} />
           <IconButton
-            label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
+            label="Favorite (F)"
             aria-pressed={a.favorite}
             bordered
             className={clsx("size-[34px] rounded-[9px] text-base", a.favorite ? "text-star" : "text-muted")}
