@@ -358,9 +358,13 @@ export function Peek({ list }: { list: Asset[] }) {
   );
 }
 
+/** Image formats the backend can analyse; the same list as kind::DECODABLE. */
+const ANALYSABLE = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tga", "psd", "tif", "tiff", "ico"];
+
 function PeekBody({ a }: { a: Asset }) {
   const setFavorite = useStore((s) => s.setFavorite);
   const setRating = useStore((s) => s.setRating);
+  const findSimilar = useStore((s) => s.findSimilar);
   const where = useLocation(a);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-auto px-[18px] pt-[18px] pb-5">
@@ -388,6 +392,11 @@ function PeekBody({ a }: { a: Asset }) {
         </div>
       </div>
       <DuplicateBanner a={a} />
+      {a.kind === "image" && ANALYSABLE.includes(a.ext) && (
+        <Button size="sm" className="self-start" onClick={() => void findSimilar(a.id)}>
+          Find similar
+        </Button>
+      )}
       <MetaRows a={a} />
       <TagEditor items={[a]} />
       <CollectionChecks items={[a]} />

@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
 import type { Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
@@ -56,6 +57,10 @@ export const api = {
   exportFrames: (id: number, cols: number, rows: number, skipEmpty: boolean, dest: string) =>
     invoke<{ written: number; failed: string[]; first: string | null }>("export_frames", { id, cols, rows, skipEmpty, dest }),
   findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
+  /** Dominant colours of every analysed image; later ones come with onImageFeatures. */
+  imageColors: () => invoke<[number, Swatch[]][]>("image_colors"),
+  /** Images whose hash is within `maxDistance` bits of `id`'s, closest first, and how many images aren't analysed yet. */
+  findSimilar: (id: number, maxDistance: number) => invoke<{ ids: number[]; pending: number }>("find_similar", { id, maxDistance }),
   setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
   trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),
   reveal: (id: number) => invoke<void>("reveal", { id }),
@@ -77,6 +82,9 @@ export const api = {
   /** A scan or a batch of file events finished; its changes came before as deltas. */
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),
   onAssetsDelta: (cb: (d: AssetsDelta) => void): Promise<UnlistenFn> => listen<AssetsDelta>("assets-delta", (e) => cb(e.payload)),
+  /** The background analysis stored a batch: its images' colours, and how many images are left. */
+  onImageFeatures: (cb: (p: { left: number; colors: [number, Swatch[]][] }) => void): Promise<UnlistenFn> =>
+    listen<{ left: number; colors: [number, Swatch[]][] }>("image-features", (e) => cb(e.payload)),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */

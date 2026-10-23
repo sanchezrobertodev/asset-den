@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { NAMED_COLORS } from "../lib/colors";
 import { activeFilterCount, noFilters, type Filters } from "../lib/filter";
 import { useStore } from "../store";
 import { IconButton } from "./ui";
@@ -79,7 +80,7 @@ function NumField({ label, value, onChange, scale = 1 }: { label: string; value:
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 export function FilterButton() {
-  const { assets, filters: f, setFilters } = useStore();
+  const { assets, filters: f, setFilters, analysing } = useStore();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const count = activeFilterCount(f);
@@ -236,6 +237,47 @@ export function FilterButton() {
                   </Chip>
                 ))}
               </div>
+            </Group>
+
+            <Group title="Colour" active={f.color !== null} onClear={() => setFilters({ color: null })}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Object.entries(NAMED_COLORS).map(([name, hex]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-pressed={f.color === name}
+                    aria-label={name}
+                    title={name}
+                    onClick={() => setFilters({ color: f.color === name ? null : name })}
+                    style={{ background: hex }}
+                    className={clsx(
+                      "size-7 rounded-full border border-line-strong",
+                      f.color === name && "ring-2 ring-accent ring-offset-2 ring-offset-field",
+                    )}
+                  />
+                ))}
+                <label
+                  title="Custom colour"
+                  className={clsx(
+                    "relative flex h-7 items-center gap-1.5 rounded-[14px] border px-2.5 text-xs",
+                    f.color?.startsWith("#") ? "border-accent bg-accent/15 text-fg" : "border-line-strong text-muted hover:text-fg",
+                  )}
+                >
+                  <span aria-hidden className="size-3.5 rounded-full border border-line-strong" style={{ background: f.color?.startsWith("#") ? f.color : "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }} />
+                  {f.color?.startsWith("#") ? <span className="font-mono">{f.color}</span> : "Custom"}
+                  <input
+                    type="color"
+                    aria-label="Custom colour"
+                    value={f.color?.startsWith("#") ? f.color : "#ff8800"}
+                    onChange={(e) => setFilters({ color: e.target.value })}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </label>
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted">
+                Images with this as one of their main colours. In search: color:red or color:#ff8800.
+                {analysing > 0 && ` ${analysing.toLocaleString()} images are still being analysed.`}
+              </p>
             </Group>
           </div>
         </div>

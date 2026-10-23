@@ -18,7 +18,7 @@ interface Item {
   run: () => void;
 }
 
-const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "dur:<2s", "rating:>=4", "note:"];
+const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "dur:<2s", "rating:>=4", "note:", "color:red"];
 const tokenLabel: Record<string, string> = { "#": "#tag", "in:": "in:folder", "note:": "note:word" };
 
 export function Palette() {
@@ -32,6 +32,10 @@ export function Palette() {
     input.current?.focus();
     input.current?.select();
   }, []);
+  const wantsColors = parseQuery(q).colors.length > 0;
+  useEffect(() => {
+    if (wantsColors) void useStore.getState().loadPalettes();
+  }, [wantsColors]);
 
   const sections = useMemo(() => {
     const out: { title: string; items: Item[] }[] = [];
@@ -39,7 +43,7 @@ export function Palette() {
     const hasQuery = q.trim().length > 0;
     const close = { palette: false };
     if (hasQuery) {
-      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes));
+      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes, s.palettes));
       const items: Item[] = [
         {
           key: "all",
@@ -120,6 +124,7 @@ export function Palette() {
       !parsed.folder &&
       !parsed.tags.length &&
       !parsed.notes.length &&
+      !parsed.colors.length &&
       parsed.minRating === 0 &&
       parsed.maxRating === 5 &&
       parsed.minMs === null &&
@@ -227,7 +232,7 @@ export function Palette() {
               })}
             </div>
           ))}
-          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, {"rating:>=4"} or in:audio.</div>}
+          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, {"rating:>=4"}, in:audio or color:blue.</div>}
         </div>
         <div className="flex gap-4 border-t border-line px-[18px] py-2.5 text-xs text-faint">
           <span>↑↓ move</span>

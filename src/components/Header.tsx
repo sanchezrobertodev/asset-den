@@ -46,6 +46,39 @@ export function Header() {
   );
 }
 
+/** The "Find similar" scope: who it's for, how loose a match may be, and a way out. */
+function SimilarChip({ chip }: { chip: string }) {
+  const { similar, analysing, findSimilar, clearSimilar } = useStore();
+  const [max, setMax] = useState(similar!.max);
+  useEffect(() => setMax(similar!.max), [similar!.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { id, name, ids } = similar!;
+  return (
+    <>
+      <button type="button" className={clsx(chip, "pr-2")} onClick={clearSimilar} aria-label={`Stop showing images similar to ${name}`}>
+        Similar to {name}
+        <X aria-hidden className="size-3.5 opacity-55" />
+      </button>
+      <label className="flex h-[30px] flex-none items-center gap-2 px-1 text-xs text-muted" title={analysing ? `${analysing.toLocaleString()} images not analysed yet` : undefined}>
+        Strict
+        <input
+          type="range"
+          aria-label="How different similar images may be"
+          aria-valuetext={`Up to ${max} of 64 bits differ, ${ids.length} images`}
+          min={1}
+          max={24}
+          value={max}
+          onChange={(e) => {
+            setMax(Number(e.target.value));
+            void findSimilar(id, Number(e.target.value));
+          }}
+          className="w-24 accent-[var(--accent)]"
+        />
+        Loose
+      </label>
+    </>
+  );
+}
+
 const sortLabels: Record<SortKey, string> = { name: "Name", kind: "Type", size: "Size", mtime: "Modified", folder: "Folder" };
 
 /** Type chips, active-scope chips and the view controls above the library grid. */
@@ -109,6 +142,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
             <X aria-hidden className="size-3.5 opacity-55" />
           </button>
         )}
+        {s.similar && <SimilarChip chip={chip(true)} />}
         <FilterButton />
         {(s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
       </div>

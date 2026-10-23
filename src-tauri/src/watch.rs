@@ -50,6 +50,7 @@ pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, Str
             crate::emit_delta(&app, &conn, &touched);
         }
         let _ = app.emit("assets-changed", root_id);
+        crate::analysis::request(&app);
     })
     .map_err(|e| e.to_string())?;
     debouncer

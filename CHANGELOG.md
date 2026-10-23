@@ -49,6 +49,15 @@ All notable changes to Asset Den are documented here. The format follows
 - **Export frames…** in the full-screen sprite view saves each frame of the sheet as its own PNG (`walk_000.png`,
   `walk_001.png`…) in a folder you pick, cut from the original image at the saved grid. Fully transparent frames can be
   skipped. Existing files are never replaced: a taken name gets " (2)", and the sheet itself is only read.
+- **Find similar** in the side panel shows the images that look like the open one, closest first: resized, recoloured
+  (hue-shifted) and lightly cropped copies included. A "Similar to …" chip above the grid has a Strict–Loose slider and
+  clears the search. Works for PNG, JPEG, GIF, WebP, BMP, TGA, PSD, TIFF and ICO.
+- **Search by colour**: a Colour group in the Filters panel (twelve named swatches and a custom colour), and
+  `color:red` or `color:#ff8800` in search. An image matches when one of its main colours is that colour; smart collections
+  can save a colour too.
+- Both use a background pass after each scan that reads every image once (from its cached thumbnail when there is
+  one) and keeps a small fingerprint and its five main colours until the file changes. It uses at most half the
+  thumbnail workers and waits while folders are scanned. Files are only read.
 
 ### Changed
 

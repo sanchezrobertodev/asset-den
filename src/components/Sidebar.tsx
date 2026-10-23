@@ -86,7 +86,7 @@ export function Sidebar() {
     }
     return { favorites, byKind, total };
   }, [s.assets]);
-  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes), [s.collections, s.assets, s.notes]);
+  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, s.palettes), [s.collections, s.assets, s.notes, s.palettes]);
 
   const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
     { view: "library", label: "Library", count: s.assets.length },

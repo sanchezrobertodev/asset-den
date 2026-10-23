@@ -11,7 +11,7 @@ import { Button, KindPill } from "./ui";
 export function CollectionsView({ items }: { items: Asset[] }) {
   const s = useStore();
   const byId = useMemo(() => new Map(s.assets.map((a) => [a.id, a])), [s.assets]);
-  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes), [s.collections, s.assets, s.notes]);
+  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, s.palettes), [s.collections, s.assets, s.notes, s.palettes]);
   const searching = s.query.trim() !== "" || s.kinds.length > 0 || activeFilterCount(s.filters) > 0;
   const current = s.collections.find((c) => c.id === s.colSel) ?? null;
   const [name, setName] = useState(current?.name ?? "");

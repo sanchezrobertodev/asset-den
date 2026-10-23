@@ -1,3 +1,4 @@
+mod analysis;
 mod audio;
 mod db;
 mod dupes;
@@ -104,6 +105,7 @@ fn spawn_scan(app: AppHandle, root: Root) {
         }
         progress(result.unwrap_or(0), true);
         let _ = app.emit("assets-changed", root.id);
+        analysis::request(&app);
     });
 }
 
@@ -358,6 +360,52 @@ async fn find_duplicates(app: AppHandle, state: State<'_, AppState>) -> Result<V
         .map_err(err)?
         .map_err(err)?;
     with_db(&state, dupes::groups)
+}
+
+/// Dominant colours of every analysed image, for search by colour. Later ones arrive with `image-features` events.
+#[tauri::command]
+fn image_colors(state: State<'_, AppState>) -> Result<Vec<(i64, Vec<analysis::Swatch>)>, String> {
+    with_db(&state, analysis::colors)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Similar {
+    /// Closest first.
+    ids: Vec<i64>,
+    /// Images not analysed yet, which can't be in `ids`.
+    pending: usize,
+}
+
+/// Images that look like `id`: their difference hashes differ in at most `max_distance` of 64 bits. Analyses `id` first
+/// if the background pass hasn't reached it yet.
+#[tauri::command]
+async fn find_similar(state: State<'_, AppState>, id: i64, max_distance: u32) -> Result<Similar, String> {
+    let hash = match with_db(&state, |c| analysis::dhash_of(c, id))? {
+        Some(h) => h,
+        None => {
+            let a = asset(&state, id)?;
+            if a.kind != "image" || !kind::decodable(&a.ext) {
+                return Err("Find similar works on PNG, JPEG, GIF, WebP, BMP, TGA, PSD, TIFF and ICO images.".into());
+            }
+            let thumb = state.thumbs_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+            let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+            let (path, ext) = (a.path.clone(), a.ext.clone());
+            let f = tauri::async_runtime::spawn_blocking(move || analysis::features(Path::new(&path), &ext, &thumb))
+                .await
+                .map_err(err)?
+                .map_err(|e| format!("Couldn't read {}: {e}", a.name))?;
+            let hash = f.dhash;
+            with_db(&state, |c| analysis::store(c, &[(a.id, a.size, a.mtime, Some(f))]))?;
+            hash
+        }
+    };
+    with_db(&state, |c| {
+        Ok(Similar {
+            ids: analysis::similar(c, id, hash, max_distance)?,
+            pending: analysis::pending(c)?,
+        })
+    })
 }
 
 /// "Not duplicates" / "Keep both": hides a group until it's un-ignored.
@@ -699,6 +747,7 @@ pub fn run() {
             app.asset_protocol_scope().allow_directory(&cache, true)?;
 
             let conn = db::open(&data.join("asset-den.db"))?;
+            conn.execute_batch(analysis::SCHEMA)?;
             let roots = db::roots(&conn)?;
             // Before the catch-up scans below, so they skip the user's ignored folders too.
             kind::set_extra_ignored(&db::ignored_folders(&conn)?);
@@ -746,6 +795,8 @@ pub fn run() {
             delete_collection,
             set_in_collection,
             find_duplicates,
+            image_colors,
+            find_similar,
             set_duplicate_ignored,
             trash_duplicates,
             rename_collection,

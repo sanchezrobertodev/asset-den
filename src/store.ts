@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { api, errorText } from "./api";
+import { toLab, type LabSwatch, type Swatch } from "./lib/colors";
 import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
 import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
+import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
 
@@ -48,6 +50,12 @@ interface State extends Prefs {
   sheets: Record<number, SpriteSheet | null>;
   /** Every asset note, loaded with the library: the side panel edits them and `note:` searches them. */
   notes: Notes;
+  /** Dominant colours by image id, loaded the first time a colour filter is used; null until then. */
+  palettes: Map<number, LabSwatch[]> | null;
+  /** Images the background analysis (colours, similarity) hasn't reached yet, as of its last report. */
+  analysing: number;
+  /** "Find similar" scope of the library: images like `id` within `max` bits, closest first. */
+  similar: { id: number; name: string; max: number; ids: number[] } | null;
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
@@ -101,6 +109,9 @@ interface State extends Prefs {
   trashDuplicates: (keep: number, remove: number[]) => Promise<void>;
   loadSheet: (id: number) => Promise<void>;
   saveSheet: (id: number, sheet: SpriteSheet) => Promise<void>;
+  loadPalettes: () => Promise<void>;
+  findSimilar: (id: number, max?: number) => Promise<void>;
+  clearSimilar: () => void;
 }
 
 const prefs = loadPrefs();
@@ -113,6 +124,15 @@ let loading = 0;
 let incoming: AssetsDelta[] = [];
 /** The last note save; each one waits for the one before. */
 let noteSaves: Promise<unknown> = Promise.resolve();
+/** Colours reported while the palettes load, applied on top of what the load returns. */
+let paletteBacklog: [number, Swatch[]][] | null = null;
+/** "Find similar": answers to superseded (slider drags) or cancelled requests are dropped; re-asked as analysis goes on. */
+const similarAsk = latestRequest<{ id: number; max: number }>(2000);
+/** Ends "Find similar", including a request still on its way. */
+const noSimilar = () => {
+  similarAsk.cancel();
+  return { similar: null };
+};
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -159,6 +179,7 @@ export const useStore = create<State>((set, get) => {
     // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
     sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => has(Number(id)))),
     notes: Object.fromEntries(Object.entries(s.notes).filter(([id]) => has(Number(id)))),
+    palettes: s.palettes && new Map([...s.palettes].filter(([id]) => has(id))),
   });
   /** Patches `assets` with the deltas received so far, or reloads everything if one went missing. True if it patched. */
   const applyIncoming = () => {
@@ -219,6 +240,9 @@ export const useStore = create<State>((set, get) => {
     toast: null,
     sheets: {},
     notes: {},
+    palettes: null,
+    analysing: 0,
+    similar: null,
     colSel: null,
     dups: null,
     dupSel: 0,
@@ -238,6 +262,17 @@ export const useStore = create<State>((set, get) => {
           return { scanning };
         }),
       );
+      await api.onImageFeatures(({ left, colors }) => {
+        // Images analysed since can match the open "Find similar"; its results were a snapshot.
+        similarAsk.again(({ id, max }) => void get().findSimilar(id, max));
+        if (paletteBacklog) paletteBacklog.push(...colors);
+        set((s) => {
+          if (!s.palettes || paletteBacklog) return { analysing: left };
+          const palettes = new Map(s.palettes);
+          for (const [id, c] of colors) palettes.set(id, toLab(c));
+          return { analysing: left, palettes };
+        });
+      });
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
         // A scan or a burst of file events ended: catch up once, then refresh collections and re-check duplicates.
@@ -287,7 +322,7 @@ export const useStore = create<State>((set, get) => {
       try {
         const root = await api.addRoot(path);
         const folder = { rootId: root.id, path: "" };
-        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: "library", folder, ...folderState(folder) }));
+        set((s) => ({ roots: [...s.roots, root], scanning: { ...s.scanning, [root.id]: 0 }, view: "library", folder, ...noSimilar(), ...folderState(folder) }));
       } catch (e) {
         get().setError(e);
       }
@@ -316,13 +351,13 @@ export const useStore = create<State>((set, get) => {
     },
     dismissToast: () => set({ toast: null }),
 
-    go: (view, extra = {}) => set({ view, full: false, palette: false, ...extra, ...folderState(extra.folder) }),
+    go: (view, extra = {}) => set({ view, full: false, palette: false, ...noSimilar(), ...extra, ...folderState(extra.folder) }),
     setQuery: (query) => set({ query }),
     toggleKind: (k) =>
       set((s) => ({ kinds: k === "all" ? [] : s.kinds.includes(k) ? s.kinds.filter((x) => x !== k) : [...s.kinds, k] })),
-    setFolder: (folder) => set({ folder, ...folderState(folder) }),
+    setFolder: (folder) => set({ folder, ...noSimilar(), ...folderState(folder) }),
     setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
-    clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "" }),
+    clearFilters: () => set({ filters: noFilters, kinds: [], folder: null, query: "", ...noSimilar() }),
     setSort: (key) => {
       set((s) => ({ sort: { key, desc: s.sort.key === key ? !s.sort.desc : key === "mtime" || key === "size" } }));
       persist();
@@ -385,6 +420,36 @@ export const useStore = create<State>((set, get) => {
         get().setError(e);
       }
     },
+
+    loadPalettes: async () => {
+      if (get().palettes || paletteBacklog) return;
+      paletteBacklog = [];
+      try {
+        const rows = await api.imageColors();
+        const palettes = new Map(rows.map(([id, c]) => [id, toLab(c)]));
+        for (const [id, c] of paletteBacklog) palettes.set(id, toLab(c));
+        set({ palettes });
+      } catch (e) {
+        get().setError(e);
+      } finally {
+        paletteBacklog = null;
+      }
+    },
+    findSimilar: async (id, max = 10) => {
+      const current = similarAsk.start({ id, max });
+      try {
+        const { ids, pending } = await api.findSimilar(id, max);
+        if (!current()) return;
+        // A new image opens the library on its results; a new slider position or a refresh keeps the view as it is.
+        const nav = get().similar?.id === id ? {} : { view: "library" as const, full: false, palette: false, query: "", kinds: [], folder: null };
+        set({ ...nav, similar: { id, name: nameOf(id), max, ids }, analysing: pending });
+      } catch (e) {
+        if (!current()) return;
+        similarAsk.cancel(); // or every analysis batch would ask again and show the same error
+        get().setError(e);
+      }
+    },
+    clearSimilar: () => set(noSimilar()),
 
     select: (id, mode = "replace", order = []) =>
       set((s) => {
@@ -538,7 +603,7 @@ export const useStore = create<State>((set, get) => {
     copyCollection: async (id) => {
       const c = get().collections.find((x) => x.id === id);
       if (!c) return;
-      const ids = c.rule ? get().assets.filter(ruleMatcher(c.rule, get().notes)).map((a) => a.id) : c.assetIds;
+      const ids = c.rule ? get().assets.filter(ruleMatcher(c.rule, get().notes, undefined, get().palettes)).map((a) => a.id) : c.assetIds;
       if (!ids.length) return;
       const dest = await api.pickFolder(`Copy ${c.name} to…`);
       if (!dest) return;
