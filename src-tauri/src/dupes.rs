@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use rusqlite::{Connection, Result, params};
 
-use crate::db::abs_path;
+use crate::db::{self, abs_path};
 
 const SAME_SIZE: &str = "SELECT size FROM assets WHERE size > 0 GROUP BY size HAVING count(*) > 1";
 
@@ -89,7 +89,8 @@ pub fn set_ignored(conn: &Connection, hash: &str, ignored: bool) -> Result<()> {
     conn.execute(sql, [hash]).map(|_| ())
 }
 
-/// Moves a removed copy's tags, favorite and collection memberships onto the copy that's kept, then drops its row.
+/// Moves a removed copy's tags, favorite, rating (the higher one), note (both, if they differ) and collection
+/// memberships onto the copy that's kept, then drops its row.
 pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()> {
     conn.execute(
         "INSERT OR IGNORE INTO asset_tags (asset_id, tag) SELECT ?1, tag FROM asset_tags WHERE asset_id = ?2",
@@ -98,6 +99,16 @@ pub fn merge_and_forget(conn: &Connection, keep: i64, remove: i64) -> Result<()>
     conn.execute(
         "UPDATE assets SET favorite = 1 WHERE id = ?1 AND (SELECT favorite FROM assets WHERE id = ?2) = 1",
         params![keep, remove],
+    )?;
+    conn.execute(
+        "INSERT INTO asset_meta (asset_id, rating, note) SELECT ?1, rating, note FROM asset_meta WHERE asset_id = ?2
+         ON CONFLICT (asset_id) DO UPDATE SET
+           rating = max(rating, excluded.rating),
+           note = CASE WHEN note IS NULL OR note = excluded.note THEN excluded.note
+                       WHEN excluded.note IS NULL THEN note
+                       ELSE substr(note || char(10) || char(10) || excluded.note, 1, ?3) END",
+        // Cut at the note limit (the kept note is never cut, it's at most that long), so it stays editable.
+        params![keep, remove, db::NOTE_MAX as i64],
     )?;
     conn.execute(
         "INSERT OR IGNORE INTO collection_assets (collection_id, asset_id)
@@ -150,6 +161,7 @@ mod tests {
         let r = dir.path();
         fs::write(r.join("a.png"), "same").unwrap();
         fs::write(r.join("b.png"), "same").unwrap();
+        fs::write(r.join("c.png"), "same").unwrap();
         let mut conn = db::open_memory();
         conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
             .unwrap();
@@ -167,11 +179,15 @@ mod tests {
         set_ignored(&conn, &g.hash, false).unwrap();
         assert_eq!(groups(&conn).unwrap().len(), 1);
 
-        let (keep, remove) = (g.ids[0], g.ids[1]);
+        let (keep, remove, third) = (g.ids[0], g.ids[1], g.ids[2]);
         db::add_tag(&conn, &[keep], "a").unwrap();
         db::add_tag(&conn, &[remove], "b").unwrap();
         db::set_favorite(&conn, &[remove], true).unwrap();
-        let c = db::create_collection(&conn, "Level").unwrap();
+        db::set_rating(&conn, &[keep], 2).unwrap();
+        db::set_rating(&conn, &[remove], 4).unwrap();
+        db::set_note(&conn, keep, "keep note").unwrap();
+        db::set_note(&conn, remove, "copy note").unwrap();
+        let c = db::create_collection(&conn, "Level", None).unwrap();
         db::set_in_collection(&conn, c, &[remove], true).unwrap();
         merge_and_forget(&conn, keep, remove).unwrap();
 
@@ -179,8 +195,41 @@ mod tests {
         let mut tags = kept.tags.clone();
         tags.sort();
         assert_eq!((tags, kept.favorite), (vec!["a".to_string(), "b".to_string()], true));
+        assert_eq!(kept.rating, 4);
+        let merged = "keep note\n\ncopy note".to_string();
+        assert_eq!(db::notes(&conn).unwrap(), [(keep, merged.clone())].into());
         assert_eq!(db::collections(&conn).unwrap()[0].asset_ids, vec![keep]);
         assert!(db::asset(&conn, remove).is_err());
+
+        // The same note isn't repeated, and a lower rating doesn't lower the kept one.
+        db::set_rating(&conn, &[third], 1).unwrap();
+        db::set_note(&conn, third, &merged).unwrap();
+        merge_and_forget(&conn, keep, third).unwrap();
+        assert_eq!(db::asset(&conn, keep).unwrap().rating, 4);
+        assert_eq!(db::notes(&conn).unwrap()[&keep], merged);
+    }
+
+    #[test]
+    fn merged_notes_stay_editable() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "same").unwrap();
+        fs::write(r.join("b.png"), "same").unwrap();
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let ids: Vec<i64> = db::assets(&conn, None).unwrap().iter().map(|a| a.id).collect();
+        let (keep, remove) = (ids[0], ids[1]);
+        let kept_note = "k".repeat(db::NOTE_MAX - 10);
+        db::set_note(&conn, keep, &kept_note).unwrap();
+        db::set_note(&conn, remove, &"é".repeat(db::NOTE_MAX)).unwrap();
+        merge_and_forget(&conn, keep, remove).unwrap();
+
+        let merged = db::notes(&conn).unwrap().remove(&keep).unwrap();
+        assert_eq!(merged.chars().count(), db::NOTE_MAX);
+        assert!(merged.starts_with(&format!("{kept_note}\n\néééééééé")));
+        db::set_note(&conn, keep, &merged).unwrap(); // still saves as is
     }
 
     #[test]

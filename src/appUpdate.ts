@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, errorText, type AppUpdate, type DownloadProgress } from "./api";
+import { loadPrefs } from "./lib/prefs";
 
 /** Asset Den's own updates (the Tauri updater), separate from the library store. */
 export type AppUpdatePhase = "idle" | "checking" | "upToDate" | "available" | "installing" | "error";
@@ -38,8 +39,8 @@ export const useAppUpdate = create<AppUpdateState>((set, get) => ({
     } catch {
       set({ supported: false });
     }
-    // Look once the library is up; a quiet check keeps failures (offline, no release yet) silent.
-    if (get().supported) setTimeout(() => void get().check({ quiet: true }), 4000);
+    // Look once the library is up, unless turned off in Settings; a quiet check keeps failures (offline, no release yet) silent.
+    if (get().supported && loadPrefs().checkUpdates) setTimeout(() => void get().check({ quiet: true }), 4000);
   },
 
   check: async (opts) => {

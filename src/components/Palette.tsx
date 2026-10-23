@@ -18,7 +18,8 @@ interface Item {
   run: () => void;
 }
 
-const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "color:red"];
+const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "dur:<2s", "rating:>=4", "note:", "color:red"];
+const tokenLabel: Record<string, string> = { "#": "#tag", "in:": "in:folder", "note:": "note:word" };
 
 export function Palette() {
   const s = useStore();
@@ -42,7 +43,7 @@ export function Palette() {
     const hasQuery = q.trim().length > 0;
     const close = { palette: false };
     if (hasQuery) {
-      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.palettes));
+      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes, s.palettes));
       const items: Item[] = [
         {
           key: "all",
@@ -112,10 +113,22 @@ export function Palette() {
         s.clearFilters();
         s.go("library");
       }],
+      ["Settings", () => s.setModal("settings")],
+      ["Keyboard shortcuts", () => s.setModal("shortcuts")],
     ];
     if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
     const words = parsed.text;
-    const onlyText = hasQuery && !parsed.types && !parsed.folder && !parsed.tags.length && !parsed.colors.length;
+    const onlyText =
+      hasQuery &&
+      !parsed.types &&
+      !parsed.folder &&
+      !parsed.tags.length &&
+      !parsed.notes.length &&
+      !parsed.colors.length &&
+      parsed.minRating === 0 &&
+      parsed.maxRating === 5 &&
+      parsed.minMs === null &&
+      parsed.maxMs === null;
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];
     if (acts.length) out.push({ title: "Actions", items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
     return out;
@@ -186,7 +199,7 @@ export function Palette() {
               }}
               className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:bg-line-strong"
             >
-              {t === "#" ? "#tag" : t === "in:" ? "in:folder" : t}
+              {tokenLabel[t] ?? t}
             </button>
           ))}
         </div>
@@ -219,7 +232,7 @@ export function Palette() {
               })}
             </div>
           ))}
-          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, in:audio or color:blue.</div>}
+          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, {"rating:>=4"}, in:audio or color:blue.</div>}
         </div>
         <div className="flex gap-4 border-t border-line px-[18px] py-2.5 text-xs text-faint">
           <span>↑↓ move</span>

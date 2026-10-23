@@ -1,4 +1,5 @@
 mod analysis;
+mod audio;
 mod db;
 mod dupes;
 mod kind;
@@ -285,6 +286,22 @@ fn set_favorite(state: State<'_, AppState>, ids: Vec<i64>, favorite: bool) -> Re
 }
 
 #[tauri::command]
+fn set_rating(state: State<'_, AppState>, ids: Vec<i64>, rating: u8) -> Result<(), String> {
+    db::set_rating(&state.db.lock().unwrap(), &ids, rating)
+}
+
+#[tauri::command]
+fn list_notes(state: State<'_, AppState>) -> Result<HashMap<i64, String>, String> {
+    with_db(&state, db::notes)
+}
+
+/// Returns the note as stored (trimmed; null when cleared).
+#[tauri::command]
+fn set_note(state: State<'_, AppState>, id: i64, note: String) -> Result<Option<String>, String> {
+    db::set_note(&state.db.lock().unwrap(), id, &note)
+}
+
+#[tauri::command]
 fn add_tag(state: State<'_, AppState>, ids: Vec<i64>, tag: String) -> Result<String, String> {
     let tag = db::clean_tag(&tag)?;
     with_db(&state, |c| db::add_tag(c, &ids, &tag))?;
@@ -311,9 +328,15 @@ fn list_collections(state: State<'_, AppState>) -> Result<Vec<Collection>, Strin
     with_db(&state, db::collections)
 }
 
+/// A plain collection, or a smart one when `rule` is given.
 #[tauri::command]
-fn create_collection(state: State<'_, AppState>, name: String) -> Result<i64, String> {
-    db::create_collection(&state.db.lock().unwrap(), &name)
+fn create_collection(state: State<'_, AppState>, name: String, rule: Option<db::Rule>) -> Result<i64, String> {
+    db::create_collection(&state.db.lock().unwrap(), &name, rule.as_ref())
+}
+
+#[tauri::command]
+fn set_collection_rule(state: State<'_, AppState>, id: i64, rule: db::Rule) -> Result<(), String> {
+    db::set_rule(&state.db.lock().unwrap(), id, &rule)
 }
 
 #[tauri::command]
@@ -476,28 +499,124 @@ struct CopyResult {
     failed: Vec<String>,
 }
 
-/// Copies a collection's files into `dest`. Originals are only read; existing files in `dest` are never replaced.
+/// Copies a collection's files (`ids`: the UI knows a smart collection's members) into `dest`. Originals are only read;
+/// existing files in `dest` are never replaced.
 #[tauri::command]
-async fn copy_collection(state: State<'_, AppState>, id: i64, dest: String) -> Result<CopyResult, String> {
+async fn copy_collection(state: State<'_, AppState>, ids: Vec<i64>, dest: String) -> Result<CopyResult, String> {
     let dest = PathBuf::from(dest);
     if !dest.is_dir() {
         return Err(format!("{} is not a folder.", dest.display()));
     }
-    let files = with_db(&state, |c| {
-        let ids = db::collections(c)?
-            .into_iter()
-            .find(|col| col.id == id)
-            .map(|col| col.asset_ids)
-            .unwrap_or_default();
-        Ok(db::assets(c, None)?
-            .into_iter()
-            .filter(|a| ids.contains(&a.id))
-            .collect::<Vec<_>>())
-    })?;
+    let files = with_db(&state, |c| db::assets(c, Some(&ids)))?;
     let (copied, failed) = tauri::async_runtime::spawn_blocking(move || copy_into(&files, &dest))
         .await
         .map_err(err)?;
     Ok(CopyResult { copied, failed })
+}
+
+/// Writes each cell of a `cols`×`rows` grid over `img` to `dest` as `<stem>_000.png`, `<stem>_001.png`… in reading
+/// order. Frames are floor(width / cols) × floor(height / rows), as in the sprite view, so a remainder is dropped.
+/// With `skip_empty`, fully transparent frames are left out (the others keep their numbers). Never replaces a file.
+/// Returns the files written and the frames that failed.
+fn write_frames(
+    img: &image::DynamicImage,
+    stem: &str,
+    cols: u32,
+    rows: u32,
+    skip_empty: bool,
+    dest: &Path,
+) -> (Vec<PathBuf>, Vec<String>) {
+    let (fw, fh) = (img.width() / cols, img.height() / rows);
+    let digits = (cols * rows - 1).max(1).ilog10() as usize + 1;
+    let mut failed = Vec::new();
+    let mut written = Vec::new();
+    for i in 0..cols * rows {
+        let frame = img.crop_imm((i % cols) * fw, (i / cols) * fh, fw, fh);
+        if skip_empty && frame.to_rgba8().pixels().all(|p| p[3] == 0) {
+            continue;
+        }
+        let name = format!("{stem}_{i:0w$}.png", w = digits.max(3));
+        let target = free_path(dest, &name);
+        let r = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .map_err(err)
+            .and_then(|f| {
+                frame
+                    .write_to(&mut std::io::BufWriter::new(f), image::ImageFormat::Png)
+                    .map_err(|e| {
+                        let _ = std::fs::remove_file(&target); // our own half-written file
+                        err(e)
+                    })
+            });
+        match r {
+            Ok(()) => written.push(target),
+            Err(e) => failed.push(format!("{name}: {e}")),
+        }
+    }
+    (written, failed)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportResult {
+    written: usize,
+    failed: Vec<String>,
+    /// The first frame written, to show in the file manager.
+    first: Option<String>,
+}
+
+/// Saves each frame of a sprite sheet as its own PNG in `dest`, cut from the original file (not the size-capped
+/// preview). The original is only read.
+#[tauri::command]
+async fn export_frames(
+    state: State<'_, AppState>,
+    id: i64,
+    cols: u32,
+    rows: u32,
+    skip_empty: bool,
+    dest: String,
+) -> Result<ExportResult, String> {
+    let a = asset(&state, id)?;
+    if !kind::decodable(&a.ext) {
+        return Err(format!("Asset Den can't cut frames from .{} files.", a.ext));
+    }
+    let dest = PathBuf::from(dest);
+    if !dest.is_dir() {
+        return Err(format!("{} is not a folder.", dest.display()));
+    }
+    let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+    let (written, failed) = tauri::async_runtime::spawn_blocking(move || {
+        let img = thumbs::decode(Path::new(&a.path), &a.ext)?;
+        if cols == 0 || rows == 0 || cols > img.width() || rows > img.height() {
+            return Err(format!(
+                "A {cols}×{rows} grid doesn't fit this {}×{} image.",
+                img.width(),
+                img.height()
+            ));
+        }
+        let stem = Path::new(&a.name)
+            .file_stem()
+            .map_or("frame".into(), |s| s.to_string_lossy().into_owned());
+        Ok(write_frames(&img, &stem, cols, rows, skip_empty, &dest))
+    })
+    .await
+    .map_err(err)??;
+    Ok(ExportResult {
+        written: written.len(),
+        failed,
+        first: written.first().map(|p| p.display().to_string()),
+    })
+}
+
+/// Shows a file or folder in the system file manager (selected in its parent). Never opens or runs it.
+#[tauri::command]
+fn reveal_path(app: AppHandle, path: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err(format!("{path} no longer exists."));
+    }
+    app.opener().reveal_item_in_dir(path).map_err(err)
 }
 
 #[tauri::command]
@@ -534,6 +653,77 @@ fn drag_icon(state: State<'_, AppState>) -> String {
     state.drag_icon.display().to_string()
 }
 
+#[tauri::command]
+fn ignored_folders(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    with_db(&state, db::ignored_folders)
+}
+
+/// Saves the user's ignored folder names. Scans and file events skip them from now on; rows already indexed under
+/// them leave the library on the next rescan.
+#[tauri::command]
+fn set_ignored_folders(state: State<'_, AppState>, names: Vec<String>) -> Result<Vec<String>, String> {
+    let names = db::set_ignored_folders(&state.db.lock().unwrap(), &names)?;
+    kind::set_extra_ignored(&names);
+    Ok(names)
+}
+
+/// Total size of the files directly in `dirs`.
+fn files_size(dirs: &[PathBuf]) -> u64 {
+    dirs.iter()
+        .filter_map(|d| std::fs::read_dir(d).ok())
+        .flatten()
+        .filter_map(|e| e.ok()?.metadata().ok())
+        .filter(|m| m.is_file())
+        .map(|m| m.len())
+        .sum()
+}
+
+/// Deletes the files directly in `dirs`, keeping the folders and anything inside subfolders.
+fn delete_files(dirs: &[PathBuf]) -> std::io::Result<()> {
+    for d in dirs {
+        for e in std::fs::read_dir(d)? {
+            let e = e?;
+            if e.file_type()?.is_file() {
+                match std::fs::remove_file(e.path()) {
+                    Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err),
+                    _ => {}
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Bytes used by the app's own thumbnail and preview caches.
+#[tauri::command]
+async fn cache_size(state: State<'_, AppState>) -> Result<u64, String> {
+    let dirs = [state.thumbs_dir.clone(), state.previews_dir.clone()];
+    tauri::async_runtime::spawn_blocking(move || files_size(&dirs))
+        .await
+        .map_err(err)
+}
+
+/// Empties the app's own thumbnail and preview caches; they are rebuilt on demand. Never touches asset files.
+#[tauri::command]
+async fn clear_thumbnail_cache(state: State<'_, AppState>) -> Result<(), String> {
+    let dirs = [state.thumbs_dir.clone(), state.previews_dir.clone()];
+    tauri::async_runtime::spawn_blocking(move || delete_files(&dirs))
+        .await
+        .map_err(err)?
+        .map_err(|e| format!("Couldn't clear the thumbnail cache: {e}"))
+}
+
+/// Opens the public releases page (installers and release notes) in the browser.
+#[tauri::command]
+fn open_releases(app: AppHandle) -> Result<(), String> {
+    app.opener()
+        .open_url(
+            "https://github.com/sanchezrobertodev/asset-den-releases/releases",
+            None::<&str>,
+        )
+        .map_err(err)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -559,6 +749,8 @@ pub fn run() {
             let conn = db::open(&data.join("asset-den.db"))?;
             conn.execute_batch(analysis::SCHEMA)?;
             let roots = db::roots(&conn)?;
+            // Before the catch-up scans below, so they skip the user's ignored folders too.
+            kind::set_extra_ignored(&db::ignored_folders(&conn)?);
             app.manage(AppState {
                 db: Mutex::new(conn),
                 thumbs_dir,
@@ -590,12 +782,16 @@ pub fn run() {
             preview,
             read_text,
             set_favorite,
+            set_rating,
+            list_notes,
+            set_note,
             add_tag,
             remove_tag,
             get_sprite_sheet,
             set_sprite_sheet,
             list_collections,
             create_collection,
+            set_collection_rule,
             delete_collection,
             set_in_collection,
             find_duplicates,
@@ -605,10 +801,17 @@ pub fn run() {
             trash_duplicates,
             rename_collection,
             copy_collection,
+            export_frames,
             reveal,
+            reveal_path,
             open_default,
             drag_icon,
-            app_updates_supported
+            app_updates_supported,
+            ignored_folders,
+            set_ignored_folders,
+            cache_size,
+            clear_thumbnail_cache,
+            open_releases
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -638,12 +841,72 @@ mod tests {
             height: None,
             favorite: false,
             tags: vec![],
+            rating: 0,
+            duration_ms: None,
+            sample_rate: None,
+            channels: None,
+            bits: None,
         };
         let (copied, failed) = super::copy_into(&[a.clone(), a], &dest);
         assert_eq!((copied, failed.len()), (2, 0));
         assert_eq!(std::fs::read_to_string(dest.join("hero.png")).unwrap(), "old");
         assert_eq!(std::fs::read_to_string(dest.join("hero (2).png")).unwrap(), "new");
         assert!(dest.join("hero (3).png").exists());
+    }
+
+    #[test]
+    fn frames_are_cut_and_never_overwrite() {
+        use image::{DynamicImage, Rgba, RgbaImage};
+        let dir = tempfile::tempdir().unwrap();
+        // 3×2 grid of 10×8 frames plus a 2px / 1px remainder; frame 4 is fully transparent.
+        let mut img = RgbaImage::from_pixel(32, 17, Rgba([200, 0, 0, 255]));
+        for y in 8..16 {
+            for x in 10..20 {
+                img.put_pixel(x, y, Rgba([0, 0, 0, 0]));
+            }
+        }
+        let img = DynamicImage::ImageRgba8(img);
+        std::fs::write(dir.path().join("hero_000.png"), "old").unwrap();
+
+        let (written, failed) = super::write_frames(&img, "hero", 3, 2, false, dir.path());
+        assert_eq!((written.len(), failed.len()), (6, 0));
+        assert_eq!(written[0], dir.path().join("hero_000 (2).png"));
+        assert_eq!(std::fs::read_to_string(dir.path().join("hero_000.png")).unwrap(), "old");
+        let first = image::open(dir.path().join("hero_000 (2).png")).unwrap();
+        assert_eq!((first.width(), first.height()), (10, 8));
+        let empty = image::open(dir.path().join("hero_004.png")).unwrap().to_rgba8();
+        assert!(empty.pixels().all(|p| p[3] == 0));
+
+        // Skipping empty frames leaves out frame 4; the rest go next to the first export.
+        let (written, _) = super::write_frames(&img, "hero", 3, 2, true, dir.path());
+        assert_eq!(written.len(), 5);
+        assert!(dir.path().join("hero_005 (2).png").exists() && !dir.path().join("hero_004 (2).png").exists());
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 12);
+
+        // Big grids get wider numbers so names sort.
+        let (written, _) = super::write_frames(&img, "big", 32, 17, false, dir.path());
+        assert_eq!(written.len(), 544);
+        assert!(dir.path().join("big_543.png").exists());
+        let (written, _) = super::write_frames(&DynamicImage::new_rgba8(100, 20), "wide", 100, 20, false, dir.path());
+        assert_eq!(written.len(), 2000);
+        assert!(dir.path().join("wide_1999.png").exists() && dir.path().join("wide_0000.png").exists());
+    }
+
+    #[test]
+    fn clearing_the_cache_only_deletes_its_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let (thumbs, previews) = (dir.path().join("thumbs"), dir.path().join("previews"));
+        std::fs::create_dir_all(thumbs.join("sub")).unwrap();
+        std::fs::create_dir_all(&previews).unwrap();
+        std::fs::write(thumbs.join("a.png"), "1234").unwrap();
+        std::fs::write(thumbs.join("sub/keep.png"), "x").unwrap();
+        std::fs::write(previews.join("b.png"), "12").unwrap();
+        std::fs::write(dir.path().join("drag-icon.png"), "x").unwrap();
+        let dirs = [thumbs.clone(), previews.clone()];
+        assert_eq!(super::files_size(&dirs), 6);
+        super::delete_files(&dirs).unwrap();
+        assert_eq!(super::files_size(&dirs), 0);
+        assert!(thumbs.join("sub/keep.png").exists() && dir.path().join("drag-icon.png").exists());
     }
 
     #[test]

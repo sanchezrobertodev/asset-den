@@ -1,4 +1,4 @@
-import type { Asset, Collection, FolderFilter, Kind, Root, ViewName } from "../types";
+import type { Asset, Collection, CollectionRule, FolderFilter, Kind, Notes, Root, ViewName } from "../types";
 import { hasColor, parseColor, type LabSwatch } from "./colors.ts";
 import { baseName, folderOf, kindLabel } from "./format.ts";
 import type { SortKey } from "./prefs";
@@ -18,6 +18,11 @@ export interface Filters {
   untagged: boolean;
   /** Has at least one of these tags. */
   anyTags: string[];
+  /** At least this many stars. */
+  minRating: number | null;
+  /** Audio length in milliseconds. */
+  minMs: number | null;
+  maxMs: number | null;
   /** A main colour: a name from NAMED_COLORS or "#rrggbb". */
   color: string | null;
 }
@@ -37,6 +42,9 @@ export const noFilters: Filters = {
   days: null,
   untagged: false,
   anyTags: [],
+  minRating: null,
+  minMs: null,
+  maxMs: null,
   color: null,
 };
 
@@ -44,8 +52,13 @@ export const noFilters: Filters = {
 export function activeFilterCount(f: Filters): number {
   const dims = f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square;
   const bytes = f.minBytes !== null || f.maxBytes !== null;
-  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0, f.color !== null].filter(Boolean).length;
+  const dur = f.minMs !== null || f.maxMs !== null;
+  return [f.exts.length > 0, dims, bytes, dur, f.days !== null, f.untagged, f.anyTags.length > 0, f.minRating !== null, f.color !== null].filter(Boolean).length;
 }
+
+/** True without limits; with any, only a known length within them. */
+const inRange = (ms: number | null, min: number | null, max: number | null) =>
+  (min === null && max === null) || (ms !== null && (min === null || ms >= min) && (max === null || ms <= max));
 
 export function matchesFilters(a: Asset, f: Filters, now = Date.now(), palettes?: Palettes | null): boolean {
   if (f.exts.length && !f.exts.includes(a.ext)) return false;
@@ -60,14 +73,19 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now(), palettes?
   }
   if (f.minBytes !== null && a.size < f.minBytes) return false;
   if (f.maxBytes !== null && a.size > f.maxBytes) return false;
+  if (!inRange(a.durationMs, f.minMs, f.maxMs)) return false;
   if (f.days !== null && a.mtime < now - f.days * 86_400_000) return false;
   if (f.untagged && a.tags.length) return false;
   if (f.anyTags.length && !a.tags.some((t) => f.anyTags.includes(t))) return false;
+  if (f.minRating !== null && a.rating < f.minRating) return false;
   if (f.color && !hasColor(palettes?.get(a.id), f.color)) return false;
   return true;
 }
 
-/** A search like `type:audio in:sprites #player size:>1mb color:red hero`, as used by the search bar and the ⌘K palette. */
+/**
+ * A search like `type:audio in:sprites #player size:>1mb dur:<2s rating:>=4 note:redo color:red hero`, as used by the
+ * search bar and the ⌘K palette.
+ */
 export interface Query {
   /** null = any type; an empty array = a `type:` that matched nothing. */
   types: Kind[] | null;
@@ -75,15 +93,23 @@ export interface Query {
   tags: string[];
   minBytes: number;
   maxBytes: number;
+  minRating: number;
+  maxRating: number;
+  /** Words the asset's note must contain. */
+  notes: string[];
+  /** Audio length limits from `dur:`, in milliseconds. */
+  minMs: number | null;
+  maxMs: number | null;
   /** Colours the image must all have (see Filters.color); null for a `color:` that names no colour. */
   colors: (string | null)[];
   text: string[];
 }
 
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
+const TIME_UNITS: Record<string, number> = { ms: 1, s: 1000, m: 60_000 };
 
 export function parseQuery(q: string): Query {
-  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, colors: [], text: [] };
+  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minMs: null, maxMs: null, minRating: 0, maxRating: 5, notes: [], colors: [], text: [] };
   for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
     if (t.startsWith("type:")) {
       const s = t.slice(5);
@@ -100,6 +126,24 @@ export function parseQuery(q: string): Query {
       const b = parseFloat(m[2]) * UNITS[m[3] ?? "kb"];
       if (m[1] === "<") out.maxBytes = b;
       else out.minBytes = b;
+    } else if (t.startsWith("dur:")) {
+      const m = t.slice(4).match(/^([<>])?(\d+(?:\.\d+)?)(ms|s|m)?$/);
+      if (!m) continue;
+      const ms = parseFloat(m[2]) * TIME_UNITS[m[3] ?? "s"];
+      if (m[1] === "<") out.maxMs = ms;
+      else out.minMs = ms;
+    } else if (t.startsWith("rating:")) {
+      // rating:3 is exactly 3 stars; rating:>=4, rating:<2 and so on compare.
+      const m = t.slice(7).match(/^(>=|<=|>|<)?([0-5])$/);
+      if (!m) continue;
+      const n = Number(m[2]);
+      if (!m[1]) [out.minRating, out.maxRating] = [n, n];
+      else if (m[1] === ">=") out.minRating = n;
+      else if (m[1] === ">") out.minRating = n + 1;
+      else if (m[1] === "<=") out.maxRating = n;
+      else out.maxRating = n - 1;
+    } else if (t.startsWith("note:")) {
+      if (t.length > 5) out.notes.push(t.slice(5));
     } else if (t.startsWith("color:")) {
       if (t.length > 6) out.colors.push(parseColor(t.slice(6)));
     } else out.text.push(t);
@@ -107,11 +151,18 @@ export function parseQuery(q: string): Query {
   return out;
 }
 
-export function matchesQuery(a: Asset, q: Query, palettes?: Palettes | null): boolean {
+/** `notes` is only read for `note:` words, `palettes` for `color:` ones. */
+export function matchesQuery(a: Asset, q: Query, notes: Notes = {}, palettes?: Palettes | null): boolean {
   if (q.types && !q.types.includes(a.kind)) return false;
   if (q.folder && !folderOf(a.relPath).toLowerCase().split("/").some((seg) => seg.startsWith(q.folder!))) return false;
   if (!q.tags.every((t) => a.tags.some((g) => g.startsWith(t)))) return false;
   if (a.size < q.minBytes || a.size > q.maxBytes) return false;
+  if (!inRange(a.durationMs, q.minMs, q.maxMs)) return false;
+  if (a.rating < q.minRating || a.rating > q.maxRating) return false;
+  if (q.notes.length) {
+    const note = notes[a.id]?.toLowerCase();
+    if (!note || !q.notes.every((w) => note.includes(w))) return false;
+  }
   if (!q.colors.every((c) => c !== null && hasColor(palettes?.get(a.id), c))) return false;
   const hay = a.relPath.toLowerCase();
   return q.text.every((t) => hay.includes(t) || a.tags.includes(t));
@@ -137,18 +188,34 @@ export interface Scope {
   filters: Filters;
   /** The open collection, for the Collections view. */
   collection: Collection | null;
+  notes: Notes;
   /** "Find similar" results, closest first: only these are shown, in this order. */
   similar?: number[] | null;
   palettes?: Palettes | null;
 }
 
+/** Tests assets against a smart collection's saved search. */
+export function ruleMatcher(rule: CollectionRule, notes: Notes, now = Date.now(), palettes?: Palettes | null): (a: Asset) => boolean {
+  const q = parseQuery(rule.query);
+  const f = { ...noFilters, ...rule.filters };
+  return (a) => matchesFilters(a, f, now, palettes) && matchesQuery(a, q, notes, palettes);
+}
+
+/** Each smart collection's current members, by collection id. */
+export function smartMembers(collections: Collection[], assets: Asset[], notes: Notes, palettes?: Palettes | null): Map<number, Asset[]> {
+  const now = Date.now();
+  return new Map(collections.flatMap((c) => (c.rule ? [[c.id, assets.filter(ruleMatcher(c.rule, notes, now, palettes))] as const] : [])));
+}
+
 /** Assets the current view shows, after type chips, folder, search and Filters panel, sorted (unless `sort` is null). */
 export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; desc: boolean } | null): Asset[] {
-  const members = s.view === "collections" ? new Set(s.collection?.assetIds ?? []) : null;
   const rank = s.similar ? new Map(s.similar.map((id, i) => [id, i])) : null;
-  const q = parseQuery(s.query);
   const now = Date.now();
+  const rule = s.view === "collections" && s.collection?.rule ? ruleMatcher(s.collection.rule, s.notes, now, s.palettes) : null;
+  const members = s.view === "collections" && !rule ? new Set(s.collection?.assetIds ?? []) : null;
+  const q = parseQuery(s.query);
   const out = assets.filter((a) => {
+    if (rule) return rule(a);
     if (members) return members.has(a.id);
     if (s.view === "favorites" && !a.favorite) return false;
     if (rank && !rank.has(a.id)) return false;
@@ -159,7 +226,7 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
         if (folderOf(a.relPath) !== s.folder.path) return false;
       } else if (s.folder.path && !a.relPath.startsWith(s.folder.path + "/")) return false;
     }
-    return matchesFilters(a, s.filters, now, s.palettes) && matchesQuery(a, q, s.palettes);
+    return matchesFilters(a, s.filters, now, s.palettes) && matchesQuery(a, q, s.notes, s.palettes);
   });
   if (!sort) return out;
   if (rank) return out.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);

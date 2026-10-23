@@ -18,6 +18,11 @@ const asset = (id: number, relPath: string, size = 10, rootId = 1): Asset => ({
   height: null,
   favorite: false,
   tags: [],
+  rating: 0,
+  durationMs: null,
+  sampleRate: null,
+  channels: null,
+  bits: null,
 });
 const roots = [
   { id: 1, path: "C:\\games\\game-assets" },

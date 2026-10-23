@@ -1,6 +1,7 @@
 import clsx from "clsx";
-import { Check, ChevronDown, Folder, Grid3x3, Search, X } from "lucide-react";
+import { Check, ChevronDown, Folder, Grid3x3, Search, Sparkles, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { activeFilterCount } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
 import { baseName, kindLabel } from "../lib/format";
 import type { SortKey } from "../lib/prefs";
@@ -143,6 +144,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         )}
         {s.similar && <SimilarChip chip={chip(true)} />}
         <FilterButton />
+        {(s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
       </div>
       {exact && exact.children.length > 0 && (
         <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">
@@ -229,6 +231,53 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         </IconButton>
       </div>
     </>
+  );
+}
+
+/** Names the current search and saves it as a smart collection. */
+function SaveSmart() {
+  const s = useStore();
+  const [name, setName] = useState<string | null>(null);
+  if (name === null)
+    return (
+      <button
+        type="button"
+        onClick={() => setName(s.query.trim().slice(0, 80))}
+        className="flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border border-dashed border-line-x px-3 text-[12.5px] font-medium whitespace-nowrap text-fg-2 hover:text-fg"
+      >
+        <Sparkles aria-hidden className="size-3.5" />
+        Save as smart collection
+      </button>
+    );
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void s.saveSmartCollection(name).then((ok) => ok && setName(null));
+      }}
+      className="flex h-[30px] flex-none items-center gap-1.5 rounded-[15px] border border-accent pr-1 pl-3"
+    >
+      <Sparkles aria-hidden className="size-3.5 flex-none text-muted" />
+      <input
+        aria-label="Smart collection name"
+        autoFocus
+        value={name}
+        maxLength={80}
+        placeholder="Collection name"
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Escape") setName(null);
+        }}
+        className="w-44 border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-muted"
+      />
+      <button type="submit" className="h-[22px] rounded-[11px] bg-accent px-2.5 text-xs font-semibold text-accent-fg">
+        Save
+      </button>
+      <IconButton label="Cancel" className="size-[22px]" onClick={() => setName(null)}>
+        <X className="size-3.5" />
+      </IconButton>
+    </form>
   );
 }
 

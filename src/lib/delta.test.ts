@@ -17,6 +17,11 @@ const asset = (id: number, relPath: string, size = 10): Asset => ({
   height: null,
   favorite: false,
   tags: [],
+  rating: 0,
+  durationMs: null,
+  sampleRate: null,
+  channels: null,
+  bits: null,
 });
 const delta = (seq: number, upserted: Asset[] = [], removed: number[] = []): AssetsDelta => ({ seq, upserted, removed });
 const all = [asset(1, "a.png"), asset(2, "b.png"), asset(3, "c.png")];

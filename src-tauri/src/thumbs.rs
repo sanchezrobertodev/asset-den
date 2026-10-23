@@ -28,6 +28,7 @@ pub fn rendered_name(path: &str, current: (i64, i64), rendered: (i64, i64)) -> R
     Ok(cache_name(path, current.0, current.1))
 }
 
+/// Decodes the whole original image (PSD: its flattened composite).
 pub fn decode(path: &Path, ext: &str) -> Result<DynamicImage, String> {
     if ext == "psd" {
         // shortcut: uses the flattened composite only, so some layered/16-bit files fail and show an icon instead.

@@ -179,6 +179,14 @@ export function FilterButton() {
               <p className="mt-1.5 text-[11px] text-muted">In pixels. Only images with known dimensions match.</p>
             </Group>
 
+            <Group title="Audio length" active={f.minMs !== null || f.maxMs !== null} onClear={() => setFilters({ minMs: null, maxMs: null })}>
+              <div className="flex gap-2">
+                <NumField label="Min (seconds)" value={f.minMs} scale={1000} onChange={(v) => setFilters({ minMs: v })} />
+                <NumField label="Max (seconds)" value={f.maxMs} scale={1000} onChange={(v) => setFilters({ maxMs: v })} />
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted">Only audio files with a known length match.</p>
+            </Group>
+
             <Group
               title="File size & date"
               active={f.minBytes !== null || f.maxBytes !== null || f.days !== null}
@@ -214,6 +222,21 @@ export function FilterButton() {
                 ))}
               </div>
               {tags.length > 0 && <p className="mt-1.5 text-[11px] text-muted">Matches assets with any of the selected tags.</p>}
+            </Group>
+
+            <Group title="Rating" active={f.minRating !== null} onClear={() => setFilters({ minRating: null })}>
+              <div className="flex flex-wrap gap-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Chip
+                    key={n}
+                    on={f.minRating === n}
+                    onClick={() => setFilters({ minRating: f.minRating === n ? null : n })}
+                    label={n === 5 ? "5 stars" : `${n} or more stars`}
+                  >
+                    <span className="text-star">★</span> {n === 5 ? "5" : `${n}+`}
+                  </Chip>
+                ))}
+              </div>
             </Group>
 
             <Group title="Colour" active={f.color !== null} onClear={() => setFilters({ color: null })}>

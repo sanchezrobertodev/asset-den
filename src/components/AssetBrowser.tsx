@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import type { Group } from "../lib/filter";
-import { ago, bytes, folderOf } from "../lib/format";
+import { ago, bytes, duration, folderOf } from "../lib/format";
 import { thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -199,6 +199,7 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                         <span className="truncate font-medium">{a.name}</span>
                         <span className="-mt-[3px] truncate font-mono text-[11px] text-muted">
                           {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
+                          {a.durationMs !== null ? `${duration(a.durationMs)} · ` : ""}
                           {bytes(a.size)}
                         </span>
                       </div>
@@ -248,7 +249,7 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
         <span />
         <span>Name</span>
         <span>Type</span>
-        <span>Dimensions</span>
+        <span>Dims / length</span>
         <span>Size</span>
         <span>Folder</span>
         <span>Modified</span>
@@ -291,7 +292,9 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                 <span>
                   <KindPill kind={a.kind} />
                 </span>
-                <span className="font-mono text-xs text-muted">{a.width && a.height ? `${a.width}×${a.height}` : "—"}</span>
+                <span className="font-mono text-xs text-muted">
+                  {a.width && a.height ? `${a.width}×${a.height}` : a.durationMs !== null ? duration(a.durationMs) : "—"}
+                </span>
                 <span className="font-mono text-xs">{bytes(a.size)}</span>
                 <span className="truncate text-muted" title={folderOf(a.relPath)}>
                   {folderOf(a.relPath) || "/"}

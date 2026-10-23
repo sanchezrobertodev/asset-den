@@ -6,7 +6,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
-import type { Asset, Collection, DupGroup, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
+import type { Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
   version: string;
@@ -37,17 +37,25 @@ export const api = {
   preview: (id: number) => invoke<string>("preview", { id }),
   readText: (id: number) => invoke<TextPreview>("read_text", { id }),
   setFavorite: (ids: number[], favorite: boolean) => invoke<void>("set_favorite", { ids, favorite }),
+  setRating: (ids: number[], rating: number) => invoke<void>("set_rating", { ids, rating }),
+  listNotes: () => invoke<Notes>("list_notes"),
+  /** Returns the note as stored: trimmed, or null when cleared. */
+  setNote: (id: number, note: string) => invoke<string | null>("set_note", { id, note }),
   addTag: (ids: number[], tag: string) => invoke<string>("add_tag", { ids, tag }),
   removeTag: (ids: number[], tag: string) => invoke<void>("remove_tag", { ids, tag }),
   getSpriteSheet: (id: number) => invoke<SpriteSheet | null>("get_sprite_sheet", { id }),
   setSpriteSheet: (id: number, sheet: SpriteSheet) => invoke<void>("set_sprite_sheet", { id, sheet }),
   listCollections: () => invoke<Collection[]>("list_collections"),
-  createCollection: (name: string) => invoke<number>("create_collection", { name }),
+  createCollection: (name: string, rule: CollectionRule | null = null) => invoke<number>("create_collection", { name, rule }),
+  setCollectionRule: (id: number, rule: CollectionRule) => invoke<void>("set_collection_rule", { id, rule }),
   deleteCollection: (id: number) => invoke<void>("delete_collection", { id }),
   setInCollection: (collection: number, ids: number[], member: boolean) =>
     invoke<void>("set_in_collection", { collection, ids, member }),
   renameCollection: (id: number, name: string) => invoke<string>("rename_collection", { id, name }),
-  copyCollection: (id: number, dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { id, dest }),
+  copyCollection: (ids: number[], dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { ids, dest }),
+  /** Cuts a sprite sheet's frames into PNGs in `dest`; existing files are never replaced. */
+  exportFrames: (id: number, cols: number, rows: number, skipEmpty: boolean, dest: string) =>
+    invoke<{ written: number; failed: string[]; first: string | null }>("export_frames", { id, cols, rows, skipEmpty, dest }),
   findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
   /** Dominant colours of every analysed image; later ones come with onImageFeatures. */
   imageColors: () => invoke<[number, Swatch[]][]>("image_colors"),
@@ -56,8 +64,17 @@ export const api = {
   setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
   trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),
   reveal: (id: number) => invoke<void>("reveal", { id }),
+  revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   openDefault: (id: number) => invoke<void>("open_default", { id }),
   dragIcon: () => invoke<string>("drag_icon"),
+  /** Folder names skipped while scanning, on top of the built-in ones (hidden folders, node_modules, sidecars). */
+  ignoredFolders: () => invoke<string[]>("ignored_folders"),
+  /** Saves the list and returns it cleaned; takes effect on the next rescan. */
+  setIgnoredFolders: (names: string[]) => invoke<string[]>("set_ignored_folders", { names }),
+  /** Bytes used by the app's own thumbnail and preview caches. */
+  cacheSize: () => invoke<number>("cache_size"),
+  clearThumbnailCache: () => invoke<void>("clear_thumbnail_cache"),
+  openReleases: () => invoke<void>("open_releases"),
   pickFolder: async (title = "Import an asset folder") => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;
