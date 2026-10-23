@@ -139,7 +139,8 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
         "SELECT a.id, a.root_id, a.rel_path, a.name, a.ext, a.kind, a.size, a.mtime, a.width, a.height, a.favorite,
                 (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id),
                 i.duration_ms, i.sample_rate, i.channels, i.bits
-         FROM assets a LEFT JOIN audio_info i ON i.asset_id = a.id AND i.size = a.size AND i.mtime = a.mtime
+         FROM assets a LEFT JOIN audio_info i
+           ON i.asset_id = a.id AND a.kind = 'audio' AND i.size = a.size AND i.mtime = a.mtime
          WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
     )?;
     let only = only.map(|ids| serde_json::to_string(ids).unwrap_or_default());

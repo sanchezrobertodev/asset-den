@@ -69,11 +69,11 @@ pub fn read_info(path: &Path, ext: &str) -> Option<AudioInfo> {
 }
 
 /// Stores what was read from version `size`/`mtime` of the file; a row that doesn't match the asset anymore is stale.
-/// Does nothing if the asset is gone by now.
+/// Does nothing if the asset is gone or has changed since (its newer version may already be stored).
 pub fn store(conn: &Connection, id: i64, size: i64, mtime: i64, i: &AudioInfo) -> Result<()> {
     conn.execute(
         "INSERT OR REPLACE INTO audio_info (asset_id, size, mtime, duration_ms, sample_rate, channels, bits)
-         SELECT id, ?2, ?3, ?4, ?5, ?6, ?7 FROM assets WHERE id = ?1",
+         SELECT id, ?2, ?3, ?4, ?5, ?6, ?7 FROM assets WHERE id = ?1 AND size = ?2 AND mtime = ?3",
         params![id, size, mtime, i.duration_ms, i.sample_rate, i.channels, i.bits],
     )
     .map(|_| ())
@@ -210,5 +210,34 @@ pub mod tests {
         wav(&r.join("a.wav"), 8_000, 1, 16, 16_000);
         scan::tests::scan(&mut conn, 1, r);
         assert_eq!(by_name(&conn, "a.wav").duration_ms, Some(2000));
+    }
+
+    #[test]
+    fn ignores_stale_reads_and_non_audio() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        wav(&r.join("a.wav"), 8_000, 1, 16, 8_000);
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let a = db::assets(&conn, None).unwrap().remove(0);
+        assert_eq!(a.duration_ms, Some(1000));
+
+        // A read of an older version that finishes after the current one was stored doesn't replace it.
+        let old = AudioInfo {
+            duration_ms: Some(5),
+            ..Default::default()
+        };
+        store(&conn, a.id, a.size - 1, a.mtime, &old).unwrap();
+        assert_eq!(db::asset(&conn, a.id).unwrap().duration_ms, Some(1000));
+
+        // Renamed to a non-audio extension: same bytes, size and mtime, but no audio details, even after a rescan.
+        fs::rename(r.join("a.wav"), r.join("a.txt")).unwrap();
+        scan::rename_path(&conn, 1, r, &r.join("a.wav"), &r.join("a.txt"), &mut Vec::new()).unwrap();
+        let a = db::asset(&conn, a.id).unwrap();
+        assert_eq!((a.kind.as_str(), a.duration_ms, a.sample_rate), ("text", None, None));
+        scan::tests::scan(&mut conn, 1, r);
+        assert_eq!(db::asset(&conn, a.id).unwrap().duration_ms, None);
     }
 }
