@@ -11,6 +11,34 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- A welcome screen on first run says what Asset Den does, imports your first folder and shows three tips (drag cards
+  into your engine, Space to preview, Ctrl/⌘ K to search). It repeats that your files are only read, never changed.
+- **Keyboard shortcuts**: press `?` (or the keyboard button in the sidebar footer, or search for "Keyboard shortcuts")
+  for every shortcut, grouped into Navigate, Preview, Organize and Search. The hint bar and the full-screen legend now
+  come from the same list.
+- **Settings** (the gear in the sidebar footer, or "Settings" in search):
+  - Appearance: theme (System, Dark, Light), thumbnail size and pixel-art scaling.
+  - Library: folder names to ignore in every library folder, such as `Backup` or `_old`, on top of the built-in ones
+    (hidden folders, `node_modules`, `.meta` files). Only folders match; a file with the same name stays. The list is
+    saved with the library, file changes in those folders are ignored at once, and **Rescan now** drops what's already
+    indexed under them. Files stay on disk.
+  - Storage: the size of the thumbnail and preview cache, and **Clear thumbnail cache**. Only the app's own cache is
+    deleted; thumbnails are rebuilt as you browse.
+  - Updates: turn off the update check on launch (shown where the app updates itself).
+  - About: version, license, and a link to the releases page.
+- A preview that fails shows "Couldn't preview this file" with the reason, **Open** and **Show in folder**, in the side
+  panel and in full screen. That covers files that can't be decoded or played (images, video, audio, fonts, models,
+  text) and viewers that crash or can't load, which used to leave a blank player or break the panel. The next asset
+  previews normally.
+- **Ratings**: give assets 1 to 5 stars from the side panel, full screen, a multi-selection, or the keys
+  <kbd>1</kbd>–<kbd>5</kbd> (<kbd>0</kbd> clears). Filter by rating in **More filters** or search with `rating:>=4`,
+  `rating:3` or `rating:<2`.
+- **Notes**: a free-text note per asset in the side panel (saved as you type), shown in full screen. Search them with
+  `note:word`.
+- **Smart collections**: **Save as smart collection** next to the filters keeps the current search, type chips and
+  filters as a collection whose assets update as the library changes. Open one as a search, replace its search with
+  the current one, rename, copy or delete it like any collection.
+- Removing duplicates also keeps the higher rating and both notes on the kept file.
 - Audio files show their length, sample rate, channels and bit depth ("0:03.2 · 44.1 kHz · stereo · 16-bit") in the
   side panel and full screen, and their length in the list view and on grid cards. They're read from the file headers
   of WAV, OGG, MP3, FLAC, M4A, AAC and Opus files in the background after a scan (MP3s are counted frame by frame, so
@@ -26,6 +54,9 @@ All notable changes to Asset Den are documented here. The format follows
 
 - The app starts with a third of the code it loaded before: the 3D viewer, model thumbnails and the audio waveform
   load their libraries (three.js, wavesurfer.js) the first time they're needed.
+- New app icon: a fanned stack of cards (an image card in front of blue and amber ones) on a warm dark tile, also
+  shown next to the name in the sidebar. `app-icon.svg` is the source; `npx tauri icon app-icon.svg` regenerates
+  `src-tauri/icons`.
 
 ## [0.2.3] - 2026-10-21
 

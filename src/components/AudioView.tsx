@@ -5,7 +5,7 @@ import WaveSurfer from "wavesurfer.js";
 import { errorText, fileUrl } from "../api";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { Note, toggleChip } from "./Viewers";
+import { toggleChip, usePreviewFailure } from "./Viewers";
 
 // Its own chunk: wavesurfer loads on the first audio preview, not at startup.
 export default function AudioView({ asset, full }: { asset: Asset; full: boolean }) {
@@ -13,14 +13,14 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
   const ws = useRef<WaveSurfer | null>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState({ now: 0, total: 0 });
-  const [error, setError] = useState<string | null>(null);
+  const fail = usePreviewFailure();
   const loop = useStore((s) => s.audioLoop);
   const setLoop = useStore((s) => s.setAudioLoop);
 
   useEffect(() => {
     if (!box.current) return;
-    setError(null);
     setPlaying(false);
+    let live = true;
     const css = getComputedStyle(document.documentElement);
     const w = WaveSurfer.create({
       container: box.current,
@@ -43,12 +43,14 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
     w.on("pause", () => setPlaying(false));
     // Read at the end rather than captured, so toggling Loop doesn't reload the waveform.
     w.on("finish", () => useStore.getState().audioLoop && void w.play(0).catch(() => {}));
-    w.on("error", (e) => setError(errorText(e)));
-    return () => w.destroy();
-  }, [asset.id, asset.path, asset.mtime, full]);
+    w.on("error", (e) => live && fail(`Can't play this file here: ${errorText(e)}`));
+    return () => {
+      live = false;
+      w.destroy();
+    };
+  }, [asset.id, asset.path, asset.mtime, full, fail]);
 
   const fmt = (s: number) => (s < 10 && s % 1 ? `0:0${s.toFixed(1)}` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`);
-  if (error) return <Note>Can't play this file here: {error}</Note>;
   return (
     <div className={clsx("flex w-full flex-col", full ? "max-w-[760px] gap-[26px]" : "gap-[18px]")}>
       <div ref={box} className="w-full" />

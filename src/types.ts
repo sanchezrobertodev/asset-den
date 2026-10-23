@@ -1,3 +1,5 @@
+import type { Filters } from "./lib/filter";
+
 export type Kind = "image" | "audio" | "model" | "font" | "video" | "text" | "other";
 
 export const KINDS: Kind[] = ["image", "audio", "model", "font", "video", "text", "other"];
@@ -18,6 +20,8 @@ export interface Asset {
   height: number | null;
   favorite: boolean;
   tags: string[];
+  /** 0 (unrated) to 5 stars. */
+  rating: number;
   /** Audio details from the file header; null when unknown or not audio. */
   durationMs: number | null;
   sampleRate: number | null;
@@ -38,11 +42,22 @@ export interface Root {
   path: string;
 }
 
+/** A smart collection's saved search. Missing filter fields mean "any", so older rules keep working. */
+export interface CollectionRule {
+  query: string;
+  filters: Partial<Filters>;
+}
+
 export interface Collection {
   id: number;
   name: string;
+  /** Empty for a smart collection, whose members are whatever matches `rule` now. */
   assetIds: number[];
+  rule: CollectionRule | null;
 }
+
+/** Asset notes by asset id; only assets that have one. */
+export type Notes = Record<number, string>;
 
 export interface DupGroup {
   hash: string;
