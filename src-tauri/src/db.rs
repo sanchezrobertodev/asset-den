@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS collection_rules (
   query TEXT NOT NULL,
   filters TEXT NOT NULL /* JSON */
 );
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {

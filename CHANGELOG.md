@@ -12,6 +12,19 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 
+### Changed
+
+- **Image analysis** (for Find similar and search by colour) no longer runs by itself after every scan, which on a big
+  library kept several cores busy for minutes after launch. Images are now analysed:
+  - as you browse, from the thumbnails on screen (cheap: they're small);
+  - when you ask: **Analyse images** in **Settings → Library**, or **Analyse now** where results depend on it (Find
+    similar, the Colour filter, `color:` searches), which also say how many images they cover. While it runs, the
+    sidebar shows "Analysing images · 12,340 of 51,200" with **Pause** and **Cancel**; what's done is kept;
+  - when files change, once **Keep new and changed images analysed** is on (Settings → Library). It turns on by itself
+    after the first full analysis, and then only reads the files that were added or changed.
+- Image analysis, duplicate hashing and audio header reading run at low OS priority, so the app and other programs
+  stay responsive while they work.
+
 ## [0.3.0] - 2026-10-23
 
 ### Added

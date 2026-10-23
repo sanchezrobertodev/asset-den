@@ -36,6 +36,11 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   files into a folder for a build or a handoff. **Save as smart collection** turns the current search and filters into
   a collection that keeps itself up to date. Most changes show a toast with **Undo**.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
+- **Find similar** and **search by colour**: the side panel finds images that look like the open one (resized,
+  recoloured or lightly cropped copies included), and the Colour filter or `color:red` / `color:#ff8800` finds images by
+  their main colours. Both need images analysed: the ones you browse are done as you go, **Analyse images** in
+  **Settings → Library** does the rest (on spare CPU, with Pause and Cancel), and **Keep new and changed images
+  analysed** keeps it current. Results say how many images they cover.
 - **Duplicates**: identical files side by side. Keep the one you want, then mark the rest as not duplicates or move
   them to the Trash, with tags, favorites, ratings, notes and collections merged into the kept file.
 - **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
@@ -147,7 +152,7 @@ hand to publish the macOS and Linux builds.
 
 | What | Where |
 |---|---|
-| Index, tags, favorites, ratings, notes, collections, ignored folder names | `asset-den.db` (SQLite) in the app data folder |
+| Index, tags, favorites, ratings, notes, collections, ignored folder names, image analysis | `asset-den.db` (SQLite) in the app data folder |
 | Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete, or **Settings → Clear thumbnail cache**) |
 | UI preferences | browser storage in the app's webview |
 
@@ -158,6 +163,10 @@ hand to publish the macOS and Linux builds.
 - Which audio and video formats play, and which videos get a frame thumbnail, depends on the OS webview. Windows
   (WebView2) plays the most; on Linux, install the GStreamer plugins for MP4/H.264.
 - A file renamed while the app is closed shows up as a new file on the next scan, so its tags don't follow it.
+- Find similar and search by colour only cover analysed images. A full analysis reads every image once (from its
+  thumbnail when it has one) and can take several minutes on a big library; scrolling very fast past unanalysed images
+  leaves some of them for that pass. Images that change while the app is closed are analysed after the next launch's
+  scan only when **Keep new and changed images analysed** is on.
 - Syntax highlighting for text and code is not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
   `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.

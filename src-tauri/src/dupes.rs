@@ -42,10 +42,18 @@ const BATCH: usize = 500;
 /// while a batch is written, so scans and UI commands get in between. Unreadable files are skipped.
 pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, PathBuf)]) -> Result<()> {
     for batch in todo.chunks(BATCH) {
-        let hashes: Vec<_> = batch
-            .iter()
-            .filter_map(|(id, p)| hash_file(p).ok().map(|h| (*id, h)))
-            .collect();
+        // On a thread of its own at low priority (see low_priority); this one stores, with the lock.
+        let hashes: Vec<_> = std::thread::scope(|s| {
+            s.spawn(|| {
+                crate::low_priority();
+                batch
+                    .iter()
+                    .filter_map(|(id, p)| hash_file(p).ok().map(|h| (*id, h)))
+                    .collect()
+            })
+            .join()
+            .unwrap()
+        });
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
         store(&tx, &hashes)?;

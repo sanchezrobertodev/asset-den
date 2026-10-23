@@ -44,6 +44,15 @@ fn asset(state: &AppState, id: i64) -> Result<Asset, String> {
     db::asset(&state.db.lock().unwrap(), id)
 }
 
+/// Puts the calling thread at low OS priority, so background work yields the CPU to the UI and on-screen thumbnails.
+/// Only for threads that end with their work (Linux can't raise it back, so a reused pool thread would stay slow), and
+/// that don't hold the db lock (a waiting UI command would wait on a thread that rarely gets the CPU).
+pub(crate) fn low_priority() {
+    if let Err(e) = thread_priority::set_current_thread_priority(thread_priority::ThreadPriority::Min) {
+        eprintln!("thread priority: {e:?}");
+    }
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ScanProgress {
@@ -95,8 +104,10 @@ fn spawn_scan(app: AppHandle, root: Root) {
             );
         };
         // Commits in batches and sends each batch's changes, so the UI shows (and thumbnails) assets while it runs.
+        let mut changed = Vec::new();
         let result = scan::scan_root(&state.db, root.id, Path::new(&root.path), |conn, n, touched| {
             emit_delta(&app, conn, touched);
+            changed.extend_from_slice(touched);
             progress(n, false);
         });
         state.scanning.lock().unwrap().remove(&root.id);
@@ -105,7 +116,7 @@ fn spawn_scan(app: AppHandle, root: Root) {
         }
         progress(result.unwrap_or(0), true);
         let _ = app.emit("assets-changed", root.id);
-        analysis::request(&app);
+        analysis::changed(&app, &changed);
     });
 }
 
@@ -210,22 +221,23 @@ fn list_assets(state: State<'_, AppState>) -> Result<AssetList, String> {
 }
 
 /// Cached thumbnail path, generated on first request. None for kinds the backend can't draw (the UI uses an icon,
-/// or renders and saves one itself for 3D models).
+/// or renders and saves one itself for 3D models). An image shown this way gets analysed from its thumbnail too.
 #[tauri::command]
-async fn thumbnail(state: State<'_, AppState>, id: i64) -> Result<Option<String>, String> {
+async fn thumbnail(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<Option<String>, String> {
     let a = asset(&state, id)?;
     let out = state.thumbs_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
-    if out.exists() {
-        return Ok(Some(out.display().to_string()));
+    if !out.exists() {
+        if a.kind != "image" || !kind::decodable(&a.ext) {
+            return Ok(None);
+        }
+        let _permit = state.thumb_permits.acquire().await.map_err(err)?;
+        let (path, ext, out) = (a.path.clone(), a.ext.clone(), out.clone());
+        tauri::async_runtime::spawn_blocking(move || thumbs::thumbnail(Path::new(&path), &ext, &out))
+            .await
+            .map_err(err)??;
     }
-    if a.kind != "image" || !kind::decodable(&a.ext) {
-        return Ok(None);
-    }
-    let _permit = state.thumb_permits.acquire().await.map_err(err)?;
-    let made = tauri::async_runtime::spawn_blocking(move || thumbs::thumbnail(Path::new(&a.path), &a.ext, &out))
-        .await
-        .map_err(err)??;
-    Ok(Some(made.display().to_string()))
+    analysis::viewed(&app, &a);
+    Ok(Some(out.display().to_string()))
 }
 
 /// Stores a thumbnail the frontend rendered from the file version `size`/`mtime`; refused if the file changed since.
@@ -368,19 +380,15 @@ fn image_colors(state: State<'_, AppState>) -> Result<Vec<(i64, Vec<analysis::Sw
     with_db(&state, analysis::colors)
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Similar {
-    /// Closest first.
-    ids: Vec<i64>,
-    /// Images not analysed yet, which can't be in `ids`.
-    pending: usize,
-}
-
-/// Images that look like `id`: their difference hashes differ in at most `max_distance` of 64 bits. Analyses `id` first
-/// if the background pass hasn't reached it yet.
+/// Images that look like `id`, closest first: their difference hashes differ in at most `max_distance` of 64 bits.
+/// Only analysed images can match; `id` itself is analysed first if it isn't yet.
 #[tauri::command]
-async fn find_similar(state: State<'_, AppState>, id: i64, max_distance: u32) -> Result<Similar, String> {
+async fn find_similar(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: i64,
+    max_distance: u32,
+) -> Result<Vec<i64>, String> {
     let hash = match with_db(&state, |c| analysis::dhash_of(c, id))? {
         Some(h) => h,
         None => {
@@ -396,15 +404,46 @@ async fn find_similar(state: State<'_, AppState>, id: i64, max_distance: u32) ->
                 .map_err(err)?
                 .map_err(|e| format!("Couldn't read {}: {e}", a.name))?;
             let hash = f.dhash;
-            with_db(&state, |c| analysis::store(c, &[(a.id, a.size, a.mtime, Some(f))]))?;
+            with_db(&state, |c| {
+                analysis::store(c, &[(a.id, a.size, a.mtime, Some(f))])?;
+                analysis::emit_status(&app, c);
+                Ok(())
+            })?;
             hash
         }
     };
+    with_db(&state, |c| analysis::similar(c, id, hash, max_distance))
+}
+
+/// How many images are analysed, and the pass's state. Changes come as `analysis-status` events.
+#[tauri::command]
+fn analysis_status(state: State<'_, AppState>) -> Result<analysis::Status, String> {
+    with_db(&state, analysis::status)
+}
+
+/// "Analyse images": analyses every image that isn't yet on low-priority threads, or resumes a paused pass.
+#[tauri::command]
+fn analyse_images(app: AppHandle) {
+    analysis::start(&app);
+}
+
+#[tauri::command]
+fn pause_analysis(app: AppHandle, paused: bool) {
+    analysis::pause(&app, paused);
+}
+
+/// Stops the pass. What it analysed so far is kept.
+#[tauri::command]
+fn cancel_analysis(app: AppHandle) {
+    analysis::cancel(&app);
+}
+
+#[tauri::command]
+fn set_keep_analysed(app: AppHandle, state: State<'_, AppState>, on: bool) -> Result<(), String> {
     with_db(&state, |c| {
-        Ok(Similar {
-            ids: analysis::similar(c, id, hash, max_distance)?,
-            pending: analysis::pending(c)?,
-        })
+        analysis::set_keep(c, on)?;
+        analysis::emit_status(&app, c);
+        Ok(())
     })
 }
 
@@ -797,6 +836,11 @@ pub fn run() {
             find_duplicates,
             image_colors,
             find_similar,
+            analysis_status,
+            analyse_images,
+            pause_analysis,
+            cancel_analysis,
+            set_keep_analysed,
             set_duplicate_ignored,
             trash_duplicates,
             rename_collection,

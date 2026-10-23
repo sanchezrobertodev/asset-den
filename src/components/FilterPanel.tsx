@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NAMED_COLORS } from "../lib/colors";
 import { activeFilterCount, noFilters, type Filters } from "../lib/filter";
 import { useStore } from "../store";
+import { AnalysisNote } from "./Analysis";
 import { IconButton } from "./ui";
 
 const MB = 1024 * 1024;
@@ -90,7 +91,7 @@ function NumField({ label, value, onChange, scale = 1 }: { label: string; value:
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 export function FilterButton() {
-  const { assets, filters: f, setFilters, analysing } = useStore();
+  const { assets, filters: f, setFilters } = useStore();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -310,8 +311,8 @@ export function FilterButton() {
               </div>
               <p className="mt-1.5 text-[11px] text-muted">
                 Images with this as one of their main colours. In search: color:red or color:#ff8800.
-                {analysing > 0 && ` ${analysing.toLocaleString()} images are still being analysed.`}
               </p>
+              <AnalysisNote className="mt-1.5 text-[11px]" />
             </Group>
           </div>
         </div>

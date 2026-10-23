@@ -41,16 +41,17 @@ pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, Str
             return;
         }
         let state = app.state::<AppState>();
-        {
+        let touched = {
             let conn = state.db.lock().unwrap();
             let touched: Vec<i64> = events
                 .iter()
                 .flat_map(|e| apply(&conn, root_id, &handler_root, &e.kind, &e.paths))
                 .collect();
             crate::emit_delta(&app, &conn, &touched);
-        }
+            touched
+        };
         let _ = app.emit("assets-changed", root_id);
-        crate::analysis::request(&app);
+        crate::analysis::changed(&app, &touched);
     })
     .map_err(|e| e.to_string())?;
     debouncer

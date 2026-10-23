@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { ChevronRight, CircleArrowUp, Folder, FolderOpen, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
+import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
@@ -170,6 +171,7 @@ export function Sidebar() {
       </div>
 
       <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
+        <AnalysisProgress />
         <UpdateNotice />
         <div className="flex min-w-0 flex-col gap-0.5 text-xs">
           <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>

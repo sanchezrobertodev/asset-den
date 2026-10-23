@@ -271,7 +271,7 @@ export default function App() {
                 ) : s.similar && s.view === "library" ? (
                   <Empty
                     title={`Nothing looks like ${s.similar.name}`}
-                    body={`No other image is within ${s.similar.max} bits of it${s.analysing ? ` yet; ${s.analysing.toLocaleString()} images are still being analysed` : ""}. Try a looser match above.`}
+                    body={`No other analysed image is within ${s.similar.max} bits of it. Try a looser match above.`}
                     action={<Button onClick={s.clearSimilar}>Back to the library</Button>}
                   />
                 ) : s.view === "favorites" && !filtered ? (

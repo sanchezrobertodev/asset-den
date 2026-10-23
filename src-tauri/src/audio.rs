@@ -104,13 +104,21 @@ pub fn fill_audio(
     };
     let root = root.to_string_lossy();
     for batch in todo.chunks(BATCH) {
-        let infos: Vec<_> = batch
-            .iter()
-            .map(|(id, rel, ext, size, mtime)| {
-                let info = read_info(&abs_path(&root, rel), ext).unwrap_or_default();
-                (*id, *size, *mtime, info)
+        // On a thread of its own at low priority (see low_priority); this one stores, with the lock.
+        let infos: Vec<_> = std::thread::scope(|s| {
+            s.spawn(|| {
+                crate::low_priority();
+                batch
+                    .iter()
+                    .map(|(id, rel, ext, size, mtime)| {
+                        let info = read_info(&abs_path(&root, rel), ext).unwrap_or_default();
+                        (*id, *size, *mtime, info)
+                    })
+                    .collect()
             })
-            .collect();
+            .join()
+            .unwrap()
+        });
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
         for (id, size, mtime, info) in &infos {
