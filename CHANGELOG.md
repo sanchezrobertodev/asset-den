@@ -11,6 +11,21 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Duplicates**: each copy has a full-screen button (or double-click its preview). Full screen steps through the
+  copies of that group with the arrow keys, and <kbd>Esc</kbd> comes back to the review.
+- **Duplicates**: each copy shows its size and, for images, its dimensions. Groups with more than two copies show the
+  count in the list.
+
+### Changed
+
+- **Duplicates** stays quick with thousands of groups. Only the groups on screen are drawn, and the view no longer
+  redraws on unrelated changes; stepping through 3,700 groups went from about 300 ms per step (up to 770 ms) to about
+  10 ms. The group list is one keyboard stop: <kbd>↑</kbd> <kbd>↓</kbd>, <kbd>Page Up</kbd>/<kbd>Page Down</kbd>,
+  <kbd>Home</kbd> and <kbd>End</kbd> move through it.
+
+### Fixed
+
+- In **Duplicates** on a wide window, the preview of a copy could grow out of its card and cover the heading.
 
 ## [0.3.1] - 2026-10-23
 
