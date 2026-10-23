@@ -11,6 +11,11 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+
+## [0.3.0] - 2026-10-23
+
+### Added
+
 - A welcome screen on first run says what Asset Den does, imports your first folder and shows three tips (drag cards
   into your engine, Space to preview, Ctrl/⌘ K to search). It repeats that your files are only read, never changed.
 - **Keyboard shortcuts**: press `?` (or the keyboard button in the sidebar footer, or search for "Keyboard shortcuts")
@@ -80,8 +85,7 @@ All notable changes to Asset Den are documented here. The format follows
 - The app starts with a third of the code it loaded before: the 3D viewer, model thumbnails and the audio waveform
   load their libraries (three.js, wavesurfer.js) the first time they're needed.
 - New app icon: a fanned stack of cards (an image card in front of blue and amber ones) on a warm dark tile, also
-  shown next to the name in the sidebar. `app-icon.svg` is the source; `npx tauri icon app-icon.svg` regenerates
-  `src-tauri/icons`.
+  shown next to the name in the sidebar.
 - Small text (counts, labels, hints) is a little stronger in both themes, and the light theme's green and star are a
   little darker, so text reaches a 4.5:1 contrast and the stars 3:1.
 
