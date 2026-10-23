@@ -11,6 +11,14 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Find similar** in the side panel shows the images that look like the open one, closest first: resized, recoloured
+  (hue-shifted) and lightly cropped copies included. A "Similar to …" chip above the grid has a Strict–Loose slider and
+  clears the search. Works for PNG, JPEG, GIF, WebP, BMP, TGA, PSD, TIFF and ICO.
+- **Search by colour**: a Colour group in the Filters panel (twelve named swatches and a custom colour), and
+  `color:red` or `color:#ff8800` in search. An image matches when one of its main colours is that colour.
+- Both use a background pass after each scan that reads every image once (from its cached thumbnail when there is
+  one) and keeps a small fingerprint and its five main colours until the file changes. It uses at most half the
+  thumbnail workers and waits while folders are scanned. Files are only read.
 
 ### Changed
 

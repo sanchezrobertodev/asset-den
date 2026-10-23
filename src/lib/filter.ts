@@ -1,4 +1,5 @@
 import type { Asset, Collection, FolderFilter, Kind, Root, ViewName } from "../types";
+import { hasColor, parseColor, type LabSwatch } from "./colors.ts";
 import { baseName, folderOf, kindLabel } from "./format.ts";
 import type { SortKey } from "./prefs";
 
@@ -17,7 +18,12 @@ export interface Filters {
   untagged: boolean;
   /** Has at least one of these tags. */
   anyTags: string[];
+  /** A main colour: a name from NAMED_COLORS or "#rrggbb". */
+  color: string | null;
 }
+
+/** Dominant colours by image id, for colour filters. */
+export type Palettes = ReadonlyMap<number, LabSwatch[]>;
 
 export const noFilters: Filters = {
   exts: [],
@@ -31,16 +37,17 @@ export const noFilters: Filters = {
   days: null,
   untagged: false,
   anyTags: [],
+  color: null,
 };
 
 /** How many filter groups are active, for the badge on the Filters button. */
 export function activeFilterCount(f: Filters): number {
   const dims = f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square;
   const bytes = f.minBytes !== null || f.maxBytes !== null;
-  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0].filter(Boolean).length;
+  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0, f.color !== null].filter(Boolean).length;
 }
 
-export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean {
+export function matchesFilters(a: Asset, f: Filters, now = Date.now(), palettes?: Palettes | null): boolean {
   if (f.exts.length && !f.exts.includes(a.ext)) return false;
   // Dimension filters only make sense for images with known dimensions.
   if (f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square) {
@@ -56,10 +63,11 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean 
   if (f.days !== null && a.mtime < now - f.days * 86_400_000) return false;
   if (f.untagged && a.tags.length) return false;
   if (f.anyTags.length && !a.tags.some((t) => f.anyTags.includes(t))) return false;
+  if (f.color && !hasColor(palettes?.get(a.id), f.color)) return false;
   return true;
 }
 
-/** A search like `type:audio in:sprites #player size:>1mb hero`, as used by the search bar and the ⌘K palette. */
+/** A search like `type:audio in:sprites #player size:>1mb color:red hero`, as used by the search bar and the ⌘K palette. */
 export interface Query {
   /** null = any type; an empty array = a `type:` that matched nothing. */
   types: Kind[] | null;
@@ -67,13 +75,15 @@ export interface Query {
   tags: string[];
   minBytes: number;
   maxBytes: number;
+  /** Colours the image must all have (see Filters.color); null for a `color:` that names no colour. */
+  colors: (string | null)[];
   text: string[];
 }
 
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
 
 export function parseQuery(q: string): Query {
-  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, text: [] };
+  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, colors: [], text: [] };
   for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
     if (t.startsWith("type:")) {
       const s = t.slice(5);
@@ -90,16 +100,19 @@ export function parseQuery(q: string): Query {
       const b = parseFloat(m[2]) * UNITS[m[3] ?? "kb"];
       if (m[1] === "<") out.maxBytes = b;
       else out.minBytes = b;
+    } else if (t.startsWith("color:")) {
+      if (t.length > 6) out.colors.push(parseColor(t.slice(6)));
     } else out.text.push(t);
   }
   return out;
 }
 
-export function matchesQuery(a: Asset, q: Query): boolean {
+export function matchesQuery(a: Asset, q: Query, palettes?: Palettes | null): boolean {
   if (q.types && !q.types.includes(a.kind)) return false;
   if (q.folder && !folderOf(a.relPath).toLowerCase().split("/").some((seg) => seg.startsWith(q.folder!))) return false;
   if (!q.tags.every((t) => a.tags.some((g) => g.startsWith(t)))) return false;
   if (a.size < q.minBytes || a.size > q.maxBytes) return false;
+  if (!q.colors.every((c) => c !== null && hasColor(palettes?.get(a.id), c))) return false;
   const hay = a.relPath.toLowerCase();
   return q.text.every((t) => hay.includes(t) || a.tags.includes(t));
 }
@@ -124,16 +137,21 @@ export interface Scope {
   filters: Filters;
   /** The open collection, for the Collections view. */
   collection: Collection | null;
+  /** "Find similar" results, closest first: only these are shown, in this order. */
+  similar?: number[] | null;
+  palettes?: Palettes | null;
 }
 
 /** Assets the current view shows, after type chips, folder, search and Filters panel, sorted (unless `sort` is null). */
 export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; desc: boolean } | null): Asset[] {
   const members = s.view === "collections" ? new Set(s.collection?.assetIds ?? []) : null;
+  const rank = s.similar ? new Map(s.similar.map((id, i) => [id, i])) : null;
   const q = parseQuery(s.query);
   const now = Date.now();
   const out = assets.filter((a) => {
     if (members) return members.has(a.id);
     if (s.view === "favorites" && !a.favorite) return false;
+    if (rank && !rank.has(a.id)) return false;
     if (s.kinds.length && !s.kinds.includes(a.kind)) return false;
     if (s.folder) {
       if (a.rootId !== s.folder.rootId) return false;
@@ -141,9 +159,10 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
         if (folderOf(a.relPath) !== s.folder.path) return false;
       } else if (s.folder.path && !a.relPath.startsWith(s.folder.path + "/")) return false;
     }
-    return matchesFilters(a, s.filters, now) && matchesQuery(a, q);
+    return matchesFilters(a, s.filters, now, s.palettes) && matchesQuery(a, q, s.palettes);
   });
   if (!sort) return out;
+  if (rank) return out.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
   const dir = sort.desc ? -1 : 1;
   return out.sort((a, b) => dir * compare[sort.key](a, b));
 }

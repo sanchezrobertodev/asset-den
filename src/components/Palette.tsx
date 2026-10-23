@@ -18,7 +18,7 @@ interface Item {
   run: () => void;
 }
 
-const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb"];
+const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "color:red"];
 
 export function Palette() {
   const s = useStore();
@@ -31,6 +31,10 @@ export function Palette() {
     input.current?.focus();
     input.current?.select();
   }, []);
+  const wantsColors = parseQuery(q).colors.length > 0;
+  useEffect(() => {
+    if (wantsColors) void useStore.getState().loadPalettes();
+  }, [wantsColors]);
 
   const sections = useMemo(() => {
     const out: { title: string; items: Item[] }[] = [];
@@ -38,7 +42,7 @@ export function Palette() {
     const hasQuery = q.trim().length > 0;
     const close = { palette: false };
     if (hasQuery) {
-      const matches = s.assets.filter((a) => matchesQuery(a, parsed));
+      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.palettes));
       const items: Item[] = [
         {
           key: "all",
@@ -111,7 +115,7 @@ export function Palette() {
     ];
     if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
     const words = parsed.text;
-    const onlyText = hasQuery && !parsed.types && !parsed.folder && !parsed.tags.length;
+    const onlyText = hasQuery && !parsed.types && !parsed.folder && !parsed.tags.length && !parsed.colors.length;
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];
     if (acts.length) out.push({ title: "Actions", items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
     return out;
@@ -215,7 +219,7 @@ export function Palette() {
               })}
             </div>
           ))}
-          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player or in:audio.</div>}
+          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, in:audio or color:blue.</div>}
         </div>
         <div className="flex gap-4 border-t border-line px-[18px] py-2.5 text-xs text-faint">
           <span>↑↓ move</span>

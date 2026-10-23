@@ -12,7 +12,7 @@ import { Palette } from "./components/Palette";
 import { Peek } from "./components/Peek";
 import { Sidebar } from "./components/Sidebar";
 import { Button, Kbd } from "./components/ui";
-import { activeFilterCount, groupByFolder, visibleAssets } from "./lib/filter";
+import { activeFilterCount, groupByFolder, parseQuery, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
 import { baseName, folderOf } from "./lib/format";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
@@ -79,23 +79,31 @@ export default function App() {
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
-  const scope = { view: s.view, kinds: s.kinds, folder: s.folder, subfolders: s.subfolders, query: s.query, filters: s.filters, collection };
+  const similar = s.similar?.ids ?? null;
+  const wantsColors = !!s.filters.color || parseQuery(s.query).colors.length > 0;
+  // Colours only matter to a colour filter; otherwise their updates during an analysis pass mustn't re-sort the list.
+  const palettes = wantsColors ? s.palettes : null;
+  const scope = { view: s.view, kinds: s.kinds, folder: s.folder, subfolders: s.subfolders, query: s.query, filters: s.filters, collection, similar, palettes };
   const visible = useMemo(
     () => visibleAssets(s.assets, scope, s.sort),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.assets, s.view, s.kinds, s.folder, s.subfolders, s.query, s.filters, collection, s.sort],
+    [s.assets, s.view, s.kinds, s.folder, s.subfolders, s.query, s.filters, collection, s.sort, similar, palettes],
   );
   // Same scope without the type chips, so each chip can show its count. Only counted, so not sorted.
   const scopeAssets = useMemo(
     () => visibleAssets(s.assets, { ...scope, kinds: [] }, null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection],
+    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection, similar, palettes],
   );
+  useEffect(() => {
+    if (wantsColors) void useStore.getState().loadPalettes();
+  }, [wantsColors]);
   const browse = s.view === "library" || s.view === "favorites";
   const navigable = browse || s.view === "collections";
   const groups = useMemo(
-    () => (browse && s.grouped ? groupByFolder(visible, s.roots, s.folder) : null),
-    [browse, s.grouped, visible, s.roots, s.folder],
+    // "Find similar" results stay in one list, closest first.
+    () => (browse && s.grouped && !similar ? groupByFolder(visible, s.roots, s.folder) : null),
+    [browse, s.grouped, similar, visible, s.roots, s.folder],
   );
   const order = useMemo(() => (groups ? groups.flatMap((g) => g.items) : visible), [groups, visible]);
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
@@ -161,7 +169,7 @@ export default function App() {
   }, [order, navigable]);
 
   const scanning = Object.keys(s.scanning).length > 0;
-  const filtered = s.query || s.kinds.length > 0 || s.folder !== null || activeFilterCount(s.filters) > 0;
+  const filtered = s.query || s.kinds.length > 0 || s.folder !== null || activeFilterCount(s.filters) > 0 || !!similar;
   // Whether the open folder holds any files itself, before any filter; decides which empty state fits.
   const hasDirectFiles = useMemo(
     () => !!s.folder && s.assets.some((a) => a.rootId === s.folder!.rootId && folderOf(a.relPath) === s.folder!.path),
@@ -197,6 +205,12 @@ export default function App() {
                     title={`No files directly in ${s.folder.path ? baseName(s.folder.path) : "this folder"}`}
                     body="Its assets are in subfolders."
                     action={<Button onClick={() => s.setSubfolders(true)}>Include subfolders</Button>}
+                  />
+                ) : s.similar && s.view === "library" ? (
+                  <Empty
+                    title={`Nothing looks like ${s.similar.name}`}
+                    body={`No other image is within ${s.similar.max} bits of it${s.analysing ? ` yet; ${s.analysing.toLocaleString()} images are still being analysed` : ""}. Try a looser match above.`}
+                    action={<Button onClick={s.clearSimilar}>Back to the library</Button>}
                   />
                 ) : s.view === "favorites" && !filtered ? (
                   <Empty title="No favorites yet" body="Press F on any asset to add it here." />
