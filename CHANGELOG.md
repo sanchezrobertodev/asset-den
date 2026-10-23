@@ -11,6 +11,11 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+
+## [0.3.2] - 2026-10-23
+
+### Added
+
 - **Duplicates**: each copy has a full-screen button (or double-click its preview). Full screen steps through the
   copies of that group with the arrow keys, and <kbd>Esc</kbd> comes back to the review.
 - **Duplicates**: each copy shows its size and, for images, its dimensions. Groups with more than two copies show the
