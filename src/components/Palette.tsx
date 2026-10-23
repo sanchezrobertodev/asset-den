@@ -7,7 +7,7 @@ import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Thumb } from "./Thumb";
-import { KindPill, Kbd, trapTab } from "./ui";
+import { focusAssets, KindPill, Kbd, trapTab } from "./ui";
 
 interface Item {
   key: string;
@@ -28,16 +28,18 @@ export function Palette() {
   const input = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
+  const ran = useRef(false);
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const box = dialog.current;
     input.current?.focus();
     input.current?.select();
-    // Back to where search was opened from, unless a result or action moved focus on purpose.
+    // Running a result lands on the assets it shows (the chosen one active); closing search goes back to where it opened.
     return () => {
       const at = document.activeElement;
-      if (!at || at === document.body || box?.contains(at)) prev?.focus();
+      if (ran.current) focusAssets();
+      else if (!at || at === document.body || box?.contains(at)) prev?.focus();
     };
   }, []);
   const wantsColors = parseQuery(q).colors.length > 0;
@@ -149,6 +151,7 @@ export function Palette() {
   const flat = sections.flatMap((sec) => sec.items);
   const run = (item?: Item) => {
     if (!item) return;
+    ran.current = true;
     item.run();
     useStore.setState({ palette: false });
   };

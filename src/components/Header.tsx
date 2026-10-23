@@ -99,6 +99,18 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
   }, [scopeAssets]);
   const node = useMemo(() => (s.folder ? (pathTo(treeFor(s.assets, s.roots), s.folder).at(-1) ?? null) : null), [s.assets, s.roots, s.folder]);
   const exact = node && node.path === s.folder!.path ? node : null;
+  const countText = `${count.toLocaleString()} ${count === 1 ? "asset" : "assets"}`;
+
+  // Screen readers hear the count when the search, chips or filters change, not on every batch a scan adds. During a
+  // scan the count is still moving, so they wait for its "Scan finished" message instead.
+  const scope = JSON.stringify([s.view, s.query, s.kinds, s.folder, s.subfolders, s.filters, s.similar?.id]);
+  const lastScope = useRef(scope);
+  const [said, setSaid] = useState("");
+  useEffect(() => {
+    if (lastScope.current === scope) return;
+    lastScope.current = scope;
+    if (!Object.keys(useStore.getState().scanning).length) setSaid(countText);
+  }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chip = (on: boolean) =>
     clsx(
@@ -181,9 +193,12 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         </div>
       )}
       <div className="flex flex-none flex-wrap items-center gap-2 px-7 pt-2.5 pb-3 whitespace-nowrap">
-        <span className="mr-auto text-muted" aria-live="polite">
-          {count.toLocaleString()} {count === 1 ? "asset" : "assets"}
+        <span className="mr-auto text-muted">
+          {countText}
           {s.grouped && folders > 1 && ` in ${folders.toLocaleString()} folders`}
+        </span>
+        <span role="status" className="sr-only">
+          {said}
         </span>
         <label className="flex items-center gap-1.5 text-muted">
           Sort
