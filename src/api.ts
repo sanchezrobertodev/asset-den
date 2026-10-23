@@ -58,6 +58,14 @@ export const api = {
   reveal: (id: number) => invoke<void>("reveal", { id }),
   openDefault: (id: number) => invoke<void>("open_default", { id }),
   dragIcon: () => invoke<string>("drag_icon"),
+  /** Folder names skipped while scanning, on top of the built-in ones (hidden folders, node_modules, sidecars). */
+  ignoredFolders: () => invoke<string[]>("ignored_folders"),
+  /** Saves the list and returns it cleaned; takes effect on the next rescan. */
+  setIgnoredFolders: (names: string[]) => invoke<string[]>("set_ignored_folders", { names }),
+  /** Bytes used by the app's own thumbnail and preview caches. */
+  cacheSize: () => invoke<number>("cache_size"),
+  clearThumbnailCache: () => invoke<void>("clear_thumbnail_cache"),
+  openReleases: () => invoke<void>("open_releases"),
   pickFolder: async (title = "Import an asset folder") => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;

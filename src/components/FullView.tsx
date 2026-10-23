@@ -1,16 +1,18 @@
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { bytes } from "../lib/format";
+import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { DuplicateBanner, MetaRows, openAsset, revealAsset, Stars } from "./Peek";
+import { DuplicateBanner, MetaRows, openAsset, PreviewBoundary, revealAsset, Stars } from "./Peek";
 import { Thumb } from "./Thumb";
 import { Button, IconButton, KindPill, Kbd, Label } from "./ui";
 import { Viewer } from "./Viewers";
 
 /** How many filmstrip tiles to render on each side of the current one. */
 const STRIP_SPAN = 40;
+const LEGEND = ["move", "favorite", "rate", "unrate", "full-back"].map(shortcut);
 
 export function FullView({ list }: { list: Asset[] }) {
   const s = useStore();
@@ -57,7 +59,9 @@ export function FullView({ list }: { list: Asset[] }) {
 
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_320px]">
         <div className={clsx("relative flex min-w-0 items-center justify-center px-[90px] py-6", a.kind === "image" ? "checker" : "bg-sunken")}>
-          <Viewer asset={a} pixelated={s.pixelated} full />
+          <PreviewBoundary asset={a}>
+            <Viewer asset={a} pixelated={s.pixelated} full />
+          </PreviewBoundary>
           <button
             type="button"
             aria-label="Previous (←)"
@@ -111,14 +115,12 @@ export function FullView({ list }: { list: Asset[] }) {
             )}
           </div>
           <div className="mt-auto grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-muted">
-            <Kbd>← →</Kbd>
-            <span>Previous / next</span>
-            <Kbd>F</Kbd>
-            <span>Favorite</span>
-            <Kbd>1–5</Kbd>
-            <span>Rate (0 clears)</span>
-            <Kbd>Esc</Kbd>
-            <span>Back to side panel</span>
+            {LEGEND.map((k) => (
+              <Fragment key={k.id}>
+                <Kbd>{k.keys}</Kbd>
+                <span className="first-letter:uppercase">{k.hint}</span>
+              </Fragment>
+            ))}
           </div>
         </aside>
       </div>

@@ -115,11 +115,13 @@ export function Modal({
   onClose,
   children,
   footer,
+  wide,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -147,9 +149,12 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         onMouseDown={(e) => e.stopPropagation()}
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]"
+        className={clsx(
+          "flex max-h-[calc(86vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]",
+          wide ? "max-w-[640px]" : "max-w-md",
+        )}
       >
-        <div className="flex items-center justify-between gap-3 px-5 pt-4">
+        <div className="flex flex-none items-center justify-between gap-3 px-5 pt-4">
           <h2 id="modal-title" className="text-[15px] font-semibold">
             {title}
           </h2>
@@ -157,7 +162,7 @@ export function Modal({
             <X className="size-4" />
           </IconButton>
         </div>
-        <div className="px-5 py-3 text-fg-2">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-3 text-fg-2">{children}</div>
         {footer && <div className="flex justify-end gap-2 px-5 pt-1 pb-4">{footer}</div>}
       </div>
     </div>

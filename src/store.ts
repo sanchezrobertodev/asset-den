@@ -31,6 +31,8 @@ interface State extends Prefs {
   /** Full-screen view of the active asset (Enter). */
   full: boolean;
   palette: boolean;
+  /** Open app dialog: keyboard shortcuts (?) or Settings. */
+  modal: "shortcuts" | "settings" | null;
   toast: Toast | null;
   /** Open collection in the Collections view. */
   colSel: number | null;
@@ -68,12 +70,14 @@ interface State extends Prefs {
   setThumbSize: (n: number) => void;
   setTheme: (t: Theme) => void;
   setPixelated: (p: boolean) => void;
+  setCheckUpdates: (on: boolean) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
   select: (id: number, mode?: "replace" | "toggle" | "range", order?: number[]) => void;
   setSelected: (ids: number[]) => void;
   setPeek: (open: boolean) => void;
   setFull: (open: boolean) => void;
   setPalette: (open: boolean) => void;
+  setModal: (modal: State["modal"]) => void;
   setFavorite: (ids: number[], favorite: boolean) => Promise<void>;
   addTag: (ids: number[], tag: string) => Promise<void>;
   removeTag: (ids: number[], tag: string) => Promise<void>;
@@ -109,8 +113,8 @@ let noteSaves: Promise<unknown> = Promise.resolve();
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders } = get();
-    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders });
+    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates } = get();
+    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -208,6 +212,7 @@ export const useStore = create<State>((set, get) => {
     peek: false,
     full: false,
     palette: false,
+    modal: null,
     toast: null,
     sheets: {},
     notes: {},
@@ -351,6 +356,10 @@ export const useStore = create<State>((set, get) => {
       set({ pixelated });
       persist();
     },
+    setCheckUpdates: (checkUpdates) => {
+      set({ checkUpdates });
+      persist();
+    },
 
     // On a failed read the entry stays unknown, so a guess never overwrites a saved slicing.
     loadSheet: async (id) => {
@@ -392,6 +401,7 @@ export const useStore = create<State>((set, get) => {
     setPeek: (peek) => set((s) => ({ peek: peek && s.activeId !== null, full: peek && s.full })),
     setFull: (full) => set((s) => ({ full: full && s.activeId !== null, peek: s.peek || full })),
     setPalette: (palette) => set({ palette }),
+    setModal: (modal) => set({ modal, palette: false }),
 
     setFavorite: async (ids, favorite) => {
       patchAssets(ids, (a) => ({ ...a, favorite }));

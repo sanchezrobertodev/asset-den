@@ -15,7 +15,7 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
 
 - **Library**: import one or more folders. Assets appear while a folder is still scanning, and a live watcher picks up
   added, renamed and deleted files (renames keep their tags). Engine sidecars (`.meta`, `.import`, `.uid`), hidden
-  folders and `node_modules` are skipped.
+  folders and `node_modules` are skipped, plus any folder names you add in **Settings → Library**.
 - **Folders**: an expandable folder tree in the sidebar with file counts, and a breadcrumb in the header whose carets
   jump to any subfolder or a recent folder. Subfolder chips drill down, <kbd>Alt+↑</kbd> goes to the parent, and
   **Include subfolders** switches between a folder's own files and everything below it.
@@ -56,8 +56,7 @@ The screenshots show a small sample library generated for them: procedural sprit
 
 Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side panel · <kbd>Enter</kbd> full screen ·
 <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>1</kbd>–<kbd>5</kbd> rate, <kbd>0</kbd> clear ·
-<kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and
-<kbd>Ctrl+A</kbd> select · <kbd>Esc</kbd> step back.
+<kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and <kbd>Ctrl+A</kbd> select · <kbd>Esc</kbd> step back · <kbd>?</kbd> all shortcuts.
 
 ## Install
 
@@ -145,8 +144,8 @@ hand to publish the macOS and Linux builds.
 
 | What | Where |
 |---|---|
-| Index, tags, favorites, ratings, notes, collections | `asset-den.db` (SQLite) in the app data folder |
-| Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete) |
+| Index, tags, favorites, ratings, notes, collections, ignored folder names | `asset-den.db` (SQLite) in the app data folder |
+| Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete, or **Settings → Clear thumbnail cache**) |
 | UI preferences | browser storage in the app's webview |
 
 ## Known limits
