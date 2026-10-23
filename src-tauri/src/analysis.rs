@@ -238,13 +238,10 @@ pub fn stale(conn: &Connection) -> Result<Vec<Todo>> {
     .collect()
 }
 
-/// A pass's work: every stale image (`all`), or only those among `ids` (images that just changed).
-pub fn todo(conn: &Connection, all: bool, ids: &[i64]) -> Result<Vec<Todo>> {
+/// The stale images among `ids` (images that just changed).
+pub fn todo(conn: &Connection, ids: &[i64]) -> Result<Vec<Todo>> {
     let ids: HashSet<i64> = ids.iter().copied().collect();
-    Ok(stale(conn)?
-        .into_iter()
-        .filter(|t| all || ids.contains(&t.id))
-        .collect())
+    Ok(stale(conn)?.into_iter().filter(|t| ids.contains(&t.id)).collect())
 }
 
 /// Whether this version of the image still needs analysing.
@@ -557,21 +554,38 @@ fn spawn(app: &AppHandle) {
     });
 }
 
+/// A whole-library pass: every stale image, then again for the ones scans or the watcher added or changed meanwhile,
+/// until none are left. `ready()` runs before each look at what's stale: it waits for running scans (they add images)
+/// and says whether to go on. True when it ended with every image analysed, false when `ready()` stopped it.
+pub fn analyse_all<G>(
+    db: &Mutex<Connection>,
+    workers: usize,
+    thumbs_dir: &Path,
+    ready: impl Fn() -> bool,
+    gate: impl Fn() -> Option<G> + Sync,
+    mut after: impl FnMut(&Connection, Vec<(i64, Vec<Swatch>)>),
+) -> Result<bool> {
+    loop {
+        if !ready() {
+            return Ok(false);
+        }
+        let todo = stale(&db.lock().unwrap())?;
+        if todo.is_empty() {
+            return Ok(true);
+        }
+        analyse_and_store(db, &todo, workers, thumbs_dir, &gate, &mut after)?;
+    }
+}
+
 fn pass(app: &AppHandle, all: bool, ids: &[i64], cancels: usize) -> Result<()> {
     let state = app.state::<AppState>();
-    let todo = todo(&state.db.lock().unwrap(), all, ids)?;
-    if todo.is_empty() && !all {
-        return Ok(());
-    }
+    let cancelled = || CANCELS.load(SeqCst) != cancels;
     let started = Instant::now();
     // At most half the thumbnail permits, so thumbnails for what's on screen always have the other half.
     let workers = (std::thread::available_parallelism().map_or(4, |n| n.get().clamp(2, 8)) / 2).max(1);
-    // A few changed files are done before a progress line could be read; a big new folder gets one, with Pause.
-    SHOWN.store(all || todo.len() > BATCH, SeqCst);
-    emit_status(app, &state.db.lock().unwrap());
     let gate = || {
         loop {
-            if CANCELS.load(SeqCst) != cancels {
+            if cancelled() {
                 return None;
             }
             // Scans go first: they hold the lock often and the UI is waiting for them.
@@ -586,17 +600,36 @@ fn pass(app: &AppHandle, all: bool, ids: &[i64], cancels: usize) -> Result<()> {
         }
     };
     let mut analysed = 0;
-    analyse_and_store(&state.db, &todo, workers, &state.thumbs_dir, gate, |conn, colors| {
+    let after = |conn: &Connection, colors: Vec<(i64, Vec<Swatch>)>| {
         analysed += colors.len();
         let _ = app.emit("image-features", colors);
         emit_status(app, conn);
-    })?;
-    SHOWN.store(false, SeqCst);
-    let conn = state.db.lock().unwrap();
-    if all && CANCELS.load(SeqCst) == cancels {
-        keep_by_default(&conn)?;
+    };
+    if all {
+        SHOWN.store(true, SeqCst);
+        emit_status(app, &state.db.lock().unwrap());
+        let ready = || {
+            while !cancelled() && !state.scanning.lock().unwrap().is_empty() {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            !cancelled()
+        };
+        let complete = analyse_all(&state.db, workers, &state.thumbs_dir, ready, gate, after)?;
+        if complete {
+            keep_by_default(&state.db.lock().unwrap())?;
+        }
+    } else {
+        let todo = todo(&state.db.lock().unwrap(), ids)?;
+        if todo.is_empty() {
+            return Ok(());
+        }
+        // A few changed files are done before a progress line could be read; a big new folder gets one, with Pause.
+        SHOWN.store(todo.len() > BATCH, SeqCst);
+        emit_status(app, &state.db.lock().unwrap());
+        analyse_and_store(&state.db, &todo, workers, &state.thumbs_dir, gate, after)?;
     }
-    emit_status(app, &conn);
+    SHOWN.store(false, SeqCst);
+    emit_status(app, &state.db.lock().unwrap());
     let secs = started.elapsed().as_secs_f32();
     eprintln!(
         "analysis: {analysed} images in {secs:.1}s ({:.0}/s, {workers} workers)",
@@ -854,13 +887,13 @@ mod tests {
         let conn = db.into_inner().unwrap();
         assert!(!is_stale(&conn, &a).unwrap());
         assert_eq!(counts(&conn).unwrap(), (1, 2));
-        assert_eq!(todo(&conn, true, &[]).unwrap().len(), 1);
+        assert_eq!(stale(&conn).unwrap().len(), 1);
     }
 
     #[test]
     fn a_cancelled_pass_keeps_what_it_stored() {
         let (_dir, conn, thumbs_dir) = library(5);
-        let work = todo(&conn, true, &[]).unwrap();
+        let work = stale(&conn).unwrap();
         let db = Mutex::new(conn);
         // Cancelled after two images: from then on the gate lets nothing through.
         let allowed = AtomicUsize::new(2);
@@ -871,7 +904,7 @@ mod tests {
         let conn = db.into_inner().unwrap();
         assert_eq!(counts(&conn).unwrap(), (2, 5));
         // The next pass picks up the rest.
-        assert_eq!(todo(&conn, true, &[]).unwrap().len(), 3);
+        assert_eq!(stale(&conn).unwrap().len(), 3);
     }
 
     #[test]
@@ -879,12 +912,55 @@ mod tests {
         let (_dir, conn, thumbs_dir) = library(4);
         let ids: Vec<i64> = db::assets(&conn, None).unwrap().iter().map(|a| a.id).collect();
         // A watcher batch changed one image and removed some other row; three images were never analysed.
-        let work = todo(&conn, false, &[ids[2], 9999]).unwrap();
+        let work = todo(&conn, &[ids[2], 9999]).unwrap();
         assert_eq!(work.iter().map(|t| t.id).collect::<Vec<_>>(), vec![ids[2]]);
         let db = Mutex::new(conn);
         analyse_and_store(&db, &work, 2, &thumbs_dir, || Some(()), |_, _| {}).unwrap();
         let conn = db.into_inner().unwrap();
         assert_eq!(counts(&conn).unwrap(), (1, 4));
+    }
+
+    /// Writes an image into the library folder and indexes it, as a scan or the watcher would.
+    fn index(conn: &Connection, root: &Path, name: &str) {
+        RgbaImage::from_pixel(20, 20, Rgba([0, 0, 200, 255]))
+            .save(root.join(name))
+            .unwrap();
+        conn.execute(
+            "INSERT INTO assets (root_id, rel_path, name, ext, kind, size, mtime, seen) VALUES (1, ?1, ?1, 'png', 'image', 1, 1, 1)",
+            [name],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_whole_library_pass_covers_images_indexed_while_it_runs() {
+        let (dir, conn, thumbs_dir) = library(2);
+        let root = dir.path().join("lib");
+        let db = Mutex::new(conn);
+        // The user starts it during a scan: `ready` waits for the scan, which indexes one more image. While the first
+        // round runs, the watcher indexes another.
+        let readies = AtomicUsize::new(0);
+        let ready = || {
+            if readies.fetch_add(1, SeqCst) == 0 {
+                index(&db.lock().unwrap(), &root, "scanned.png");
+            }
+            true
+        };
+        let mut rounds = 0;
+        let after = |conn: &Connection, _: Vec<(i64, Vec<Swatch>)>| {
+            rounds += 1;
+            if rounds == 1 {
+                index(conn, &root, "late.png");
+            }
+        };
+        assert!(analyse_all(&db, 2, &thumbs_dir, ready, || Some(()), after).unwrap());
+        assert_eq!(rounds, 2);
+        assert_eq!(counts(&db.lock().unwrap()).unwrap(), (4, 4));
+
+        // Stopped before it's done (Cancel): not complete, so "keep analysed" isn't turned on, and the rest stays.
+        index(&db.lock().unwrap(), &root, "after.png");
+        assert!(!analyse_all(&db, 2, &thumbs_dir, || false, || Some(()), |_, _| {}).unwrap());
+        assert_eq!(counts(&db.lock().unwrap()).unwrap(), (4, 5));
     }
 
     #[test]

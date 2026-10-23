@@ -193,8 +193,12 @@ export const useStore = create<State>((set, get) => {
     if (!next.length) return false;
     seq = next[next.length - 1].seq;
     set((s) => {
-      const { assets, gone } = applyDeltas(s.assets, next);
-      return gone.size ? { assets, ...keepOnly(s, (id) => !gone.has(id)) } : { assets };
+      const { assets, gone, changed } = applyDeltas(s.assets, next);
+      const out: Partial<State> = gone.size ? { assets, ...keepOnly(s, (id) => !gone.has(id)) } : { assets };
+      // A file's new version has no colours until it's analysed again, which with "keep analysed" off may be never.
+      const palettes = out.palettes ?? s.palettes;
+      if (changed.size && palettes) out.palettes = new Map([...palettes].filter(([id]) => !changed.has(id)));
+      return out;
     });
     return true;
   };
