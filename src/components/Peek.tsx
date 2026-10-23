@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
-import { Component, useMemo, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, errorText } from "../api";
 import { ago, baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
@@ -175,8 +175,76 @@ export function TagEditor({ items }: { items: Asset[] }) {
   );
 }
 
+/** Five stars; clicking the current rating clears it. */
+export function Stars({ value, onChange, className }: { value: number; onChange: (n: number) => void; className?: string }) {
+  return (
+    <div role="group" aria-label={value ? `Rating: ${value} of 5` : "Rating: none"} className={clsx("flex items-center", className)}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const label = value === n ? "Clear rating (0)" : `Rate ${n} ${n === 1 ? "star" : "stars"} (${n})`;
+        return (
+          <button
+            key={n}
+            type="button"
+            aria-label={label}
+            title={label}
+            onClick={() => onChange(value === n ? 0 : n)}
+            className={clsx(
+              "flex size-[22px] items-center justify-center rounded text-[15px] leading-none hover:bg-active",
+              n <= value ? "text-star" : "text-faint hover:text-muted",
+            )}
+          >
+            {n <= value ? "★" : "☆"}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Free-text note for one asset; render it with `key={asset.id}`. Saves after a pause in typing and on blur. */
+export function NoteEditor({ a }: { a: Asset }) {
+  const { notes, setNote } = useStore();
+  const [draft, setDraft] = useState(notes[a.id] ?? "");
+  const pending = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flush = () => {
+    clearTimeout(timer.current);
+    if (pending.current !== null) void setNote(a.id, pending.current);
+    pending.current = null;
+  };
+  // Switching assets or closing the panel unmounts this: save what's typed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => flush, []);
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>Note</Label>
+      <textarea
+        aria-label="Note"
+        value={draft}
+        maxLength={5000}
+        rows={3}
+        placeholder="Add a note"
+        onChange={(e) => {
+          setDraft(e.target.value);
+          pending.current = e.target.value;
+          clearTimeout(timer.current);
+          timer.current = setTimeout(flush, 800);
+        }}
+        onBlur={flush}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Escape") e.currentTarget.blur();
+        }}
+        className="min-h-[68px] resize-y rounded-[9px] border border-line-strong bg-card px-2.5 py-2 text-[13px] text-fg outline-none placeholder:text-muted focus:border-line-x"
+      />
+    </div>
+  );
+}
+
 export function CollectionChecks({ items }: { items: Asset[] }) {
-  const { collections, setInCollection, newCollection } = useStore();
+  const { collections: all, setInCollection, newCollection } = useStore();
+  // Smart collections pick their own members.
+  const collections = all.filter((c) => !c.rule);
   const ids = items.map((a) => a.id);
   return (
     <div className="flex flex-col gap-1.5">
@@ -213,6 +281,8 @@ export function Peek({ list }: { list: Asset[] }) {
   const a = s.assets.find((x) => x.id === s.activeId);
   if (!a) return null;
   const multi = selectedAssets.length > 1;
+  const mixedRating = selectedAssets.some((x) => x.rating !== selectedAssets[0].rating);
+  const sharedRating = multi && !mixedRating ? selectedAssets[0].rating : 0;
   const i = list.findIndex((x) => x.id === a.id);
   const step = (d: number) => list.length && s.select(list[(Math.max(i, 0) + d + list.length) % list.length].id);
 
@@ -246,6 +316,13 @@ export function Peek({ list }: { list: Asset[] }) {
           >
             {selectedAssets.every((x) => x.favorite) ? "★ Unfavorite all" : "☆ Favorite all"}
           </Button>
+          <div className="flex flex-col gap-2">
+            <Label>Rating</Label>
+            <span className="flex items-center gap-2.5">
+              <Stars value={sharedRating} onChange={(n) => void s.setRating(selectedAssets.map((x) => x.id), n)} />
+              {mixedRating && <span className="text-xs text-muted">Mixed</span>}
+            </span>
+          </div>
           <TagEditor items={selectedAssets} />
           <CollectionChecks items={selectedAssets} />
         </div>
@@ -282,6 +359,7 @@ export function Peek({ list }: { list: Asset[] }) {
 
 function PeekBody({ a }: { a: Asset }) {
   const setFavorite = useStore((s) => s.setFavorite);
+  const setRating = useStore((s) => s.setRating);
   const where = useLocation(a);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-auto px-[18px] pt-[18px] pb-5">
@@ -295,20 +373,24 @@ function PeekBody({ a }: { a: Asset }) {
             </span>
           </span>
         </div>
-        <IconButton
-          label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
-          aria-pressed={a.favorite}
-          bordered
-          className={clsx("size-[34px] rounded-[9px] text-base", a.favorite ? "text-star" : "text-muted")}
-          onClick={() => void setFavorite([a.id], !a.favorite)}
-        >
-          {a.favorite ? "★" : "☆"}
-        </IconButton>
+        <div className="flex flex-none items-center gap-1.5">
+          <Stars value={a.rating} onChange={(n) => void setRating([a.id], n)} />
+          <IconButton
+            label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
+            aria-pressed={a.favorite}
+            bordered
+            className={clsx("size-[34px] rounded-[9px] text-base", a.favorite ? "text-star" : "text-muted")}
+            onClick={() => void setFavorite([a.id], !a.favorite)}
+          >
+            {a.favorite ? "★" : "☆"}
+          </IconButton>
+        </div>
       </div>
       <DuplicateBanner a={a} />
       <MetaRows a={a} />
       <TagEditor items={[a]} />
       <CollectionChecks items={[a]} />
+      <NoteEditor key={a.id} a={a} />
     </div>
   );
 }

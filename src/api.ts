@@ -5,7 +5,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { AssetsDelta } from "./lib/delta";
-import type { Asset, Collection, DupGroup, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
+import type { Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
   version: string;
@@ -36,17 +36,22 @@ export const api = {
   preview: (id: number) => invoke<string>("preview", { id }),
   readText: (id: number) => invoke<TextPreview>("read_text", { id }),
   setFavorite: (ids: number[], favorite: boolean) => invoke<void>("set_favorite", { ids, favorite }),
+  setRating: (ids: number[], rating: number) => invoke<void>("set_rating", { ids, rating }),
+  listNotes: () => invoke<Notes>("list_notes"),
+  /** Returns the note as stored: trimmed, or null when cleared. */
+  setNote: (id: number, note: string) => invoke<string | null>("set_note", { id, note }),
   addTag: (ids: number[], tag: string) => invoke<string>("add_tag", { ids, tag }),
   removeTag: (ids: number[], tag: string) => invoke<void>("remove_tag", { ids, tag }),
   getSpriteSheet: (id: number) => invoke<SpriteSheet | null>("get_sprite_sheet", { id }),
   setSpriteSheet: (id: number, sheet: SpriteSheet) => invoke<void>("set_sprite_sheet", { id, sheet }),
   listCollections: () => invoke<Collection[]>("list_collections"),
-  createCollection: (name: string) => invoke<number>("create_collection", { name }),
+  createCollection: (name: string, rule: CollectionRule | null = null) => invoke<number>("create_collection", { name, rule }),
+  setCollectionRule: (id: number, rule: CollectionRule) => invoke<void>("set_collection_rule", { id, rule }),
   deleteCollection: (id: number) => invoke<void>("delete_collection", { id }),
   setInCollection: (collection: number, ids: number[], member: boolean) =>
     invoke<void>("set_in_collection", { collection, ids, member }),
   renameCollection: (id: number, name: string) => invoke<string>("rename_collection", { id, name }),
-  copyCollection: (id: number, dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { id, dest }),
+  copyCollection: (ids: number[], dest: string) => invoke<{ copied: number; failed: string[] }>("copy_collection", { ids, dest }),
   findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
   setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
   trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),

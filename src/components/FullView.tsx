@@ -5,14 +5,14 @@ import { bytes } from "../lib/format";
 import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { DuplicateBanner, MetaRows, openAsset, PreviewBoundary, revealAsset } from "./Peek";
+import { DuplicateBanner, MetaRows, openAsset, PreviewBoundary, revealAsset, Stars } from "./Peek";
 import { Thumb } from "./Thumb";
 import { Button, IconButton, KindPill, Kbd, Label } from "./ui";
 import { Viewer } from "./Viewers";
 
 /** How many filmstrip tiles to render on each side of the current one. */
 const STRIP_SPAN = 40;
-const LEGEND = ["move", "favorite", "full-back"].map(shortcut);
+const LEGEND = ["move", "favorite", "rate", "unrate", "full-back"].map(shortcut);
 
 export function FullView({ list }: { list: Asset[] }) {
   const s = useStore();
@@ -39,11 +39,12 @@ export function FullView({ list }: { list: Asset[] }) {
         <span className="min-w-0 truncate text-[15px] font-semibold">{a.name}</span>
         <span className="text-muted">{bytes(a.size)}</span>
         <span className="ml-2 font-mono text-xs text-faint">{i >= 0 ? `${i + 1} of ${list.length.toLocaleString()}` : ""}</span>
+        <Stars value={a.rating} onChange={(n) => void s.setRating([a.id], n)} className="ml-auto" />
         <IconButton
           label={a.favorite ? "Unfavorite (F)" : "Favorite (F)"}
           aria-pressed={a.favorite}
           bordered
-          className={clsx("ml-auto size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
+          className={clsx("size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
           onClick={() => void s.setFavorite([a.id], !a.favorite)}
         >
           {a.favorite ? "★" : "☆"}
@@ -104,6 +105,14 @@ export function FullView({ list }: { list: Asset[] }) {
                 ))}
               {!s.collections.some((c) => c.assetIds.includes(a.id)) && <span className="text-faint">Not in a collection</span>}
             </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Note</Label>
+            {s.notes[a.id] ? (
+              <p className="text-[13px] whitespace-pre-wrap text-fg-2 [overflow-wrap:anywhere]">{s.notes[a.id]}</p>
+            ) : (
+              <span className="text-faint">No note</span>
+            )}
           </div>
           <div className="mt-auto grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-muted">
             {LEGEND.map((k) => (

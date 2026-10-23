@@ -23,7 +23,7 @@ import { shortcut } from "./lib/shortcuts";
 import { useStore } from "./store";
 
 /** The library's hint bar, in order. */
-const HINTS = ["peek", "full", "move", "favorite", "search"].map(shortcut);
+const HINTS = ["peek", "full", "move", "favorite", "rate", "search"].map(shortcut);
 
 function typing(t: EventTarget | null) {
   const el = t as HTMLElement | null;
@@ -84,17 +84,17 @@ export default function App() {
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
-  const scope = { view: s.view, kinds: s.kinds, folder: s.folder, subfolders: s.subfolders, query: s.query, filters: s.filters, collection };
+  const scope = { view: s.view, kinds: s.kinds, folder: s.folder, subfolders: s.subfolders, query: s.query, filters: s.filters, collection, notes: s.notes };
   const visible = useMemo(
     () => visibleAssets(s.assets, scope, s.sort),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.assets, s.view, s.kinds, s.folder, s.subfolders, s.query, s.filters, collection, s.sort],
+    [s.assets, s.view, s.kinds, s.folder, s.subfolders, s.query, s.filters, collection, s.notes, s.sort],
   );
   // Same scope without the type chips, so each chip can show its count. Only counted, so not sorted.
   const scopeAssets = useMemo(
     () => visibleAssets(s.assets, { ...scope, kinds: [] }, null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection],
+    [s.assets, s.view, s.folder, s.subfolders, s.query, s.filters, collection, s.notes],
   );
   const browse = s.view === "library" || s.view === "favorites";
   const navigable = browse || s.view === "collections";
@@ -163,6 +163,9 @@ export default function App() {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
         const items = st.assets.filter((a) => ids.includes(a.id));
         if (items.length) void st.setFavorite(ids, !items.every((a) => a.favorite));
+      } else if (/^[0-5]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
+        if (ids.length) void st.setRating(ids, Number(e.key));
       } else if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         st.setSelected(order.map((a) => a.id));

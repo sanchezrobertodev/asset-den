@@ -283,6 +283,22 @@ fn set_favorite(state: State<'_, AppState>, ids: Vec<i64>, favorite: bool) -> Re
 }
 
 #[tauri::command]
+fn set_rating(state: State<'_, AppState>, ids: Vec<i64>, rating: u8) -> Result<(), String> {
+    db::set_rating(&state.db.lock().unwrap(), &ids, rating)
+}
+
+#[tauri::command]
+fn list_notes(state: State<'_, AppState>) -> Result<HashMap<i64, String>, String> {
+    with_db(&state, db::notes)
+}
+
+/// Returns the note as stored (trimmed; null when cleared).
+#[tauri::command]
+fn set_note(state: State<'_, AppState>, id: i64, note: String) -> Result<Option<String>, String> {
+    db::set_note(&state.db.lock().unwrap(), id, &note)
+}
+
+#[tauri::command]
 fn add_tag(state: State<'_, AppState>, ids: Vec<i64>, tag: String) -> Result<String, String> {
     let tag = db::clean_tag(&tag)?;
     with_db(&state, |c| db::add_tag(c, &ids, &tag))?;
@@ -309,9 +325,15 @@ fn list_collections(state: State<'_, AppState>) -> Result<Vec<Collection>, Strin
     with_db(&state, db::collections)
 }
 
+/// A plain collection, or a smart one when `rule` is given.
 #[tauri::command]
-fn create_collection(state: State<'_, AppState>, name: String) -> Result<i64, String> {
-    db::create_collection(&state.db.lock().unwrap(), &name)
+fn create_collection(state: State<'_, AppState>, name: String, rule: Option<db::Rule>) -> Result<i64, String> {
+    db::create_collection(&state.db.lock().unwrap(), &name, rule.as_ref())
+}
+
+#[tauri::command]
+fn set_collection_rule(state: State<'_, AppState>, id: i64, rule: db::Rule) -> Result<(), String> {
+    db::set_rule(&state.db.lock().unwrap(), id, &rule)
 }
 
 #[tauri::command]
@@ -428,24 +450,15 @@ struct CopyResult {
     failed: Vec<String>,
 }
 
-/// Copies a collection's files into `dest`. Originals are only read; existing files in `dest` are never replaced.
+/// Copies a collection's files (`ids`: the UI knows a smart collection's members) into `dest`. Originals are only read;
+/// existing files in `dest` are never replaced.
 #[tauri::command]
-async fn copy_collection(state: State<'_, AppState>, id: i64, dest: String) -> Result<CopyResult, String> {
+async fn copy_collection(state: State<'_, AppState>, ids: Vec<i64>, dest: String) -> Result<CopyResult, String> {
     let dest = PathBuf::from(dest);
     if !dest.is_dir() {
         return Err(format!("{} is not a folder.", dest.display()));
     }
-    let files = with_db(&state, |c| {
-        let ids = db::collections(c)?
-            .into_iter()
-            .find(|col| col.id == id)
-            .map(|col| col.asset_ids)
-            .unwrap_or_default();
-        Ok(db::assets(c, None)?
-            .into_iter()
-            .filter(|a| ids.contains(&a.id))
-            .collect::<Vec<_>>())
-    })?;
+    let files = with_db(&state, |c| db::assets(c, Some(&ids)))?;
     let (copied, failed) = tauri::async_runtime::spawn_blocking(move || copy_into(&files, &dest))
         .await
         .map_err(err)?;
@@ -614,12 +627,16 @@ pub fn run() {
             preview,
             read_text,
             set_favorite,
+            set_rating,
+            list_notes,
+            set_note,
             add_tag,
             remove_tag,
             get_sprite_sheet,
             set_sprite_sheet,
             list_collections,
             create_collection,
+            set_collection_rule,
             delete_collection,
             set_in_collection,
             find_duplicates,
@@ -665,6 +682,7 @@ mod tests {
             height: None,
             favorite: false,
             tags: vec![],
+            rating: 0,
         };
         let (copied, failed) = super::copy_into(&[a.clone(), a], &dest);
         assert_eq!((copied, failed.len()), (2, 0));

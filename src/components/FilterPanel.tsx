@@ -214,6 +214,21 @@ export function FilterButton() {
               </div>
               {tags.length > 0 && <p className="mt-1.5 text-[11px] text-muted">Matches assets with any of the selected tags.</p>}
             </Group>
+
+            <Group title="Rating" active={f.minRating !== null} onClear={() => setFilters({ minRating: null })}>
+              <div className="flex flex-wrap gap-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Chip
+                    key={n}
+                    on={f.minRating === n}
+                    onClick={() => setFilters({ minRating: f.minRating === n ? null : n })}
+                    label={n === 5 ? "5 stars" : `${n} or more stars`}
+                  >
+                    <span className="text-star">★</span> {n === 5 ? "5" : `${n}+`}
+                  </Chip>
+                ))}
+              </div>
+            </Group>
           </div>
         </div>
       )}

@@ -29,6 +29,8 @@ export const SHORTCUTS: Shortcut[] = [
   { id: "zoom", group: "Preview", keys: "Scroll", label: "Zoom an image in full screen (drag to pan, double-click to reset)" },
 
   { id: "favorite", group: "Organize", keys: "F", label: "Favorite or unfavorite the selection", hint: "favorite" },
+  { id: "rate", group: "Organize", keys: "1–5", label: "Rate the selection 1 to 5 stars", hint: "rate" },
+  { id: "unrate", group: "Organize", keys: "0", label: "Clear the selection's rating", hint: "clear rating" },
   { id: "select-all", group: "Organize", keys: `${mod}A`, label: "Select every asset shown" },
   { id: "toggle", group: "Organize", keys: isMac ? "⌘ click" : "Ctrl click", label: "Add to or remove from the selection" },
   { id: "range", group: "Organize", keys: "Shift click", label: "Select a range" },

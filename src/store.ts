@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { api, errorText } from "./api";
 import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
-import { noFilters, type Filters } from "./lib/filter";
+import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
-import type { Asset, Collection, DupGroup, FolderFilter, Kind, Root, SpriteSheet, ViewName } from "./types";
+import type { Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
 
 export interface Toast {
   id: number;
@@ -44,6 +44,8 @@ interface State extends Prefs {
   recentFolders: FolderFilter[];
   /** Saved sprite-sheet slicing by asset id, loaded on demand; null when the asset has none. */
   sheets: Record<number, SpriteSheet | null>;
+  /** Every asset note, loaded with the library: the side panel edits them and `note:` searches them. */
+  notes: Notes;
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
@@ -79,7 +81,14 @@ interface State extends Prefs {
   setFavorite: (ids: number[], favorite: boolean) => Promise<void>;
   addTag: (ids: number[], tag: string) => Promise<void>;
   removeTag: (ids: number[], tag: string) => Promise<void>;
+  /** 1 to 5 stars, or 0 to clear. */
+  setRating: (ids: number[], rating: number) => Promise<void>;
+  setNote: (id: number, note: string) => Promise<void>;
   newCollection: () => Promise<void>;
+  /** Saves the current search (with its type chips and filters) as a smart collection. False if the name was refused. */
+  saveSmartCollection: (name: string) => Promise<boolean>;
+  /** Replaces a smart collection's search, by default with the current one. */
+  setCollectionRule: (id: number, rule?: CollectionRule) => Promise<void>;
   renameCollection: (id: number, name: string) => Promise<boolean>;
   deleteCollection: (id: number) => Promise<void>;
   setInCollection: (collection: number, ids: number[], member: boolean) => Promise<void>;
@@ -99,6 +108,8 @@ let seq = -1;
 /** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
 let loading = 0;
 let incoming: AssetsDelta[] = [];
+/** The last note save; each one waits for the one before. */
+let noteSaves: Promise<unknown> = Promise.resolve();
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -131,6 +142,12 @@ export const useStore = create<State>((set, get) => {
     };
   };
   const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
+  /** The current search as a smart-collection rule. Type chips become type: words, unless the query names types itself. */
+  const currentRule = (): CollectionRule => {
+    const { query, kinds, filters } = get();
+    const types = parseQuery(query).types ? [] : kinds.map((k) => `type:${k}`);
+    return { query: [query.trim(), ...types].filter(Boolean).join(" "), filters };
+  };
   /** Forgets selection, the active asset, duplicate entries and cached slicings for assets that are gone. */
   const keepOnly = (s: State, has: (id: number) => boolean): Partial<State> => ({
     selected: new Set([...s.selected].filter(has)),
@@ -138,6 +155,7 @@ export const useStore = create<State>((set, get) => {
     dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter(has) })).filter((g) => g.ids.length > 1) ?? null,
     // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
     sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => has(Number(id)))),
+    notes: Object.fromEntries(Object.entries(s.notes).filter(([id]) => has(Number(id)))),
   });
   /** Patches `assets` with the deltas received so far, or reloads everything if one went missing. True if it patched. */
   const applyIncoming = () => {
@@ -197,6 +215,7 @@ export const useStore = create<State>((set, get) => {
     modal: null,
     toast: null,
     sheets: {},
+    notes: {},
     colSel: null,
     dups: null,
     dupSel: 0,
@@ -237,7 +256,7 @@ export const useStore = create<State>((set, get) => {
     reload: async () => {
       loading++;
       try {
-        const [roots, list, collections] = await Promise.all([api.listRoots(), api.listAssets(), api.listCollections()]);
+        const [roots, list, collections, notes] = await Promise.all([api.listRoots(), api.listAssets(), api.listCollections(), api.listNotes()]);
         seq = list.seq;
         const ids = new Set(list.assets.map((a) => a.id));
         set((s) => ({
@@ -246,6 +265,7 @@ export const useStore = create<State>((set, get) => {
           collections,
           colSel: collections.some((c) => c.id === s.colSel) ? s.colSel : (collections[0]?.id ?? null),
           ...keepOnly(s, (id) => ids.has(id)),
+          notes,
         }));
       } catch (e) {
         // Keeping a gap would retry the failing load at once, forever. The next delta finds the gap and retries.
@@ -403,6 +423,41 @@ export const useStore = create<State>((set, get) => {
       patchAssets(ids, (a) => ({ ...a, tags: a.tags.filter((t) => t !== tag) }));
       await write(() => api.removeTag(ids, tag));
     },
+    setRating: async (ids, rating) => {
+      // Previous ratings, grouped, so Undo restores each asset's own.
+      const wanted = new Set(ids);
+      const before = new Map<number, number[]>();
+      for (const a of get().assets) {
+        if (!wanted.has(a.id)) continue;
+        const group = before.get(a.rating);
+        if (group) group.push(a.id);
+        else before.set(a.rating, [a.id]);
+      }
+      patchAssets(ids, (a) => ({ ...a, rating }));
+      if (!(await write(() => api.setRating(ids, rating)))) return;
+      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
+      get().showToast(rating ? `Rated ${what} ${"★".repeat(rating)}` : `Cleared the rating of ${what}`, async () => {
+        for (const [r, group] of before) {
+          patchAssets(group, (a) => ({ ...a, rating: r }));
+          if (!(await write(() => api.setRating(group, r)))) return;
+        }
+      });
+    },
+    setNote: async (id, note) => {
+      const text = note.trim();
+      if ((get().notes[id] ?? "") === text) return;
+      // Optimistic, so the next edit is compared with this one and not with a save still in flight; saves run one at a
+      // time in the order they were made, so the last edit is the one that sticks.
+      set((s) => {
+        const notes = { ...s.notes };
+        if (text) notes[id] = text;
+        else delete notes[id];
+        return { notes };
+      });
+      const run = noteSaves.then(() => api.setNote(id, note));
+      noteSaves = run.catch(() => {});
+      await write(() => run);
+    },
 
     newCollection: async () => {
       const names = new Set(get().collections.map((c) => c.name));
@@ -415,6 +470,25 @@ export const useStore = create<State>((set, get) => {
       } catch (e) {
         get().setError(e);
       }
+    },
+    saveSmartCollection: async (name) => {
+      try {
+        const id = await api.createCollection(name, currentRule());
+        set({ collections: await api.listCollections() });
+        get().go("collections", { colSel: id });
+        return true;
+      } catch (e) {
+        get().setError(e);
+        return false;
+      }
+    },
+    setCollectionRule: async (id, rule = currentRule()) => {
+      const c = get().collections.find((x) => x.id === id);
+      if (!c?.rule) return;
+      const old = c.rule;
+      set((s) => ({ collections: s.collections.map((x) => (x.id === id ? { ...x, rule } : x)) }));
+      if (!(await write(() => api.setCollectionRule(id, rule)))) return;
+      get().showToast(`Updated the search of ${c.name}`, () => get().setCollectionRule(id, old));
     },
     renameCollection: async (id, name) => {
       try {
@@ -433,7 +507,7 @@ export const useStore = create<State>((set, get) => {
       if (!(await write(() => api.deleteCollection(id)))) return;
       await get().reload();
       get().showToast(`Deleted ${c.name}. Files are untouched.`, async () => {
-        const nid = await api.createCollection(c.name);
+        const nid = await api.createCollection(c.name, c.rule);
         if (c.assetIds.length) await api.setInCollection(nid, c.assetIds, true);
         await get().reload();
         set({ colSel: nid });
@@ -456,11 +530,13 @@ export const useStore = create<State>((set, get) => {
     },
     copyCollection: async (id) => {
       const c = get().collections.find((x) => x.id === id);
-      if (!c || !c.assetIds.length) return;
+      if (!c) return;
+      const ids = c.rule ? get().assets.filter(ruleMatcher(c.rule, get().notes)).map((a) => a.id) : c.assetIds;
+      if (!ids.length) return;
       const dest = await api.pickFolder(`Copy ${c.name} to…`);
       if (!dest) return;
       try {
-        const r = await api.copyCollection(id, dest);
+        const r = await api.copyCollection(ids, dest);
         if (r.failed.length) get().setError(`Copied ${r.copied} files. ${r.failed.length} failed: ${r.failed.slice(0, 3).join("; ")}`);
         else get().showToast(`Copied ${r.copied} ${r.copied === 1 ? "file" : "files"} to ${dest}`);
       } catch (e) {
