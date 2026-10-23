@@ -23,6 +23,12 @@ export function requestThumbnail(a: Asset, onReady: (path: string | null) => voi
   return (a.kind === "video" ? videoThumbs : thumbs).request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
 }
 
+/** After the thumbnail cache is cleared: cards that mount from now on ask the backend again, which rebuilds them. */
+export function forgetThumbnails() {
+  thumbs.clear();
+  videoThumbs.clear();
+}
+
 /** Promise form, for one-off uses like the drag icon. */
 export function thumbnailFor(a: Asset): Promise<string | null> {
   return new Promise((resolve) => {

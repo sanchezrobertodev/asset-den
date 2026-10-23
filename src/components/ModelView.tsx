@@ -5,14 +5,14 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { errorText } from "../api";
 import { addLights, dispose, frame, loadModel, stats } from "../lib/models";
 import type { Asset } from "../types";
-import { chip, Note, toggleChip } from "./Viewers";
+import { chip, Note, toggleChip, usePreviewFailure } from "./Viewers";
 
 // Its own chunk: three.js loads on the first model preview, not at startup.
 export default function ModelView({ asset, full }: { asset: Asset; full: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const [wireframe, setWireframe] = useState(false);
   const [info, setInfo] = useState<{ vertices: number; triangles: number; clips: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const fail = usePreviewFailure();
   const wire = useRef<(on: boolean) => void>(() => {});
   const reset = useRef<() => void>(() => {});
 
@@ -20,7 +20,6 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
     const el = box.current;
     if (!el) return;
     setInfo(null);
-    setError(null);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     el.appendChild(renderer.domElement);
@@ -74,7 +73,7 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
           });
         setInfo({ ...stats(o), clips: animations.length });
       })
-      .catch((e) => live && setError(errorText(e)));
+      .catch((e) => live && fail(errorText(e)));
 
     return () => {
       live = false;
@@ -85,16 +84,16 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [asset.id, asset.path, asset.mtime]);
+  }, [asset.id, asset.path, asset.mtime, fail]);
 
   useEffect(() => wire.current(wireframe), [wireframe, info]);
 
   return (
     <div className={clsx("stripes relative w-full overflow-hidden rounded-xl", full ? "h-full" : "h-[200px]")}>
       <div ref={box} className="h-full w-full" />
-      {(error || !info) && (
+      {!info && (
         <div className="pointer-events-none absolute inset-0">
-          {error ? <Note>Couldn't load this model: {error}</Note> : <Note busy>Loading model…</Note>}
+          <Note busy>Loading model…</Note>
         </div>
       )}
       {info && (

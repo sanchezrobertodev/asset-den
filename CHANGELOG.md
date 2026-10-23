@@ -11,6 +11,25 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- A welcome screen on first run says what Asset Den does, imports your first folder and shows three tips (drag cards
+  into your engine, Space to preview, Ctrl/⌘ K to search). It repeats that your files are only read, never changed.
+- **Keyboard shortcuts**: press `?` (or the keyboard button in the sidebar footer, or search for "Keyboard shortcuts")
+  for every shortcut, grouped into Navigate, Preview, Organize and Search. The hint bar and the full-screen legend now
+  come from the same list.
+- **Settings** (the gear in the sidebar footer, or "Settings" in search):
+  - Appearance: theme (System, Dark, Light), thumbnail size and pixel-art scaling.
+  - Library: folder names to ignore in every library folder, such as `Backup` or `_old`, on top of the built-in ones
+    (hidden folders, `node_modules`, `.meta` files). Only folders match; a file with the same name stays. The list is
+    saved with the library, file changes in those folders are ignored at once, and **Rescan now** drops what's already
+    indexed under them. Files stay on disk.
+  - Storage: the size of the thumbnail and preview cache, and **Clear thumbnail cache**. Only the app's own cache is
+    deleted; thumbnails are rebuilt as you browse.
+  - Updates: turn off the update check on launch (shown where the app updates itself).
+  - About: version, license, and a link to the releases page.
+- A preview that fails shows "Couldn't preview this file" with the reason, **Open** and **Show in folder**, in the side
+  panel and in full screen. That covers files that can't be decoded or played (images, video, audio, fonts, models,
+  text) and viewers that crash or can't load, which used to leave a blank player or break the panel. The next asset
+  previews normally.
 
 ### Changed
 

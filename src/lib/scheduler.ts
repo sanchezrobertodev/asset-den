@@ -59,5 +59,8 @@ export function createScheduler<A, T>(run: (arg: A) => Promise<T>, maxActive: nu
     };
   };
 
-  return { request, stats: () => ({ waiting: waiting.size, running: running.size, done: done.size }) };
+  /** Forgets cached results, so the next request for each key runs again. */
+  const clear = () => done.clear();
+
+  return { request, clear, stats: () => ({ waiting: waiting.size, running: running.size, done: done.size }) };
 }
