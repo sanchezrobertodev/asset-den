@@ -19,11 +19,13 @@ export function deltasAfter(seq: number, received: AssetsDelta[]): AssetsDelta[]
 /**
  * `assets` with `deltas` applied in order: changed rows replaced in place, new rows appended, removed rows dropped.
  * `gone` is every id removed along the way, including ones SQLite reused for a new file (that row is appended as new),
- * so state tied to the old file can be cleared. Returns the same array when nothing changed.
+ * so state tied to the old file can be cleared. `changed` is every kept row whose file is a new version (size or mtime
+ * differ), so state computed from the old contents can be dropped. Returns the same array when nothing changed.
  */
-export function applyDeltas(assets: Asset[], deltas: AssetsDelta[]): { assets: Asset[]; gone: Set<number> } {
+export function applyDeltas(assets: Asset[], deltas: AssetsDelta[]): { assets: Asset[]; gone: Set<number>; changed: Set<number> } {
   const fresh = new Map<number, Asset>();
   const gone = new Set<number>();
+  const changed = new Set<number>();
   for (const d of deltas) {
     for (const id of d.removed) {
       fresh.delete(id);
@@ -31,14 +33,15 @@ export function applyDeltas(assets: Asset[], deltas: AssetsDelta[]): { assets: A
     }
     for (const a of d.upserted) fresh.set(a.id, a);
   }
-  if (!fresh.size && !gone.size) return { assets, gone };
+  if (!fresh.size && !gone.size) return { assets, gone, changed };
   const out: Asset[] = [];
   for (const a of assets) {
     if (gone.has(a.id)) continue;
     const n = fresh.get(a.id);
     if (n) fresh.delete(a.id);
+    if (n && (n.size !== a.size || n.mtime !== a.mtime)) changed.add(a.id);
     out.push(n ?? a);
   }
   out.push(...fresh.values());
-  return { assets: out, gone };
+  return { assets: out, gone, changed };
 }

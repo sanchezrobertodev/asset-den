@@ -6,7 +6,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
-import type { Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
+import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
   version: string;
@@ -59,8 +59,15 @@ export const api = {
   findDuplicates: () => invoke<DupGroup[]>("find_duplicates"),
   /** Dominant colours of every analysed image; later ones come with onImageFeatures. */
   imageColors: () => invoke<[number, Swatch[]][]>("image_colors"),
-  /** Images whose hash is within `maxDistance` bits of `id`'s, closest first, and how many images aren't analysed yet. */
-  findSimilar: (id: number, maxDistance: number) => invoke<{ ids: number[]; pending: number }>("find_similar", { id, maxDistance }),
+  /** Analysed images whose hash is within `maxDistance` bits of `id`'s, closest first. */
+  findSimilar: (id: number, maxDistance: number) => invoke<number[]>("find_similar", { id, maxDistance }),
+  analysisStatus: () => invoke<AnalysisStatus>("analysis_status"),
+  /** Analyses every image that isn't yet (or resumes a paused pass); progress comes with onAnalysisStatus. */
+  analyseImages: () => invoke<void>("analyse_images"),
+  pauseAnalysis: (paused: boolean) => invoke<void>("pause_analysis", { paused }),
+  /** Stops the pass; what it analysed so far is kept. */
+  cancelAnalysis: () => invoke<void>("cancel_analysis"),
+  setKeepAnalysed: (on: boolean) => invoke<void>("set_keep_analysed", { on }),
   setDuplicateIgnored: (hash: string, ignored: boolean) => invoke<void>("set_duplicate_ignored", { hash, ignored }),
   trashDuplicates: (keep: number, remove: number[]) => invoke<number>("trash_duplicates", { keep, remove }),
   reveal: (id: number) => invoke<void>("reveal", { id }),
@@ -82,9 +89,10 @@ export const api = {
   /** A scan or a batch of file events finished; its changes came before as deltas. */
   onAssetsChanged: (cb: () => void): Promise<UnlistenFn> => listen("assets-changed", () => cb()),
   onAssetsDelta: (cb: (d: AssetsDelta) => void): Promise<UnlistenFn> => listen<AssetsDelta>("assets-delta", (e) => cb(e.payload)),
-  /** The background analysis stored a batch: its images' colours, and how many images are left. */
-  onImageFeatures: (cb: (p: { left: number; colors: [number, Swatch[]][] }) => void): Promise<UnlistenFn> =>
-    listen<{ left: number; colors: [number, Swatch[]][] }>("image-features", (e) => cb(e.payload)),
+  /** Images were analysed (by a pass, or as their thumbnails were shown): their colours. */
+  onImageFeatures: (cb: (colors: [number, Swatch[]][]) => void): Promise<UnlistenFn> =>
+    listen<[number, Swatch[]][]>("image-features", (e) => cb(e.payload)),
+  onAnalysisStatus: (cb: (s: AnalysisStatus) => void): Promise<UnlistenFn> => listen<AnalysisStatus>("analysis-status", (e) => cb(e.payload)),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */

@@ -1,12 +1,13 @@
 import clsx from "clsx";
 import { Check, ChevronDown, Folder, Grid3x3, Search, Sparkles, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { activeFilterCount } from "../lib/filter";
+import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
 import { baseName, kindLabel } from "../lib/format";
 import type { SortKey } from "../lib/prefs";
 import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
+import { AnalysisNote } from "./Analysis";
 import { FilterButton } from "./FilterPanel";
 import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented } from "./ui";
 
@@ -48,7 +49,8 @@ export function Header() {
 
 /** The "Find similar" scope: who it's for, how loose a match may be, and a way out. */
 function SimilarChip({ chip }: { chip: string }) {
-  const { similar, analysing, findSimilar, clearSimilar } = useStore();
+  const { similar, analysis, findSimilar, clearSimilar } = useStore();
+  const left = analysis.total - analysis.done;
   const [max, setMax] = useState(similar!.max);
   useEffect(() => setMax(similar!.max), [similar!.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const { id, name, ids } = similar!;
@@ -66,7 +68,7 @@ function SimilarChip({ chip }: { chip: string }) {
         Similar to {name}
         <X aria-hidden className="size-3.5 opacity-55" />
       </button>
-      <label className="flex h-[30px] flex-none items-center gap-2 px-1 text-xs text-muted" title={analysing ? `${analysing.toLocaleString()} images not analysed yet` : undefined}>
+      <label className="flex h-[30px] flex-none items-center gap-2 px-1 text-xs text-muted" title={left ? `${left.toLocaleString()} images not analysed yet` : undefined}>
         Strict
         <input
           type="range"
@@ -174,6 +176,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         <FilterButton />
         {(s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
       </div>
+      {(s.similar || s.filters.color || parseQuery(s.query).colors.length > 0) && <AnalysisNote className="px-7 pt-2 text-xs" />}
       {exact && exact.children.length > 0 && (
         <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">
           <span className="mr-1 text-muted">Subfolders</span>

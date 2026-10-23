@@ -6,7 +6,7 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
-import type { Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
+import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
 
 export interface Toast {
   id: number;
@@ -52,8 +52,8 @@ interface State extends Prefs {
   notes: Notes;
   /** Dominant colours by image id, loaded the first time a colour filter is used; null until then. */
   palettes: Map<number, LabSwatch[]> | null;
-  /** Images the background analysis (colours, similarity) hasn't reached yet, as of its last report. */
-  analysing: number;
+  /** How many images are analysed for colours and similarity, and the analysis pass the user started. */
+  analysis: AnalysisStatus;
   /** "Find similar" scope of the library: images like `id` within `max` bits, closest first. */
   similar: { id: number; name: string; max: number; ids: number[] } | null;
 
@@ -193,8 +193,12 @@ export const useStore = create<State>((set, get) => {
     if (!next.length) return false;
     seq = next[next.length - 1].seq;
     set((s) => {
-      const { assets, gone } = applyDeltas(s.assets, next);
-      return gone.size ? { assets, ...keepOnly(s, (id) => !gone.has(id)) } : { assets };
+      const { assets, gone, changed } = applyDeltas(s.assets, next);
+      const out: Partial<State> = gone.size ? { assets, ...keepOnly(s, (id) => !gone.has(id)) } : { assets };
+      // A file's new version has no colours until it's analysed again, which with "keep analysed" off may be never.
+      const palettes = out.palettes ?? s.palettes;
+      if (changed.size && palettes) out.palettes = new Map([...palettes].filter(([id]) => !changed.has(id)));
+      return out;
     });
     return true;
   };
@@ -241,7 +245,7 @@ export const useStore = create<State>((set, get) => {
     sheets: {},
     notes: {},
     palettes: null,
-    analysing: 0,
+    analysis: { done: 0, total: 0, running: false, paused: false, keep: false },
     similar: null,
     colSel: null,
     dups: null,
@@ -262,17 +266,19 @@ export const useStore = create<State>((set, get) => {
           return { scanning };
         }),
       );
-      await api.onImageFeatures(({ left, colors }) => {
+      await api.onImageFeatures((colors) => {
         // Images analysed since can match the open "Find similar"; its results were a snapshot.
         similarAsk.again(({ id, max }) => void get().findSimilar(id, max));
         if (paletteBacklog) paletteBacklog.push(...colors);
         set((s) => {
-          if (!s.palettes || paletteBacklog) return { analysing: left };
+          if (!s.palettes || paletteBacklog) return {};
           const palettes = new Map(s.palettes);
           for (const [id, c] of colors) palettes.set(id, toLab(c));
-          return { analysing: left, palettes };
+          return { palettes };
         });
       });
+      await api.onAnalysisStatus((analysis) => set({ analysis }));
+      api.analysisStatus().then((analysis) => set({ analysis }), get().setError);
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
         // A scan or a burst of file events ended: catch up once, then refresh collections and re-check duplicates.
@@ -438,11 +444,11 @@ export const useStore = create<State>((set, get) => {
     findSimilar: async (id, max = 10) => {
       const current = similarAsk.start({ id, max });
       try {
-        const { ids, pending } = await api.findSimilar(id, max);
+        const ids = await api.findSimilar(id, max);
         if (!current()) return;
         // A new image opens the library on its results; a new slider position or a refresh keeps the view as it is.
         const nav = get().similar?.id === id ? {} : { view: "library" as const, full: false, palette: false, query: "", kinds: [], folder: null };
-        set({ ...nav, similar: { id, name: nameOf(id), max, ids }, analysing: pending });
+        set({ ...nav, similar: { id, name: nameOf(id), max, ids } });
       } catch (e) {
         if (!current()) return;
         similarAsk.cancel(); // or every analysis batch would ask again and show the same error

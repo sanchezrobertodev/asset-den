@@ -64,6 +64,19 @@ export interface DupGroup {
   ids: number[];
 }
 
+/** Image analysis (Find similar, search by colour): how far it got, and the pass the user started. */
+export interface AnalysisStatus {
+  /** Images analysed, including ones that couldn't be read. */
+  done: number;
+  /** Images that can be analysed. */
+  total: number;
+  /** A pass with a progress line is running. */
+  running: boolean;
+  paused: boolean;
+  /** "Keep new and changed images analysed". */
+  keep: boolean;
+}
+
 export interface ScanProgress {
   rootId: number;
   count: number;

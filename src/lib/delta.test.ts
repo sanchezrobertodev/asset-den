@@ -52,6 +52,15 @@ const all = [asset(1, "a.png"), asset(2, "b.png"), asset(3, "c.png")];
   assert.deepEqual([...gone], [5, 1]);
 }
 
+// `changed` lists kept rows whose file is a new version (size or mtime), so colours from the old one can be dropped. A
+// rename alone, a new row and a reused id are not changes of a known file.
+{
+  const touched = { ...asset(3, "c.png"), mtime: 5 };
+  const { changed } = applyDeltas(all, [delta(1, [asset(1, "moved/a.png"), asset(2, "b.png", 99), touched, asset(4, "d.png")])]);
+  assert.deepEqual([...changed].sort(), [2, 3]);
+  assert.deepEqual([...applyDeltas(all, [delta(1, [], [1]), delta(2, [asset(1, "new.png", 5)])]).changed], []);
+}
+
 // Nothing to do keeps the same array, so memoized views don't recompute.
 assert.equal(applyDeltas(all, [delta(1)]).assets, all);
 assert.equal(applyDeltas(all, []).assets, all);

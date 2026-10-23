@@ -7,6 +7,7 @@ import { useAppUpdate } from "../appUpdate";
 import { bytes } from "../lib/format";
 import { forgetThumbnails } from "../lib/thumbs";
 import { useStore } from "../store";
+import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
 import { Button, Label, Modal, Segmented } from "./ui";
 
 const close = () => useStore.getState().setModal(null);
@@ -101,6 +102,7 @@ export function SettingsDialog() {
       </Section>
       <Section title="Library">
         <IgnoredFolders />
+        <ImageAnalysis />
       </Section>
       <Section title="Storage">
         <ThumbnailCache />
@@ -207,6 +209,64 @@ function IgnoredFolders() {
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Images a pass analyses per second, for the estimate: 320 measured on mixed generated images with 4 workers (16
+ * threads); real textures decode slower and smaller CPUs get fewer workers. */
+const PER_SECOND = 150;
+
+function duration(images: number) {
+  const min = Math.round(images / PER_SECOND / 60);
+  if (min < 1) return "under a minute";
+  if (min < 90) return `about ${min} minute${min === 1 ? "" : "s"}`;
+  return `about ${Math.round(min / 60)} hours`;
+}
+
+function ImageAnalysis() {
+  const a = useStore((s) => s.analysis);
+  const left = a.total - a.done;
+  const n = (x: number) => x.toLocaleString();
+  return (
+    <>
+      <Row
+        label="Image analysis"
+        hint={
+          <>
+            <span className="font-mono">{n(a.done)}</span> of <span className="font-mono">{n(a.total)}</span> images analysed for Find similar and
+            search by colour.{" "}
+            {left > 0 && !a.running
+              ? `The other ${n(left)} take ${duration(left)}, on spare CPU. Images you browse are analysed as you go.`
+              : "Images you browse are analysed as you go."}
+          </>
+        }
+      >
+        <div className="flex flex-none gap-2">
+          {/* The same first button throughout, so focus stays on it when it changes. */}
+          <Button size="sm" disabled={!a.running && left <= 0} onClick={() => (a.running ? pauseAnalysis(!a.paused) : analyse())}>
+            {a.running ? (a.paused ? "Resume" : "Pause") : "Analyse images"}
+          </Button>
+          {a.running && (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                // Cancel goes away; keep focus on the button next to it.
+                (e.currentTarget.previousElementSibling as HTMLElement | null)?.focus();
+                cancelAnalysis();
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+      </Row>
+      <Row
+        label="Keep new and changed images analysed"
+        hint="Analyses images as they're added or changed while Asset Den is open. Turns on by itself after the first full analysis."
+      >
+        <Switch label="Keep new and changed images analysed" on={a.keep} onChange={(on) => void api.setKeepAnalysed(on).catch(useStore.getState().setError)} />
+      </Row>
+    </>
   );
 }
 
