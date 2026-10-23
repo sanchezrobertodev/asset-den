@@ -18,7 +18,7 @@ interface Item {
   run: () => void;
 }
 
-const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "rating:>=4", "note:"];
+const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "dur:<2s", "rating:>=4", "note:"];
 const tokenLabel: Record<string, string> = { "#": "#tag", "in:": "in:folder", "note:": "note:word" };
 
 export function Palette() {
@@ -115,7 +115,15 @@ export function Palette() {
     if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
     const words = parsed.text;
     const onlyText =
-      hasQuery && !parsed.types && !parsed.folder && !parsed.tags.length && !parsed.notes.length && parsed.minRating === 0 && parsed.maxRating === 5;
+      hasQuery &&
+      !parsed.types &&
+      !parsed.folder &&
+      !parsed.tags.length &&
+      !parsed.notes.length &&
+      parsed.minRating === 0 &&
+      parsed.maxRating === 5 &&
+      parsed.minMs === null &&
+      parsed.maxMs === null;
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];
     if (acts.length) out.push({ title: "Actions", items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
     return out;

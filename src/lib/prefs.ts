@@ -16,6 +16,8 @@ export interface Prefs {
   subfolders: boolean;
   /** Look for a new version of Asset Den shortly after launch. */
   checkUpdates: boolean;
+  /** Audio previews start again when they end. */
+  audioLoop: boolean;
 }
 
 const defaults: Prefs = {
@@ -27,6 +29,7 @@ const defaults: Prefs = {
   grouped: true,
   subfolders: true,
   checkUpdates: true,
+  audioLoop: false,
 };
 
 const KEY = "assetden.prefs.v2";

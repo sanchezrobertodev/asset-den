@@ -1,10 +1,11 @@
 import clsx from "clsx";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, Repeat } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { errorText, fileUrl } from "../api";
+import { useStore } from "../store";
 import type { Asset } from "../types";
-import { usePreviewFailure } from "./Viewers";
+import { toggleChip, usePreviewFailure } from "./Viewers";
 
 // Its own chunk: wavesurfer loads on the first audio preview, not at startup.
 export default function AudioView({ asset, full }: { asset: Asset; full: boolean }) {
@@ -13,6 +14,8 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState({ now: 0, total: 0 });
   const fail = usePreviewFailure();
+  const loop = useStore((s) => s.audioLoop);
+  const setLoop = useStore((s) => s.setAudioLoop);
 
   useEffect(() => {
     if (!box.current) return;
@@ -38,6 +41,8 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
     w.on("timeupdate", (t) => setTime((x) => ({ ...x, now: t })));
     w.on("play", () => setPlaying(true));
     w.on("pause", () => setPlaying(false));
+    // Read at the end rather than captured, so toggling Loop doesn't reload the waveform.
+    w.on("finish", () => useStore.getState().audioLoop && void w.play(0).catch(() => {}));
     w.on("error", (e) => live && fail(`Can't play this file here: ${errorText(e)}`));
     return () => {
       live = false;
@@ -61,6 +66,15 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
         <span className={clsx("font-mono text-fg-2", full ? "text-[13px]" : "text-xs")}>
           {fmt(time.now)} / {fmt(time.total)}
         </span>
+        <button
+          type="button"
+          aria-pressed={loop}
+          title="Play again from the start when it ends"
+          onClick={() => setLoop(!loop)}
+          className={clsx(toggleChip(loop), "ml-auto flex items-center gap-1")}
+        >
+          <Repeat aria-hidden className="size-3" /> Loop
+        </button>
       </div>
     </div>
   );

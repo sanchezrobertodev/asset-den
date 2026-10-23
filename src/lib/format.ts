@@ -34,6 +34,25 @@ export function ago(ms: number, now = Date.now()): string {
   return new Date(ms).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
+/** "0:03.2", "12:05.0": minutes, seconds and tenths. */
+export function duration(ms: number): string {
+  const tenths = Math.round(ms / 100);
+  return `${Math.floor(tenths / 600)}:${((tenths % 600) / 10).toFixed(1).padStart(4, "0")}`;
+}
+
+/** "0:03.2 · 44.1 kHz · stereo · 16-bit", leaving out what the header didn't tell. */
+export function audioDetails(a: { durationMs: number | null; sampleRate: number | null; channels: number | null; bits: number | null }): string {
+  const ch = a.channels === 1 ? "mono" : a.channels === 2 ? "stereo" : a.channels ? `${a.channels} ch` : null;
+  return [
+    a.durationMs !== null ? duration(a.durationMs) : null,
+    a.sampleRate ? `${+(a.sampleRate / 1000).toFixed(2)} kHz` : null,
+    ch,
+    a.bits ? `${a.bits}-bit` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function date(ms: number): string {
   return ms ? new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 }

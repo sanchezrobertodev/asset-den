@@ -20,12 +20,18 @@ const asset = (o: Partial<Asset>): Asset => ({
   favorite: false,
   tags: [],
   rating: 0,
+  durationMs: null,
+  sampleRate: null,
+  channels: null,
+  bits: null,
   ...o,
 });
 
 const sprite = asset({ relPath: "pack/sprites/a.png", favorite: true, tags: ["player"], rating: 5 });
 const texture = asset({ id: 2, name: "t.tga", relPath: "tex/t.tga", ext: "tga", width: 2048, height: 1024, size: 8e6, mtime: now - 40 * day, tags: ["env"], rating: 3 });
-const sound = asset({ id: 3, name: "s.ogg", relPath: "audio/s.ogg", ext: "ogg", kind: "audio", width: null, height: null, tags: ["sfx", "ui"] });
+const sound = asset({ id: 3, name: "s.ogg", relPath: "audio/s.ogg", ext: "ogg", kind: "audio", width: null, height: null, tags: ["sfx", "ui"], durationMs: 1500 });
+const music = asset({ id: 4, name: "m.mp3", relPath: "audio/m.mp3", ext: "mp3", kind: "audio", width: null, height: null, durationMs: 95_000 });
+const unread = asset({ id: 5, name: "u.opus", relPath: "audio/u.opus", ext: "opus", kind: "audio", width: null, height: null });
 const all = [sprite, texture, sound];
 
 // Filters panel
@@ -43,6 +49,13 @@ assert.deepEqual(ids({ minRating: 3 }), [1, 2]);
 assert.deepEqual(ids({ minRating: 5 }), [1]);
 assert.equal(activeFilterCount(f({ minW: 1, maxW: 2, square: true, untagged: true })), 2);
 assert.equal(activeFilterCount(f({ minRating: 1 })), 1);
+// Audio length: only files with a known length match once a limit is set.
+const durIds = (o: Partial<typeof noFilters>) => [...all, music, unread].filter((a) => matchesFilters(a, f(o), now)).map((a) => a.id);
+assert.deepEqual(durIds({ maxMs: 2000 }), [3]);
+assert.deepEqual(durIds({ minMs: 30_000 }), [4]);
+assert.deepEqual(durIds({ minMs: 1500, maxMs: 95_000 }), [3, 4]); // limits are inclusive
+assert.deepEqual(durIds({ minMs: 0 }), [3, 4]);
+assert.equal(activeFilterCount(f({ minMs: 1000 })), 1);
 
 // Search syntax shared by the search bar and the palette
 const q = (s: string) => all.filter((a) => matchesQuery(a, parseQuery(s))).map((a) => a.id);
@@ -69,6 +82,15 @@ assert.deepEqual(qn("note:2x note:version"), [2]);
 assert.deepEqual(qn("note:missing"), []);
 assert.deepEqual(qn("note:"), [1, 2, 3]); // an empty note: is ignored, like in:
 assert.deepEqual(q("note:redo"), []); // no notes given
+const qa = (s: string) => [...all, music, unread].filter((a) => matchesQuery(a, parseQuery(s))).map((a) => a.id);
+assert.deepEqual(qa("dur:<2s"), [3]);
+assert.deepEqual(qa("dur:>30s"), [4]);
+assert.deepEqual(qa("dur:90"), [4]); // seconds by default, no operator = at least
+assert.deepEqual(qa("dur:>1m dur:<2m"), [4]);
+assert.deepEqual(qa("dur:<1500ms"), [3]);
+assert.deepEqual(qa("dur:>0s type:audio"), [3, 4]); // unknown lengths never match a dur: limit
+assert.deepEqual(parseQuery("dur:abc").text, []); // malformed tokens are ignored, as with size:
+assert.deepEqual([parseQuery("dur:<2.5s").maxMs, parseQuery("dur:2.5s").minMs], [2500, 2500]);
 
 // Views, sorting, grouping
 const scope = (o: Partial<Scope>): Scope => ({ view: "library", kinds: [], folder: null, subfolders: true, query: "", filters: noFilters, collection: null, notes: {}, ...o });

@@ -19,6 +19,9 @@ export interface Filters {
   anyTags: string[];
   /** At least this many stars. */
   minRating: number | null;
+  /** Audio length in milliseconds. */
+  minMs: number | null;
+  maxMs: number | null;
 }
 
 export const noFilters: Filters = {
@@ -34,14 +37,21 @@ export const noFilters: Filters = {
   untagged: false,
   anyTags: [],
   minRating: null,
+  minMs: null,
+  maxMs: null,
 };
 
 /** How many filter groups are active, for the badge on the Filters button. */
 export function activeFilterCount(f: Filters): number {
   const dims = f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square;
   const bytes = f.minBytes !== null || f.maxBytes !== null;
-  return [f.exts.length > 0, dims, bytes, f.days !== null, f.untagged, f.anyTags.length > 0, f.minRating !== null].filter(Boolean).length;
+  const dur = f.minMs !== null || f.maxMs !== null;
+  return [f.exts.length > 0, dims, bytes, dur, f.days !== null, f.untagged, f.anyTags.length > 0, f.minRating !== null].filter(Boolean).length;
 }
+
+/** True without limits; with any, only a known length within them. */
+const inRange = (ms: number | null, min: number | null, max: number | null) =>
+  (min === null && max === null) || (ms !== null && (min === null || ms >= min) && (max === null || ms <= max));
 
 export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean {
   if (f.exts.length && !f.exts.includes(a.ext)) return false;
@@ -56,6 +66,7 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean 
   }
   if (f.minBytes !== null && a.size < f.minBytes) return false;
   if (f.maxBytes !== null && a.size > f.maxBytes) return false;
+  if (!inRange(a.durationMs, f.minMs, f.maxMs)) return false;
   if (f.days !== null && a.mtime < now - f.days * 86_400_000) return false;
   if (f.untagged && a.tags.length) return false;
   if (f.anyTags.length && !a.tags.some((t) => f.anyTags.includes(t))) return false;
@@ -63,7 +74,7 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now()): boolean 
   return true;
 }
 
-/** A search like `type:audio in:sprites #player size:>1mb rating:>=4 note:redo hero`, as used by the search bar and the ⌘K palette. */
+/** A search like `type:audio in:sprites #player size:>1mb dur:<2s rating:>=4 note:redo hero`, as used by the search bar and the ⌘K palette. */
 export interface Query {
   /** null = any type; an empty array = a `type:` that matched nothing. */
   types: Kind[] | null;
@@ -75,13 +86,17 @@ export interface Query {
   maxRating: number;
   /** Words the asset's note must contain. */
   notes: string[];
+  /** Audio length limits from `dur:`, in milliseconds. */
+  minMs: number | null;
+  maxMs: number | null;
   text: string[];
 }
 
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
+const TIME_UNITS: Record<string, number> = { ms: 1, s: 1000, m: 60_000 };
 
 export function parseQuery(q: string): Query {
-  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minRating: 0, maxRating: 5, notes: [], text: [] };
+  const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minMs: null, maxMs: null, minRating: 0, maxRating: 5, notes: [], text: [] };
   for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
     if (t.startsWith("type:")) {
       const s = t.slice(5);
@@ -98,6 +113,12 @@ export function parseQuery(q: string): Query {
       const b = parseFloat(m[2]) * UNITS[m[3] ?? "kb"];
       if (m[1] === "<") out.maxBytes = b;
       else out.minBytes = b;
+    } else if (t.startsWith("dur:")) {
+      const m = t.slice(4).match(/^([<>])?(\d+(?:\.\d+)?)(ms|s|m)?$/);
+      if (!m) continue;
+      const ms = parseFloat(m[2]) * TIME_UNITS[m[3] ?? "s"];
+      if (m[1] === "<") out.maxMs = ms;
+      else out.minMs = ms;
     } else if (t.startsWith("rating:")) {
       // rating:3 is exactly 3 stars; rating:>=4, rating:<2 and so on compare.
       const m = t.slice(7).match(/^(>=|<=|>|<)?([0-5])$/);
@@ -121,6 +142,7 @@ export function matchesQuery(a: Asset, q: Query, notes: Notes = {}): boolean {
   if (q.folder && !folderOf(a.relPath).toLowerCase().split("/").some((seg) => seg.startsWith(q.folder!))) return false;
   if (!q.tags.every((t) => a.tags.some((g) => g.startsWith(t)))) return false;
   if (a.size < q.minBytes || a.size > q.maxBytes) return false;
+  if (!inRange(a.durationMs, q.minMs, q.maxMs)) return false;
   if (a.rating < q.minRating || a.rating > q.maxRating) return false;
   if (q.notes.length) {
     const note = notes[a.id]?.toLowerCase();

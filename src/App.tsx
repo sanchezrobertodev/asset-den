@@ -49,9 +49,9 @@ function Toast() {
             dismissToast();
             void toast.undo!();
           }}
-          className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold text-fg"
+          className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
         >
-          Undo
+          {toast.action ?? "Undo"}
         </button>
       )}
       {toast.error && (

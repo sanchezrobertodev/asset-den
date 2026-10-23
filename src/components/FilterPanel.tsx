@@ -178,6 +178,14 @@ export function FilterButton() {
               <p className="mt-1.5 text-[11px] text-muted">In pixels. Only images with known dimensions match.</p>
             </Group>
 
+            <Group title="Audio length" active={f.minMs !== null || f.maxMs !== null} onClear={() => setFilters({ minMs: null, maxMs: null })}>
+              <div className="flex gap-2">
+                <NumField label="Min (seconds)" value={f.minMs} scale={1000} onChange={(v) => setFilters({ minMs: v })} />
+                <NumField label="Max (seconds)" value={f.maxMs} scale={1000} onChange={(v) => setFilters({ maxMs: v })} />
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted">Only audio files with a known length match.</p>
+            </Group>
+
             <Group
               title="File size & date"
               active={f.minBytes !== null || f.maxBytes !== null || f.days !== null}

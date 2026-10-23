@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, errorText } from "../api";
-import { ago, baseName, bytes, folderOf } from "../lib/format";
+import { ago, audioDetails, baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Button, IconButton, KindPill, Label } from "./ui";
@@ -112,6 +112,7 @@ export function DuplicateBanner({ a }: { a: Asset }) {
 export function MetaRows({ a }: { a: Asset }) {
   const rows = [
     a.width && a.height ? ["Dimensions", `${a.width}×${a.height}`] : null,
+    audioDetails(a) ? ["Audio", audioDetails(a)] : null,
     ["Size", bytes(a.size)],
     ["Format", `.${a.ext}`],
     ["Modified", ago(a.mtime)],

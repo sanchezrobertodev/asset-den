@@ -10,6 +10,8 @@ export interface Toast {
   id: number;
   message: string;
   undo?: () => void | Promise<void>;
+  /** Label of the `undo` button, when it does something else. */
+  action?: string;
   error?: boolean;
 }
 
@@ -53,7 +55,7 @@ interface State extends Prefs {
   removeRoot: (id: number) => Promise<void>;
   rescan: (id: number) => Promise<void>;
   setError: (e: unknown) => void;
-  showToast: (message: string, undo?: Toast["undo"]) => void;
+  showToast: (message: string, undo?: Toast["undo"], action?: string) => void;
   dismissToast: () => void;
   go: (view: ViewName, extra?: Partial<Pick<State, "kinds" | "folder" | "colSel" | "dupSel" | "query">>) => void;
   setQuery: (q: string) => void;
@@ -71,6 +73,7 @@ interface State extends Prefs {
   setTheme: (t: Theme) => void;
   setPixelated: (p: boolean) => void;
   setCheckUpdates: (on: boolean) => void;
+  setAudioLoop: (on: boolean) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
   select: (id: number, mode?: "replace" | "toggle" | "range", order?: number[]) => void;
   setSelected: (ids: number[]) => void;
@@ -113,8 +116,8 @@ let noteSaves: Promise<unknown> = Promise.resolve();
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates } = get();
-    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates });
+    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
+    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -306,9 +309,9 @@ export const useStore = create<State>((set, get) => {
       set({ toast: { id: ++toastSeq, message: errorText(e), error: true } });
       toastTimer = setTimeout(() => get().dismissToast(), 8000);
     },
-    showToast: (message, undo) => {
+    showToast: (message, undo, action) => {
       if (toastTimer) clearTimeout(toastTimer);
-      set({ toast: { id: ++toastSeq, message, undo } });
+      set({ toast: { id: ++toastSeq, message, undo, action } });
       toastTimer = setTimeout(() => get().dismissToast(), 4500);
     },
     dismissToast: () => set({ toast: null }),
@@ -358,6 +361,10 @@ export const useStore = create<State>((set, get) => {
     },
     setCheckUpdates: (checkUpdates) => {
       set({ checkUpdates });
+      persist();
+    },
+    setAudioLoop: (audioLoop) => {
+      set({ audioLoop });
       persist();
     },
 
