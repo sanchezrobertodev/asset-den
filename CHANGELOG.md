@@ -16,6 +16,9 @@ All notable changes to Asset Den are documented here. The format follows
 
 - The app starts with a third of the code it loaded before: the 3D viewer, model thumbnails and the audio waveform
   load their libraries (three.js, wavesurfer.js) the first time they're needed.
+- New app icon: a fanned stack of cards (an image card in front of blue and amber ones) on a warm dark tile, also
+  shown next to the name in the sidebar. `app-icon.svg` is the source; `npx tauri icon app-icon.svg` regenerates
+  `src-tauri/icons`.
 
 ## [0.2.3] - 2026-10-21
 

@@ -103,7 +103,15 @@ export function Sidebar() {
   return (
     <aside aria-label="Library" className="flex min-h-0 flex-col border-r border-line px-2.5">
       <div className="flex h-[60px] flex-none items-center gap-2.5 px-2">
-        <div aria-hidden className="size-[22px] rounded-md bg-accent" />
+        <svg aria-hidden viewBox="0 0 1024 1024" className="size-[22px] flex-none">
+          {/* Same mark as app-icon.svg, the source of src-tauri/icons. */}
+          <rect width="1024" height="1024" rx="228" fill="#1b1915" />
+          <rect x="176" y="268" width="392" height="528" rx="72" fill="#6aa7f2" transform="rotate(-15 372 532)" />
+          <rect x="456" y="268" width="392" height="528" rx="72" fill="#f2b84b" transform="rotate(15 652 532)" />
+          <rect x="316" y="228" width="392" height="560" rx="72" fill="#5ad68e" stroke="#1b1915" strokeWidth="36" paintOrder="stroke" />
+          <circle cx="604" cy="360" r="52" fill="#1b1915" />
+          <path d="M376 700 L484 548 L556 632 L604 580 L652 700 Z" fill="#1b1915" stroke="#1b1915" strokeWidth="28" strokeLinejoin="round" />
+        </svg>
         <span className="text-[15px] font-semibold tracking-[-.01em]">Asset Den</span>
       </div>
       <nav className="flex flex-col gap-0.5">
