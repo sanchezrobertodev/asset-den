@@ -21,6 +21,7 @@ import { baseName, folderOf } from "./lib/format";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { shortcut } from "./lib/shortcuts";
 import { useStore } from "./store";
+import type { Asset } from "./types";
 
 /** The library's hint bar, in order. */
 const HINTS = ["peek", "full", "move", "favorite", "rate", "unrate", "search"].map(shortcut);
@@ -147,7 +148,13 @@ export default function App() {
     () => (browse && s.grouped && !similar ? groupByFolder(visible, s.roots, s.folder) : null),
     [browse, s.grouped, similar, visible, s.roots, s.folder],
   );
-  const order = useMemo(() => (groups ? groups.flatMap((g) => g.items) : visible), [groups, visible]);
+  // In Duplicates, full screen steps through the copies of the open group.
+  const copies = useMemo(() => {
+    if (s.view !== "duplicates" || !s.dups?.length) return null;
+    const g = s.dups[Math.min(s.dupSel, s.dups.length - 1)];
+    return g.ids.map((id) => s.assets.find((a) => a.id === id)).filter((a): a is Asset => !!a);
+  }, [s.view, s.dups, s.dupSel, s.assets]);
+  const order = useMemo(() => copies ?? (groups ? groups.flatMap((g) => g.items) : visible), [copies, groups, visible]);
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
   const peekOn = s.peek && !!active && (navigable || s.full);
 
