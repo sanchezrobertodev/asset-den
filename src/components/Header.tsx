@@ -8,7 +8,7 @@ import type { SortKey } from "../lib/prefs";
 import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
 import { FilterButton } from "./FilterPanel";
-import { Button, IconButton, KindDot, Kbd, Segmented } from "./ui";
+import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented } from "./ui";
 
 const titles = { library: "Library", favorites: "Favorites", collections: "Collections", duplicates: "Duplicates", insights: "Insights" };
 const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
@@ -54,7 +54,15 @@ function SimilarChip({ chip }: { chip: string }) {
   const { id, name, ids } = similar!;
   return (
     <>
-      <button type="button" className={clsx(chip, "pr-2")} onClick={clearSimilar} aria-label={`Stop showing images similar to ${name}`}>
+      <button
+        type="button"
+        className={clsx(chip, "pr-2")}
+        onClick={() => {
+          clearSimilar();
+          focusAssets();
+        }}
+        aria-label={`Stop showing images similar to ${name}`}
+      >
         Similar to {name}
         <X aria-hidden className="size-3.5 opacity-55" />
       </button>
@@ -104,13 +112,13 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         <button type="button" aria-pressed={!s.kinds.length} className={chip(!s.kinds.length)} onClick={() => s.toggleKind("all")}>
           <span aria-hidden className="size-[7px] rounded-full bg-muted" />
           All
-          <span className="font-mono text-[11px] opacity-65">{scopeAssets.length.toLocaleString()}</span>
+          <span className="font-mono text-[11px] opacity-80">{scopeAssets.length.toLocaleString()}</span>
         </button>
         {KINDS.filter((k) => counts.get(k)).map((k) => (
           <button key={k} type="button" aria-pressed={s.kinds.includes(k)} className={chip(s.kinds.includes(k))} onClick={() => s.toggleKind(k)}>
             <KindDot kind={k} />
             {kindLabel[k]}
-            <span className="font-mono text-[11px] opacity-65">{counts.get(k)!.toLocaleString()}</span>
+            <span className="font-mono text-[11px] opacity-80">{counts.get(k)!.toLocaleString()}</span>
           </button>
         ))}
         {s.folder && (
@@ -137,7 +145,15 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
           </button>
         )}
         {s.query && (
-          <button type="button" className={clsx(chip(true), "pr-2")} onClick={() => s.setQuery("")} aria-label="Clear search">
+          <button
+            type="button"
+            className={clsx(chip(true), "pr-2")}
+            onClick={() => {
+              s.setQuery("");
+              focusAssets();
+            }}
+            aria-label="Clear search"
+          >
             “{s.query}”
             <X aria-hidden className="size-3.5 opacity-55" />
           </button>
@@ -158,7 +174,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
             >
               <Folder aria-hidden className="size-3.5 text-muted" />
               {c.name}
-              <span className="font-mono text-[11px] opacity-65">{c.count.toLocaleString()}</span>
+              <span className="font-mono text-[11px] opacity-80">{c.count.toLocaleString()}</span>
             </button>
           ))}
           {exact.children.length > 12 && <span className="text-faint">+{exact.children.length - 12} more in the folder menu</span>}
@@ -238,10 +254,21 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
 function SaveSmart() {
   const s = useStore();
   const [name, setName] = useState<string | null>(null);
+  // Cancelling puts focus back on the button that opened the field.
+  const refocus = useRef(false);
+  const cancel = () => {
+    refocus.current = true;
+    setName(null);
+  };
   if (name === null)
     return (
       <button
         type="button"
+        ref={(el) => {
+          if (!el || !refocus.current) return;
+          refocus.current = false;
+          el.focus();
+        }}
         onClick={() => setName(s.query.trim().slice(0, 80))}
         className="flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border border-dashed border-line-x px-3 text-[12.5px] font-medium whitespace-nowrap text-fg-2 hover:text-fg"
       >
@@ -253,28 +280,34 @@ function SaveSmart() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        void s.saveSmartCollection(name).then((ok) => ok && setName(null));
+        // Saving opens the new collection, which unmounts this field: focus the page there instead of losing it.
+        void s.saveSmartCollection(name).then((ok) => {
+          if (!ok) return;
+          setName(null);
+          focusAssets();
+        });
       }}
-      className="flex h-[30px] flex-none items-center gap-1.5 rounded-[15px] border border-accent pr-1 pl-3"
+      className="focus-ring-within flex h-[30px] flex-none items-center gap-1.5 rounded-[15px] border border-accent pr-1 pl-3"
     >
       <Sparkles aria-hidden className="size-3.5 flex-none text-muted" />
       <input
         aria-label="Smart collection name"
         autoFocus
+        onFocus={(e) => e.currentTarget.select()}
         value={name}
         maxLength={80}
         placeholder="Collection name"
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           e.stopPropagation();
-          if (e.key === "Escape") setName(null);
+          if (e.key === "Escape") cancel();
         }}
         className="w-44 border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-muted"
       />
-      <button type="submit" className="h-[22px] rounded-[11px] bg-accent px-2.5 text-xs font-semibold text-accent-fg">
+      <button type="submit" className="h-6 rounded-xl bg-accent px-2.5 text-xs font-semibold text-accent-fg">
         Save
       </button>
-      <IconButton label="Cancel" className="size-[22px]" onClick={() => setName(null)}>
+      <IconButton label="Cancel" className="size-6" onClick={cancel}>
         <X className="size-3.5" />
       </IconButton>
     </form>
@@ -326,7 +359,14 @@ function Breadcrumbs() {
           </Fragment>
         );
       })}
-      <IconButton label="Show the whole library" className="ml-1 size-7" onClick={() => s.setFolder(null)}>
+      <IconButton
+        label="Show the whole library"
+        className="ml-1 size-7"
+        onClick={() => {
+          s.setFolder(null);
+          focusAssets();
+        }}
+      >
         <X className="size-4" />
       </IconButton>
     </nav>
@@ -384,7 +424,7 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
             role="menuitemradio"
             aria-checked={c.key === current}
             onClick={() => open(c.rootId, c.path)}
-            className="flex h-[38px] flex-none items-center gap-2.5 rounded-[9px] px-2.5 text-left text-fg outline-none hover:bg-line focus:bg-line"
+            className="flex h-[38px] flex-none items-center gap-2.5 rounded-[9px] px-2.5 text-left text-fg -outline-offset-2 hover:bg-line focus:bg-line"
           >
             <Folder aria-hidden className={clsx("size-[15px] flex-none", c.key === current ? "text-accent" : "text-muted")} />
             <span className={clsx("min-w-0 flex-1 truncate", c.key === current && "font-semibold")}>{c.name}</span>
@@ -403,7 +443,7 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
                 type="button"
                 role="menuitem"
                 onClick={() => open(f.rootId, f.path)}
-                className="flex h-[34px] items-center rounded-[9px] px-2.5 text-left text-fg-2 outline-none hover:bg-line focus:bg-line"
+                className="flex h-[34px] items-center rounded-[9px] px-2.5 text-left text-fg-2 -outline-offset-2 hover:bg-line focus:bg-line"
               >
                 <span className="truncate">{[s.roots.length > 1 || !f.path ? rootName(f.rootId) : "", f.path].filter(Boolean).join("/")}</span>
               </button>

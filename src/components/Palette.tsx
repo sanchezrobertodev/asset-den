@@ -7,7 +7,7 @@ import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Thumb } from "./Thumb";
-import { KindPill, Kbd } from "./ui";
+import { KindPill, Kbd, trapTab } from "./ui";
 
 interface Item {
   key: string;
@@ -27,10 +27,18 @@ export function Palette() {
   const [pi, setPi] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    const box = dialog.current;
     input.current?.focus();
     input.current?.select();
+    // Back to where search was opened from, unless a result or action moved focus on purpose.
+    return () => {
+      const at = document.activeElement;
+      if (!at || at === document.body || box?.contains(at)) prev?.focus();
+    };
   }, []);
   const wantsColors = parseQuery(q).colors.length > 0;
   useEffect(() => {
@@ -47,7 +55,11 @@ export function Palette() {
       const items: Item[] = [
         {
           key: "all",
-          label: matches.length ? `Show all ${matches.length.toLocaleString()} matches in the library` : "No assets match",
+          label: !matches.length
+            ? "No assets match"
+            : matches.length === 1
+              ? "Show the match in the library"
+              : `Show all ${matches.length.toLocaleString()} matches in the library`,
           sub: q.trim(),
           run: () => {
             s.go("library", { query: q.trim(), kinds: [], folder: null });
@@ -150,10 +162,12 @@ export function Palette() {
   return (
     <div className="absolute inset-0 z-[60] flex justify-center bg-scrim pt-[10vh]" onMouseDown={() => s.setPalette(false)}>
       <div
+        ref={dialog}
         role="dialog"
         aria-modal="true"
         aria-label="Search"
         onMouseDown={(e) => e.stopPropagation()}
+        onKeyDownCapture={(e) => trapTab(e, dialog.current)}
         className="flex h-max max-h-[76vh] w-[min(700px,90%)] flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]"
       >
         <div className="flex h-[58px] flex-none items-center gap-3 border-b border-line-strong px-[18px]">
@@ -179,16 +193,19 @@ export function Palette() {
               e.stopPropagation();
             }}
             role="combobox"
+            aria-label="Search assets, folders and actions"
             aria-expanded="true"
             aria-controls="palette-results"
-            aria-activedescendant={flat[pi] ? `pal-${flat[pi].key}` : undefined}
+            aria-activedescendant={flat[pi] ? `pal-${pi}` : undefined}
             placeholder="Search assets, folders, actions"
             className="flex-1 border-0 bg-transparent text-base text-fg outline-none"
           />
           <Kbd>Esc</Kbd>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-[18px] py-2.5 text-xs text-faint">
-          <span className="mr-1">Filters</span>
+        <div role="group" aria-labelledby="palette-tokens" className="flex flex-wrap items-center gap-1.5 border-b border-line px-[18px] py-2.5 text-xs text-faint">
+          <span id="palette-tokens" className="mr-1">
+            Filters
+          </span>
           {TOKENS.map((t) => (
             <button
               key={t}
@@ -203,16 +220,18 @@ export function Palette() {
             </button>
           ))}
         </div>
-        <div ref={listRef} id="palette-results" role="listbox" className="overflow-auto p-2">
-          {sections.map((sec) => (
-            <div key={sec.title}>
-              <div className="px-2.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">{sec.title}</div>
+        <div ref={listRef} id="palette-results" role="listbox" aria-label="Results" className="overflow-auto p-2">
+          {sections.map((sec, si) => (
+            <div key={sec.title} role="group" aria-labelledby={`pal-sec-${si}`}>
+              <div id={`pal-sec-${si}`} className="px-2.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">
+                {sec.title}
+              </div>
               {sec.items.map((r) => {
                 const my = idx++;
                 return (
                   <div
                     key={r.key}
-                    id={`pal-${r.key}`}
+                    id={`pal-${my}`}
                     data-i={my}
                     role="option"
                     aria-selected={my === pi}

@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useMemo } from "react";
 import { baseName, bytes, folderOf, kindLabel } from "../lib/format";
 import { useStore } from "../store";
@@ -50,19 +51,22 @@ export function InsightsView() {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-auto px-7 pt-6 pb-10">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
-        {stats.map((st) => (
-          <button
-            key={st.k}
-            type="button"
-            disabled={!st.run}
-            onClick={st.run}
-            className="flex flex-col gap-1.5 rounded-xl border border-line bg-card px-[18px] py-4 text-left enabled:hover:border-line-x disabled:cursor-default"
-          >
-            <span className="text-muted">{st.k}</span>
-            <span className="text-[26px] font-semibold tracking-[-.02em]">{st.v}</span>
-            <span className="h-4 text-xs text-accent">{st.link ?? ""}</span>
-          </button>
-        ))}
+        {stats.map((st) => {
+          // Only the cards that lead somewhere are buttons.
+          const Card = st.run ? "button" : "div";
+          return (
+            <Card
+              key={st.k}
+              type={st.run ? "button" : undefined}
+              onClick={st.run}
+              className={clsx("flex flex-col gap-1.5 rounded-xl border border-line bg-card px-[18px] py-4 text-left", st.run && "hover:border-line-x")}
+            >
+              <span className="text-muted">{st.k}</span>
+              <span className="text-[26px] font-semibold tracking-[-.02em]">{st.v}</span>
+              <span className="h-4 text-xs text-accent">{st.link ?? ""}</span>
+            </Card>
+          );
+        })}
       </div>
 
       <section className={`${card} gap-4`}>

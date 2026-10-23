@@ -58,6 +58,22 @@ All notable changes to Asset Den are documented here. The format follows
 - Both use a background pass after each scan that reads every image once (from its cached thumbnail when there is
   one) and keeps a small fingerprint and its five main colours until the file changes. It uses at most half the
   thumbnail workers and waits while folders are scanned. Files are only read.
+- **Accessibility**: everything works from the keyboard and with a screen reader.
+  - The asset grid and list take focus as one list (arrows move, the focused asset has a ring); <kbd>Tab</kbd> from
+    the top of the window offers **Skip to the assets**.
+  - Every control shows a focus ring, including cards, chips, colour swatches and stars. Dialogs, search, the
+    shortcuts overlay and full screen keep <kbd>Tab</kbd> inside and give focus back to where it was when they close;
+    so do the Filters panel, the export menu and the smart-collection name field.
+  - The star rating is a radio group: <kbd>←</kbd> <kbd>→</kbd> change it while it has focus. Duplicates pick the copy
+    to keep the same way.
+  - Icon buttons, stars, swatches, cards and the filmstrip have names; toggles say whether they're on; the current
+    view, folder and breadcrumb are marked; thumbnails next to a name are skipped.
+  - Toasts (with their Undo) and the start and end of a scan are announced.
+  - With the system's "reduce motion" setting, sprite sheets and animated models start paused, audio and video don't
+    start by themselves, hover previews of audio stay silent, and transitions are instant. Full screen gets an
+    **Animate** toggle for animated models.
+  - <kbd>Esc</kbd> in a text field goes back to the asset list. The `?` overlay and the hint bar list the rating keys
+    (<kbd>1</kbd>–<kbd>5</kbd>, <kbd>0</kbd>), the star arrows and the tag field keys.
 
 ### Changed
 
@@ -66,6 +82,15 @@ All notable changes to Asset Den are documented here. The format follows
 - New app icon: a fanned stack of cards (an image card in front of blue and amber ones) on a warm dark tile, also
   shown next to the name in the sidebar. `app-icon.svg` is the source; `npx tauri icon app-icon.svg` regenerates
   `src-tauri/icons`.
+- Small text (counts, labels, hints) is a little stronger in both themes, and the light theme's green and star are a
+  little darker, so text reaches a 4.5:1 contrast and the stars 3:1.
+
+### Fixed
+
+- In the library, <kbd>Enter</kbd> or <kbd>Space</kbd> on a focused button (in the sidebar, the side panel or the bar
+  above the grid) opened full screen or the side panel instead of pressing the button.
+- <kbd>Esc</kbd> while renaming a collection saved the typed name instead of keeping the old one.
+- Search said "Show all 1 matches" for a single match.
 
 ## [0.2.3] - 2026-10-21
 

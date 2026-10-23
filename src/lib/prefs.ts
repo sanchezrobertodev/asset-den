@@ -58,6 +58,9 @@ export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
 }
 
+/** The OS "reduce motion" setting: then nothing animates or starts playing by itself. */
+export const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export function onSystemThemeChange(cb: () => void) {
   media?.addEventListener("change", cb);
   return () => media?.removeEventListener("change", cb);

@@ -1,12 +1,12 @@
 import clsx from "clsx";
 import { Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { activeFilterCount, noFilters, smartMembers } from "../lib/filter";
 import { bytes } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Thumb } from "./Thumb";
-import { Button, KindPill } from "./ui";
+import { Button, focusAssets, KindPill } from "./ui";
 
 export function CollectionsView({ items }: { items: Asset[] }) {
   const s = useStore();
@@ -17,8 +17,14 @@ export function CollectionsView({ items }: { items: Asset[] }) {
   const [name, setName] = useState(current?.name ?? "");
   useEffect(() => setName(current?.name ?? ""), [current?.id, current?.name]);
 
+  // Esc reverts: the blur that follows must not save the typed name it still sees.
+  const reverting = useRef(false);
   const commitName = async () => {
     if (!current) return;
+    if (reverting.current) {
+      reverting.current = false;
+      return setName(current.name);
+    }
     if (!name.trim() || name.trim() === current.name || !(await s.renameCollection(current.id, name))) setName(current.name);
   };
 
@@ -47,7 +53,7 @@ export function CollectionsView({ items }: { items: Asset[] }) {
               </div>
               <div className="flex flex-col gap-0.5 px-0.5">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  {c.rule && <Sparkles aria-label="Smart collection" className="size-3.5 flex-none text-muted" />}
+                  {c.rule && <Sparkles role="img" aria-label="Smart collection" className="size-3.5 flex-none text-muted" />}
                   {c.name}
                 </span>
                 <span className="font-mono text-[11px] text-muted">
@@ -78,13 +84,13 @@ export function CollectionsView({ items }: { items: Asset[] }) {
                 onBlur={() => void commitName()}
                 onKeyDown={(e) => {
                   e.stopPropagation();
-                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Enter") focusAssets();
                   if (e.key === "Escape") {
-                    setName(current.name);
-                    e.currentTarget.blur();
+                    reverting.current = true;
+                    focusAssets();
                   }
                 }}
-                className="border-0 border-b border-dashed border-transparent bg-transparent p-0 text-[26px] font-semibold tracking-[-.02em] text-fg outline-none focus:border-line-x"
+                className="border-0 border-b border-dashed border-transparent bg-transparent p-0 text-[26px] font-semibold tracking-[-.02em] text-fg focus:border-line-x"
               />
               <span className="font-mono text-xs text-muted">
                 {items.length.toLocaleString()} {items.length === 1 ? "asset" : "assets"} · {bytes(items.reduce((n, a) => n + a.size, 0))}
@@ -119,41 +125,43 @@ export function CollectionsView({ items }: { items: Asset[] }) {
             {items.map((a) => {
               const isSel = a.id === s.activeId && s.peek;
               return (
-                <div
-                  key={a.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    s.select(a.id);
-                    s.setPeek(true);
-                  }}
-                  onDoubleClick={() => {
-                    s.select(a.id);
-                    s.setFull(true);
-                  }}
-                  className="group flex min-w-0 cursor-pointer flex-col gap-[7px]"
-                >
-                  <div className={clsx("relative aspect-square overflow-hidden rounded-xl outline-offset-2", isSel && "outline-2 outline-accent")}>
-                    <Thumb asset={a} pixelated={s.pixelated} className="h-full w-full rounded-xl" />
-                    {!current.rule && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void s.setInCollection(current.id, [a.id], false);
-                        }}
-                        className="absolute top-2 right-2 flex h-6 items-center rounded-md bg-[rgba(13,12,11,.78)] px-2 text-[11px] text-[#efede8] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-                      >
-                        Remove
-                      </button>
-                    )}
-                    <KindPill kind={a.kind} className="absolute bottom-2 left-2 px-[7px] py-0.5 text-[11px]" />
-                  </div>
-                  <span className="truncate font-medium">{a.name}</span>
-                  <span className="-mt-[3px] font-mono text-[11px] text-muted">
-                    {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
-                    {bytes(a.size)}
-                  </span>
+                // The card opens the side panel; Remove is its own button beside it, not nested inside.
+                <div key={a.id} className="group relative min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      s.select(a.id);
+                      s.setPeek(true);
+                    }}
+                    onDoubleClick={() => {
+                      s.select(a.id);
+                      s.setFull(true);
+                    }}
+                    className="flex w-full min-w-0 flex-col gap-[7px] rounded-xl text-left"
+                  >
+                    <div className={clsx("relative aspect-square w-full overflow-hidden rounded-xl outline-offset-2", isSel && "outline-2 outline-accent")}>
+                      <Thumb asset={a} pixelated={s.pixelated} className="h-full w-full rounded-xl" />
+                      <KindPill kind={a.kind} className="absolute bottom-2 left-2 px-[7px] py-0.5 text-[11px]" />
+                    </div>
+                    <span className="w-full truncate font-medium">{a.name}</span>
+                    <span className="-mt-[3px] font-mono text-[11px] text-muted">
+                      {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
+                      {bytes(a.size)}
+                    </span>
+                  </button>
+                  {!current.rule && (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${a.name} from ${current.name}`}
+                      onClick={() => {
+                        focusAssets();
+                        void s.setInCollection(current.id, [a.id], false);
+                      }}
+                      className="absolute top-2 right-2 flex h-6 items-center rounded-md bg-[rgba(13,12,11,.78)] px-2 text-[11px] text-[#efede8] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               );
             })}

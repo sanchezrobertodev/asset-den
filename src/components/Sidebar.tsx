@@ -60,7 +60,7 @@ function Row({ active, onClick, title, children, trailing }: { active: boolean; 
         title={title}
         aria-current={active ? "true" : undefined}
         className={clsx(
-          "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-[7px] text-left text-fg-2",
+          "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-[7px] text-left text-fg-2 -outline-offset-2",
           active ? "bg-hover" : "hover:bg-hover",
         )}
       >
@@ -141,7 +141,7 @@ export function Sidebar() {
             <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
               <span className="flex min-w-0 items-center gap-2">
                 {c.rule ? (
-                  <Sparkles aria-label="Smart collection" className="size-3 flex-none" style={{ color: collColor(i) }} />
+                  <Sparkles role="img" aria-label="Smart collection" className="size-3 flex-none" style={{ color: collColor(i) }} />
                 ) : (
                   <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
                 )}
@@ -159,14 +159,14 @@ export function Sidebar() {
             <Plus className="size-4" />
           </IconButton>
         </div>
-        <div role="tree" aria-label="Folders" className="flex flex-col gap-px">
+        <div role="list" aria-label="Folders" className="flex flex-col gap-px">
           <FolderTree />
-          {!s.roots.length && (
-            <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
-              + Import a folder
-            </button>
-          )}
         </div>
+        {!s.roots.length && (
+          <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
+            + Import a folder
+          </button>
+        )}
       </div>
 
       <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
@@ -228,14 +228,15 @@ function FolderTree() {
     const scanning = isRoot ? s.scanning[n.rootId] : undefined;
     const Icon = active ? FolderOpen : Folder;
     return (
-      <div key={n.key} role="treeitem" aria-expanded={n.children.length ? open : undefined} aria-level={depth + 1} aria-selected={active} className="group relative flex items-center">
-        <span className="flex w-5 flex-none justify-center" style={{ marginLeft: 4 + depth * 14 }}>
+      <div key={n.key} role="listitem" className="group relative flex items-center">
+        <span className="flex w-6 flex-none justify-center" style={{ marginLeft: depth * 14 }}>
           {n.children.length > 0 && (
             <button
               type="button"
-              aria-label={`${open ? "Collapse" : "Expand"} ${n.name}`}
+              aria-label={`Subfolders of ${n.name}`}
+              aria-expanded={open}
               onClick={() => s.toggleExpanded(n.key)}
-              className="flex size-5 items-center justify-center rounded text-muted hover:bg-active hover:text-fg"
+              className="flex size-6 items-center justify-center rounded text-muted -outline-offset-2 hover:bg-active hover:text-fg"
             >
               <ChevronRight aria-hidden className={clsx("size-3.5 transition-transform duration-150", open && "rotate-90")} />
             </button>
@@ -246,25 +247,26 @@ function FolderTree() {
           title={isRoot ? s.roots.find((r) => r.id === n.rootId)?.path : n.path}
           onClick={() => s.go("library", { folder: { rootId: n.rootId, path: n.path } })}
           onDoubleClick={() => n.children.length && s.toggleExpanded(n.key)}
+          aria-current={active ? "page" : undefined}
           className={clsx(
-            "flex h-[30px] min-w-0 flex-1 items-center gap-1.5 rounded-lg pr-3 pl-1 text-left",
+            "flex h-[30px] min-w-0 flex-1 items-center gap-1.5 rounded-lg pr-3 pl-1 text-left -outline-offset-2",
             active ? "bg-active font-medium text-fg" : isRoot ? "text-fg hover:bg-hover" : "text-fg-2 hover:bg-hover",
             isRoot && !active && "font-medium",
           )}
         >
           <Icon aria-hidden className={clsx("size-3.5 flex-none", active ? "text-accent" : "text-muted")} />
           <span className="min-w-0 flex-1 truncate">{n.name}</span>
-          <span className={clsx("flex items-center gap-1 font-mono text-[11px] text-faint", isRoot && "group-hover:invisible group-focus-within:invisible")} aria-live={isRoot ? "polite" : undefined}>
-            {scanning !== undefined && <LoaderCircle aria-label="Scanning" className="size-3 animate-spin" />}
+          <span className={clsx("flex items-center gap-1 font-mono text-[11px] text-faint", isRoot && "group-hover:invisible group-focus-within:invisible")}>
+            {scanning !== undefined && <LoaderCircle role="img" aria-label="Scanning" className="size-3 animate-spin" />}
             {(scanning ?? n.count).toLocaleString()}
           </span>
         </button>
         {isRoot && (
           <div className="absolute top-0 right-1 hidden h-full items-center gap-0.5 group-focus-within:flex group-hover:flex">
-            <IconButton label={`Rescan ${n.name}`} className="size-6" onClick={() => void s.rescan(n.rootId)}>
+            <IconButton label={`Rescan ${n.name}`} className="size-6 -outline-offset-2" onClick={() => void s.rescan(n.rootId)}>
               <RefreshCw className="size-3.5" />
             </IconButton>
-            <IconButton label={`Remove ${n.name} from the library (files stay on disk)`} className="size-6 hover:text-danger" onClick={() => void s.removeRoot(n.rootId)}>
+            <IconButton label={`Remove ${n.name} from the library (files stay on disk)`} className="size-6 -outline-offset-2 hover:text-danger" onClick={() => void s.removeRoot(n.rootId)}>
               <X className="size-3.5" />
             </IconButton>
           </div>

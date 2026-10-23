@@ -1,6 +1,6 @@
 // Every keyboard shortcut in one table. The shortcuts dialog (?), the library hint bar and the full-screen legend all
-// read it. The keys themselves are handled in App.tsx (onKey), Palette.tsx, AssetBrowser.tsx and Viewers.tsx: when
-// adding a binding there, add its row here.
+// read it. The keys themselves are handled in App.tsx (onKey), Palette.tsx, AssetBrowser.tsx, Viewers.tsx and the star
+// rating in Peek.tsx: when adding a binding there, add its row here.
 
 export const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl ";
@@ -20,17 +20,20 @@ export interface Shortcut {
 export const SHORTCUTS: Shortcut[] = [
   { id: "move", group: "Navigate", keys: "← →", label: "Previous or next asset (↑ ↓ too)", hint: "move" },
   { id: "parent", group: "Navigate", keys: isMac ? "⌥↑" : "Alt ↑", label: "Up to the parent folder" },
-  { id: "back", group: "Navigate", keys: "Esc", label: "Close full screen, then the side panel, then clear the selection" },
+  { id: "back", group: "Navigate", keys: "Esc", label: "Leave a text field, close full screen, then the side panel, then clear the selection" },
+  { id: "skip", group: "Navigate", keys: "Tab", label: "From the top of the window: skip to the assets" },
   { id: "help", group: "Navigate", keys: "?", label: "Show these shortcuts" },
 
   { id: "peek", group: "Preview", keys: "Space", label: "Quick view in the side panel", hint: "quick view" },
   { id: "full", group: "Preview", keys: "↵", label: "Full screen", hint: "full screen" },
-  { id: "full-back", group: "Preview", keys: "Esc", label: "Back to the side panel from full screen", hint: "back to side panel" },
+  { id: "full-back", group: "Preview", keys: "Esc", label: "Back to the side panel from full screen (Space too)", hint: "back to side panel" },
   { id: "zoom", group: "Preview", keys: "Scroll", label: "Zoom an image in full screen (drag to pan, double-click to reset)" },
 
   { id: "favorite", group: "Organize", keys: "F", label: "Favorite or unfavorite the selection", hint: "favorite" },
   { id: "rate", group: "Organize", keys: "1–5", label: "Rate the selection 1 to 5 stars", hint: "rate" },
   { id: "unrate", group: "Organize", keys: "0", label: "Clear the selection's rating", hint: "clear rating" },
+  { id: "stars", group: "Organize", keys: "← →", label: "Change the rating while the stars have focus" },
+  { id: "tag", group: "Organize", keys: "↵", label: "Add the typed tag (Backspace in an empty tag field removes the last)" },
   { id: "select-all", group: "Organize", keys: `${mod}A`, label: "Select every asset shown" },
   { id: "toggle", group: "Organize", keys: isMac ? "⌘ click" : "Ctrl click", label: "Add to or remove from the selection" },
   { id: "range", group: "Organize", keys: "Shift click", label: "Select a range" },

@@ -18,7 +18,8 @@ const sizes = {
 
 /**
  * Square preview: the real thumbnail on a checkerboard for images, models and videos, "Aa" in the font itself for fonts,
- * and the design's striped tile with the extension for everything else.
+ * and the design's striped tile with the extension for everything else. Decorative: every use sits next to the
+ * asset's name, so screen readers skip it.
  */
 export function Thumb({
   asset,
@@ -66,6 +67,7 @@ export function Thumb({
   return (
     <div
       ref={box}
+      aria-hidden
       data-kind={asset.kind}
       className={clsx(
         "flex items-center justify-center overflow-hidden",

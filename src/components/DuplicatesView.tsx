@@ -15,7 +15,8 @@ function CopyCard({ a, keep, onKeep }: { a: Asset; keep: boolean; onKeep: () => 
     <div
       role="radio"
       aria-checked={keep}
-      tabIndex={0}
+      aria-label={`${a.name} in ${where}`}
+      tabIndex={keep ? 0 : -1}
       onClick={onKeep}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onKeep())}
       className={clsx("flex cursor-pointer flex-col gap-3.5 rounded-[14px] border-[1.5px] bg-card p-3.5", keep ? "border-invert-bg" : "border-line-strong")}
@@ -117,7 +118,20 @@ export function DuplicatesView() {
                 from the removed {remove.length === 1 ? "copy move" : "copies move"} to the one you keep.
               </span>
             </div>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[18px]">
+            <div
+              role="radiogroup"
+              aria-label="Copy to keep"
+              onKeyDown={(e) => {
+                const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+                if (!d) return;
+                e.preventDefault();
+                const at = group.items.findIndex((a) => a.id === keepId);
+                const next = (at + d + group.items.length) % group.items.length;
+                setKeepBy((k) => ({ ...k, [group.hash]: group.items[next].id }));
+                (e.currentTarget.children[next] as HTMLElement | undefined)?.focus();
+              }}
+              className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[18px]"
+            >
               {group.items.map((a) => (
                 <CopyCard key={a.id} a={a} keep={a.id === keepId} onKeep={() => setKeepBy((k) => ({ ...k, [group.hash]: a.id }))} />
               ))}

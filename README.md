@@ -41,6 +41,9 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
 - **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
 - **Updates** (Windows): the app checks for a new version on launch and installs it in place. See [Updates](#updates).
 - **Themes**: dark, light, or follow the system, from the sidebar footer.
+- **Accessibility**: works from the keyboard alone (focus rings everywhere, dialogs that keep and return focus, a skip
+  link to the assets, arrow keys for stars) and with screen readers (named controls, announced toasts and scans). Text
+  meets WCAG AA contrast in both themes, and the system's "reduce motion" setting stops anything from playing by itself.
 
 ![Side panel on an OBJ model with its .mtl texture, tags and collections](docs/screenshot-model-panel.webp)
 

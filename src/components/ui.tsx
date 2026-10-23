@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { X } from "lucide-react";
-import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { kindLabel } from "../lib/format";
 import type { Kind } from "../types";
 
@@ -101,13 +101,38 @@ export function Segmented<T extends string>({
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={clsx("px-2.5 whitespace-nowrap", value === o.value ? "bg-active text-fg" : "text-muted hover:text-fg")}
+          className={clsx("px-2.5 whitespace-nowrap -outline-offset-2", value === o.value ? "bg-active text-fg" : "text-muted hover:text-fg")}
         >
           {o.label}
         </button>
       ))}
     </div>
   );
+}
+
+/** Puts keyboard focus on the asset list (or the page, in views without one), e.g. after the focused control goes away. */
+export function focusAssets() {
+  (document.querySelector<HTMLElement>("[data-assets]") ?? document.querySelector<HTMLElement>("main"))?.focus();
+}
+
+/** Keeps Tab and Shift+Tab inside a modal `box`, wrapping at either end. */
+export function trapTab(e: { key: string; shiftKey: boolean; preventDefault: () => void }, box: HTMLElement | null) {
+  if (e.key !== "Tab" || !box) return;
+  const items = [...box.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, summary, [tabindex]")].filter(
+    (el) => el.tabIndex >= 0 && !el.matches(":disabled") && el.getClientRects().length > 0,
+  );
+  const at = document.activeElement;
+  // Focus on the dialog itself (full screen) counts as outside its controls.
+  const inside = at !== box && box.contains(at);
+  const [first, last] = [items[0], items[items.length - 1]];
+  if (!first) e.preventDefault();
+  else if (e.shiftKey && (at === first || !inside)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && (at === last || !inside)) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 export function Modal({
@@ -124,6 +149,10 @@ export function Modal({
   wide?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  // Callers pass inline closures; reading the latest through a ref keeps focus from being reset on every render.
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     // The marked default action wins over the first button in the page (the close ×).
@@ -131,15 +160,16 @@ export function Modal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        close.current();
       }
+      trapTab(e, panel.current);
     };
     window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("keydown", onKey, true);
       prev?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-scrim p-4 pt-[14vh]" onMouseDown={onClose}>
@@ -147,7 +177,7 @@ export function Modal({
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
         onMouseDown={(e) => e.stopPropagation()}
         className={clsx(
           "flex max-h-[calc(86vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]",
@@ -155,7 +185,7 @@ export function Modal({
         )}
       >
         <div className="flex flex-none items-center justify-between gap-3 px-5 pt-4">
-          <h2 id="modal-title" className="text-[15px] font-semibold">
+          <h2 id={titleId} className="text-[15px] font-semibold">
             {title}
           </h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">

@@ -23,15 +23,25 @@ const datePresets: { label: string; days: number | null }[] = [
 ];
 
 function Group({ title, onClear, active, children }: { title: string; onClear: () => void; active: boolean; children: ReactNode }) {
+  const box = useRef<HTMLFieldSetElement>(null);
   return (
-    <fieldset className="border-t border-line px-4 py-3 first:border-t-0">
+    <fieldset ref={box} className="border-t border-line px-4 py-3 first:border-t-0">
       <legend className="sr-only">{title}</legend>
       <div className="mb-2 flex h-5 items-center justify-between">
         <span aria-hidden className="text-[11px] font-semibold tracking-wider text-muted uppercase">
           {title}
         </span>
         {active && (
-          <button type="button" onClick={onClear} className="text-xs text-muted hover:text-fg">
+          <button
+            type="button"
+            aria-label={`Clear ${title}`}
+            onClick={() => {
+              // Clear goes away once the group is empty; move focus to the group's first control.
+              box.current?.querySelector<HTMLElement>("button:not([aria-label^=Clear]), input")?.focus();
+              onClear();
+            }}
+            className="text-xs text-muted hover:text-fg"
+          >
             Clear
           </button>
         )}
@@ -83,17 +93,25 @@ export function FilterButton() {
   const { assets, filters: f, setFilters, analysing } = useStore();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const count = activeFilterCount(f);
 
   useEffect(() => {
     if (!open) return;
+    root.current?.querySelector<HTMLElement>("[role=dialog] button")?.focus();
     const onDown = (e: MouseEvent) => !root.current?.contains(e.target as Node) && setOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Close only the panel (not the side panel too), and put focus back on its button.
+      e.stopPropagation();
+      setOpen(false);
+      trigger.current?.focus();
+    };
     window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
 
@@ -113,6 +131,7 @@ export function FilterButton() {
   return (
     <div ref={root} className="relative">
       <button
+        ref={trigger}
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -135,11 +154,26 @@ export function FilterButton() {
             <h2 className="text-sm font-semibold">Filters</h2>
             <div className="flex items-center gap-1">
               {count > 0 && (
-                <button type="button" onClick={() => setFilters(noFilters)} className="px-1 text-xs text-muted hover:text-fg">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    // The button goes away with the filters; focus the close button next to it.
+                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus();
+                    setFilters(noFilters);
+                  }}
+                  className="px-1 text-xs text-muted hover:text-fg"
+                >
                   Clear all
                 </button>
               )}
-              <IconButton label="Close filters" className="size-7" onClick={() => setOpen(false)}>
+              <IconButton
+                label="Close filters"
+                className="size-7"
+                onClick={() => {
+                  setOpen(false);
+                  trigger.current?.focus();
+                }}
+              >
                 <X className="size-4" />
               </IconButton>
             </div>
@@ -259,7 +293,7 @@ export function FilterButton() {
                 <label
                   title="Custom colour"
                   className={clsx(
-                    "relative flex h-7 items-center gap-1.5 rounded-[14px] border px-2.5 text-xs",
+                    "focus-ring-within relative flex h-7 items-center gap-1.5 rounded-[14px] border px-2.5 text-xs",
                     f.color?.startsWith("#") ? "border-accent bg-accent/15 text-fg" : "border-line-strong text-muted hover:text-fg",
                   )}
                 >
