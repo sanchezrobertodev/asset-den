@@ -12,6 +12,8 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 
+## [0.3.1] - 2026-10-23
+
 ### Changed
 
 - **Image analysis** (for Find similar and search by colour) no longer runs by itself after every scan, which on a big
