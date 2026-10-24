@@ -18,8 +18,8 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
   const searching = s.query.trim() !== "" || s.kinds.length > 0 || activeFilterCount(s.filters) > 0;
   const current = s.collections.find((c) => c.id === s.colSel) ?? null;
   const all = current ? (smart.get(current.id) ?? current.assetIds.map((id) => byId.get(id)).filter((a): a is Asset => !!a)) : [];
-  // Selected assets that a plain collection holds, for "Remove from collection".
-  const removable = current && !current.rule ? current.assetIds.filter((id) => s.selected.has(id)) : [];
+  // Selected assets shown in a plain collection, for "Remove". Ones hidden by the search or filters stay put.
+  const removable = current && !current.rule ? items.filter((a) => s.selected.has(a.id)).map((a) => a.id) : [];
   const [name, setName] = useState(current?.name ?? "");
   useEffect(() => setName(current?.name ?? ""), [current?.id, current?.name]);
 
