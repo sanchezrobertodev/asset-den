@@ -89,6 +89,9 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
       controls.dispose();
       if (object) dispose(object);
       renderer.dispose();
+      // Frees the WebGL context now, not at garbage collection: past 16 live contexts the browser kills the oldest,
+      // which is the one model thumbnails render with.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [asset.id, asset.path, asset.mtime, fail]);

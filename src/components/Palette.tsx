@@ -59,12 +59,25 @@ export function Palette() {
       const inCol = col
         ? matches.filter(col.rule ? ruleMatcher(col.rule, s.notes, undefined, s.palettes) : ((ids) => (a: Asset) => ids.has(a.id))(new Set(col.assetIds)))
         : [];
+      // In Duplicates, it keeps the groups that have a matching copy.
+      const hits = s.view === "duplicates" && s.dups ? new Set(matches.map((a) => a.id)) : null;
+      const inDups = hits ? s.dups!.filter((g) => g.ids.some((id) => hits.has(id))).length : 0;
       const items: Item[] = [
         ...(col
           ? [
               {
                 key: "collection",
                 label: inCol.length ? `Show ${inCol.length.toLocaleString()} ${inCol.length === 1 ? "match" : "matches"} in ${col.name}` : `No matches in ${col.name}`,
+                sub: q.trim(),
+                run: () => useStore.setState({ query: q.trim(), ...close }),
+              },
+            ]
+          : []),
+        ...(hits
+          ? [
+              {
+                key: "duplicates",
+                label: inDups ? `Show ${inDups.toLocaleString()} duplicate ${inDups === 1 ? "group" : "groups"}` : "No duplicate groups match",
                 sub: q.trim(),
                 run: () => useStore.setState({ query: q.trim(), ...close }),
               },

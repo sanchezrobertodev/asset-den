@@ -11,6 +11,16 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Duplicates** can be sorted and filtered. Sort the groups by space freed, most copies, newest or name. The type
+  chips, the search and **More filters** narrow the list to groups with a matching copy, and in Duplicates the search's
+  first result does the same. The open group stays open when the sort or filters change.
+
+### Fixed
+
+- Some 3D model thumbnails were blank, though the model showed in the side panel and full screen. After about 20
+  model previews, WebView2 shut down the renderer that draws thumbnails, and every thumbnail drawn after that was saved
+  empty. Closed previews now free their renderer right away, the thumbnail renderer restarts if it's shut down anyway,
+  and it never saves a frame it couldn't draw. Model thumbnails saved by earlier versions are drawn again once.
 
 ## [0.3.3] - 2026-10-24
 
