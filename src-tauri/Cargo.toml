@@ -1,6 +1,6 @@
 [package]
 name = "asset-den"
-version = "0.3.2"
+version = "0.3.3"
 description = "Browse, preview and tag the game assets in your folders"
 authors = ["Roberto Sanchez"]
 license = "MIT"
