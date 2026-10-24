@@ -1,19 +1,25 @@
 import clsx from "clsx";
 import { Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { activeFilterCount, noFilters, smartMembers } from "../lib/filter";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { activeFilterCount, noFilters, smartMembers, type Group } from "../lib/filter";
 import { bytes } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
+import { AssetBrowser } from "./AssetBrowser";
+import { BrowseBar } from "./Header";
 import { Thumb } from "./Thumb";
-import { Button, focusAssets, KindPill } from "./ui";
+import { Button, focusAssets } from "./ui";
 
-export function CollectionsView({ items }: { items: Asset[] }) {
+/** `items` is the open collection's members after the type chips, search and filters, in display order. */
+export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]; groups: Group[] | null; scopeAssets: Asset[] }) {
   const s = useStore();
   const byId = useMemo(() => new Map(s.assets.map((a) => [a.id, a])), [s.assets]);
   const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, s.palettes), [s.collections, s.assets, s.notes, s.palettes]);
   const searching = s.query.trim() !== "" || s.kinds.length > 0 || activeFilterCount(s.filters) > 0;
   const current = s.collections.find((c) => c.id === s.colSel) ?? null;
+  const all = current ? (smart.get(current.id) ?? current.assetIds.map((id) => byId.get(id)).filter((a): a is Asset => !!a)) : [];
+  // Selected assets shown in a plain collection, for "Remove". Ones hidden by the search or filters stay put.
+  const removable = current && !current.rule ? items.filter((a) => s.selected.has(a.id)).map((a) => a.id) : [];
   const [name, setName] = useState(current?.name ?? "");
   useEffect(() => setName(current?.name ?? ""), [current?.id, current?.name]);
 
@@ -73,7 +79,8 @@ export function CollectionsView({ items }: { items: Asset[] }) {
       </div>
 
       {current ? (
-        <div className="flex min-w-0 flex-col gap-5 overflow-auto px-7 pt-[22px] pb-10">
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="flex flex-none flex-col gap-3 px-7 pt-[22px]">
           <div className="flex flex-wrap items-end gap-3.5">
             <div className="flex min-w-[200px] flex-1 flex-col gap-1">
               <input
@@ -93,9 +100,19 @@ export function CollectionsView({ items }: { items: Asset[] }) {
                 className="border-0 border-b border-dashed border-transparent bg-transparent p-0 text-[26px] font-semibold tracking-[-.02em] text-fg focus:border-line-x"
               />
               <span className="font-mono text-xs text-muted">
-                {items.length.toLocaleString()} {items.length === 1 ? "asset" : "assets"} · {bytes(items.reduce((n, a) => n + a.size, 0))}
+                {all.length.toLocaleString()} {all.length === 1 ? "asset" : "assets"} · {bytes(all.reduce((n, a) => n + a.size, 0))}
               </span>
             </div>
+            {removable.length > 0 && (
+              <Button
+                onClick={() => {
+                  focusAssets();
+                  void s.setInCollection(current.id, removable, false);
+                }}
+              >
+                Remove {removable.length === 1 ? "1 asset" : `${removable.length.toLocaleString()} assets`}
+              </Button>
+            )}
             {current.rule && (
               <>
                 <Button
@@ -116,60 +133,27 @@ export function CollectionsView({ items }: { items: Asset[] }) {
               </>
             )}
             <Button onClick={() => void s.deleteCollection(current.id)}>Delete</Button>
-            <Button variant="accent" disabled={!items.length} onClick={() => void s.copyCollection(current.id)}>
+            <Button variant="accent" disabled={!all.length} onClick={() => void s.copyCollection(current.id)}>
               Copy to folder…
             </Button>
           </div>
           {current.rule && <RuleSummary query={current.rule.query} filters={activeFilterCount({ ...noFilters, ...current.rule.filters })} />}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-4">
-            {items.map((a) => {
-              const isSel = a.id === s.activeId && s.peek;
-              return (
-                // The card opens the side panel; Remove is its own button beside it, not nested inside.
-                <div key={a.id} className="group relative min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      s.select(a.id);
-                      s.setPeek(true);
-                    }}
-                    onDoubleClick={() => {
-                      s.select(a.id);
-                      s.setFull(true);
-                    }}
-                    className="flex w-full min-w-0 flex-col gap-[7px] rounded-xl text-left"
-                  >
-                    <div className={clsx("relative aspect-square w-full overflow-hidden rounded-xl outline-offset-2", isSel && "outline-2 outline-accent")}>
-                      <Thumb asset={a} pixelated={s.pixelated} className="h-full w-full rounded-xl" />
-                      <KindPill kind={a.kind} className="absolute bottom-2 left-2 px-[7px] py-0.5 text-[11px]" />
-                    </div>
-                    <span className="w-full truncate font-medium">{a.name}</span>
-                    <span className="-mt-[3px] font-mono text-[11px] text-muted">
-                      {a.width && a.height ? `${a.width}×${a.height} · ` : ""}
-                      {bytes(a.size)}
-                    </span>
-                  </button>
-                  {!current.rule && (
-                    <button
-                      type="button"
-                      aria-label={`Remove ${a.name} from ${current.name}`}
-                      onClick={() => {
-                        focusAssets();
-                        void s.setInCollection(current.id, [a.id], false);
-                      }}
-                      className="absolute top-2 right-2 flex h-6 items-center rounded-md bg-[rgba(13,12,11,.78)] px-2 text-[11px] text-[#efede8] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            {!current.rule && (
-              <div className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-line-x p-4 text-center text-muted">
-                <span className="text-[22px] text-fg-2">+</span>
-                <span className="leading-snug">Add from any side panel, or select assets and tick this collection</span>
-              </div>
+          </div>
+          {all.length > 0 && <BrowseBar count={items.length} folders={groups?.length ?? 0} scopeAssets={scopeAssets} />}
+          <div className="min-h-0 flex-1">
+            {items.length > 0 ? (
+              <AssetBrowser assets={items} groups={groups} />
+            ) : all.length > 0 ? (
+              <Hint title="No assets in this collection match these filters" body="Try removing a type, search or filter.">
+                <Button onClick={s.clearFilters}>Clear search and filters</Button>
+              </Hint>
+            ) : current.rule ? (
+              <Hint title="Nothing matches this smart collection yet" body="Its assets appear here as soon as files match its search." />
+            ) : (
+              <Hint
+                title="This collection is empty"
+                body="Add assets from any side panel, or select assets in the library and tick this collection in the side panel."
+              />
             )}
           </div>
         </div>
@@ -182,6 +166,16 @@ export function CollectionsView({ items }: { items: Asset[] }) {
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function Hint({ title, body, children }: { title: string; body: string; children?: ReactNode }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-7 text-center text-muted">
+      <span className="text-[15px] font-medium text-fg">{title}</span>
+      <span className="max-w-md">{body}</span>
+      {children && <div className="mt-2">{children}</div>}
     </div>
   );
 }

@@ -11,6 +11,16 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Collections** browse like the library. An open collection has the type chips, search, **More filters**, sort,
+  grouping by folder, grid or list and the thumbnail size, applied to its own assets. The library's open folder
+  doesn't narrow it. With a collection open, the first search result is "Show N matches in <collection>".
+- **Remove N assets** in a collection's header removes the selected assets (with **Undo**). It replaces the Remove
+  button on each card.
+
+### Changed
+
+- **Collections** stay quick when they're big. They use the library's grid and list, which draw only the cards on
+  screen, so opening and scrolling a collection of thousands of assets no longer stalls.
 
 ## [0.3.2] - 2026-10-23
 

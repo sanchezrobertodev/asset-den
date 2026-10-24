@@ -145,8 +145,8 @@ export default function App() {
   const navigable = browse || s.view === "collections";
   const groups = useMemo(
     // "Find similar" results stay in one list, closest first.
-    () => (browse && s.grouped && !similar ? groupByFolder(visible, s.roots, s.folder) : null),
-    [browse, s.grouped, similar, visible, s.roots, s.folder],
+    () => ((browse || s.view === "collections") && s.grouped && !similar ? groupByFolder(visible, s.roots, browse ? s.folder : null) : null),
+    [browse, s.view, s.grouped, similar, visible, s.roots, s.folder],
   );
   // In Duplicates, full screen steps through the copies of the open group.
   const copies = useMemo(() => {
@@ -293,7 +293,7 @@ export default function App() {
               </div>
             </>
           )}
-          {s.view === "collections" && <CollectionsView items={visible} />}
+          {s.view === "collections" && <CollectionsView items={order} groups={groups} scopeAssets={scopeAssets} />}
           {s.view === "duplicates" && <DuplicatesView />}
           {s.view === "insights" && <InsightsView />}
           {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
@@ -310,10 +310,10 @@ export default function App() {
           )}
           <ScanStatus />
         </main>
-        {peekOn && <Peek list={s.view === "collections" ? visible : order} />}
+        {peekOn && <Peek list={order} />}
       </div>
 
-      {s.full && active && <FullView list={s.view === "collections" ? visible : order} />}
+      {s.full && active && <FullView list={order} />}
       {s.palette && <Palette />}
       {s.modal === "shortcuts" && <ShortcutsDialog />}
       {s.modal === "settings" && <SettingsDialog />}

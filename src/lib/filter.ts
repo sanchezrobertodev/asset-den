@@ -215,12 +215,14 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
   const members = s.view === "collections" && !rule ? new Set(s.collection?.assetIds ?? []) : null;
   const q = parseQuery(s.query);
   const out = assets.filter((a) => {
-    if (rule) return rule(a);
-    if (members) return members.has(a.id);
+    // A collection's members, narrowed by the type chips, search and Filters panel like any other view.
+    if (rule && !rule(a)) return false;
+    if (members && !members.has(a.id)) return false;
     if (s.view === "favorites" && !a.favorite) return false;
     if (rank && !rank.has(a.id)) return false;
     if (s.kinds.length && !s.kinds.includes(a.kind)) return false;
-    if (s.folder) {
+    // The library's open folder doesn't narrow a collection.
+    if (s.folder && s.view !== "collections") {
       if (a.rootId !== s.folder.rootId) return false;
       if (!s.subfolders) {
         if (folderOf(a.relPath) !== s.folder.path) return false;

@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
-import { matchesQuery, parseQuery } from "../lib/filter";
+import { matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
 import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -54,7 +54,22 @@ export function Palette() {
     const close = { palette: false };
     if (hasQuery) {
       const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes, s.palettes));
+      // With a collection open, the first result searches inside it.
+      const col = s.view === "collections" ? (s.collections.find((c) => c.id === s.colSel) ?? null) : null;
+      const inCol = col
+        ? matches.filter(col.rule ? ruleMatcher(col.rule, s.notes, undefined, s.palettes) : ((ids) => (a: Asset) => ids.has(a.id))(new Set(col.assetIds)))
+        : [];
       const items: Item[] = [
+        ...(col
+          ? [
+              {
+                key: "collection",
+                label: inCol.length ? `Show ${inCol.length.toLocaleString()} ${inCol.length === 1 ? "match" : "matches"} in ${col.name}` : `No matches in ${col.name}`,
+                sub: q.trim(),
+                run: () => useStore.setState({ query: q.trim(), ...close }),
+              },
+            ]
+          : []),
         {
           key: "all",
           label: !matches.length

@@ -99,8 +99,11 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
     for (const a of scopeAssets) m.set(a.kind, (m.get(a.kind) ?? 0) + 1);
     return m;
   }, [scopeAssets]);
-  const node = useMemo(() => (s.folder ? (pathTo(treeFor(s.assets, s.roots), s.folder).at(-1) ?? null) : null), [s.assets, s.roots, s.folder]);
-  const exact = node && node.path === s.folder!.path ? node : null;
+  // A collection isn't narrowed by the library's folder, so it gets no folder controls.
+  const inCollection = s.view === "collections";
+  const folder = inCollection ? null : s.folder;
+  const node = useMemo(() => (folder ? (pathTo(treeFor(s.assets, s.roots), folder).at(-1) ?? null) : null), [s.assets, s.roots, folder]);
+  const exact = node && node.path === folder!.path ? node : null;
   const countText = `${count.toLocaleString()} ${count === 1 ? "asset" : "assets"}`;
 
   // Screen readers hear the count when the search, chips or filters change, not on every batch a scan adds. During a
@@ -135,7 +138,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
             <span className="font-mono text-[11px] opacity-80">{counts.get(k)!.toLocaleString()}</span>
           </button>
         ))}
-        {s.folder && (
+        {folder && (
           <button
             type="button"
             role="switch"
@@ -174,7 +177,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
         )}
         {s.similar && <SimilarChip chip={chip(true)} />}
         <FilterButton />
-        {(s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
+        {!inCollection && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
       </div>
       {(s.similar || s.filters.color || parseQuery(s.query).colors.length > 0) && <AnalysisNote className="px-7 pt-2 text-xs" />}
       {exact && exact.children.length > 0 && (

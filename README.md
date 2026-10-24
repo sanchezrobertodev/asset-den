@@ -34,7 +34,8 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   - video, with a frame from the video as its grid thumbnail, and text
 - **Organize**: tags, favorites, 1–5 star ratings, notes and collections. Rename a collection in place, or copy its
   files into a folder for a build or a handoff. **Save as smart collection** turns the current search and filters into
-  a collection that keeps itself up to date. Most changes show a toast with **Undo**.
+  a collection that keeps itself up to date. An open collection has the same type chips, search, filters, sort and
+  layouts as the library. Most changes show a toast with **Undo**.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
 - **Find similar** and **search by colour**: the side panel finds images that look like the open one (resized,
   recoloured or lightly cropped copies included), and the Colour filter or `color:red` / `color:#ff8800` finds images by
