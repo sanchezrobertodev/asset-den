@@ -116,10 +116,19 @@ const scope = (o: Partial<Scope>): Scope => ({ view: "library", kinds: [], folde
 assert.deepEqual(visibleAssets(all, scope({ view: "favorites" }), { key: "name", desc: false }).map((a) => a.id), [1]);
 assert.deepEqual(visibleAssets(all, scope({ folder: { rootId: 1, path: "pack" } }), { key: "name", desc: false }).map((a) => a.id), [1]);
 assert.deepEqual(visibleAssets(all, scope({ view: "collections", collection: { id: 1, name: "c", assetIds: [3, 2], rule: null } }), { key: "name", desc: false }).map((a) => a.id), [3, 2]);
-// Smart collections: members are whatever matches the saved search now, regardless of the current search and filters.
+// Inside a collection, the type chips, search and Filters panel narrow its members; the library's folder doesn't.
+const manual = { id: 1, name: "c", assetIds: [1, 2, 3], rule: null };
+const inCol = (o: Partial<Scope>) => visibleAssets(all, scope({ view: "collections", collection: manual, ...o }), null).map((a) => a.id);
+assert.deepEqual(inCol({ folder: { rootId: 1, path: "pack" } }), [1, 2, 3]);
+assert.deepEqual(inCol({ kinds: ["audio"] }), [3]);
+assert.deepEqual(inCol({ query: "type:image" }), [1, 2]);
+assert.deepEqual(inCol({ filters: f({ minRating: 5 }) }), [1]);
+// Smart collections: members are whatever matches the saved search now; the current search narrows them further.
 const smart = (query: string, filters = {}) => ({ id: 2, name: "s", assetIds: [], rule: { query, filters } });
 const members = (c: ReturnType<typeof smart>, o: Partial<Scope> = {}) =>
-  visibleAssets(all, scope({ view: "collections", collection: c, query: "type:audio", filters: f({ untagged: true }), ...o }), null).map((a) => a.id);
+  visibleAssets(all, scope({ view: "collections", collection: c, ...o }), null).map((a) => a.id);
+assert.deepEqual(members(smart("rating:>=3"), { kinds: ["audio"] }), []);
+assert.deepEqual(members(smart("rating:>=3"), { query: "type:image" }), [1, 2]);
 assert.deepEqual(members(smart("rating:>=3")), [1, 2]);
 assert.deepEqual(members(smart("", { minRating: 5 })), [1]);
 assert.deepEqual(members(smart("type:image", { exts: ["tga"] })), [2]);
