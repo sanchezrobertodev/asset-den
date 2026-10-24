@@ -29,12 +29,11 @@ const sorts: Record<DupSort, { label: string; by: (a: Group, b: Group) => number
   name: { label: "Name", by: (a, b) => compare.name(a.items[0], b.items[0]) },
 };
 
-/** Full screen steps through the copies of the group it opens from. */
-function openFull(a: Asset, hash: string) {
-  useStore.setState({ activeId: a.id, selected: new Set([a.id]), full: true, dupSel: hash });
+function openFull(a: Asset) {
+  useStore.setState({ activeId: a.id, selected: new Set([a.id]), full: true });
 }
 
-function CopyCard({ a, hash, keep, collections, onKeep }: { a: Asset; hash: string; keep: boolean; collections: Collection[]; onKeep: () => void }) {
+function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; collections: Collection[]; onKeep: () => void }) {
   const where = useLocation(a);
   const colls = collections.filter((c) => c.assetIds.includes(a.id)).map((c) => c.name);
   return (
@@ -44,7 +43,7 @@ function CopyCard({ a, hash, keep, collections, onKeep }: { a: Asset; hash: stri
       className={clsx("flex min-w-0 cursor-pointer flex-col gap-3.5 rounded-[14px] border-[1.5px] bg-card p-3.5", keep ? "border-invert-bg" : "border-line-strong")}
     >
       <div
-        onDoubleClick={() => openFull(a, hash)}
+        onDoubleClick={() => openFull(a)}
         className="checker relative flex h-[min(260px,30vh)] items-center justify-center overflow-hidden rounded-[10px]"
       >
         <Thumb asset={a} className="aspect-square h-[86%] max-w-[92%] rounded-md" />
@@ -54,7 +53,7 @@ function CopyCard({ a, hash, keep, collections, onKeep }: { a: Asset; hash: stri
           className="absolute top-2 right-2 bg-card"
           onClick={(e) => {
             e.stopPropagation();
-            openFull(a, hash);
+            openFull(a);
           }}
         >
           <Maximize2 className="size-4" />
@@ -179,7 +178,8 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
     [dups, byId],
   );
   const [sort, setSort] = useState<DupSort>("space");
-  // A group shows when any of its copies passes the type chips, search and filters. The chips count groups.
+  // A group shows when any of its copies passes the type chips, search and filters. The chips count groups, under
+  // each kind among their matching copies (identical files can differ in extension).
   const shown = useMemo(() => {
     const ids = new Set(visible.map((a) => a.id));
     return groups.filter((g) => g.items.some((a) => ids.has(a.id))).sort(sorts[sort].by);
@@ -188,11 +188,11 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
     const ids = new Set(scopeAssets.map((a) => a.id));
     const counts = new Map<string, number>();
     let total = 0;
-    for (const g of groups)
-      if (g.items.some((a) => ids.has(a.id))) {
-        total++;
-        counts.set(g.items[0].kind, (counts.get(g.items[0].kind) ?? 0) + 1);
-      }
+    for (const g of groups) {
+      const kinds = new Set(g.items.filter((a) => ids.has(a.id)).map((a) => a.kind));
+      if (kinds.size) total++;
+      for (const k of kinds) counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
     return { counts, total };
   }, [groups, scopeAssets]);
   const reclaim = useMemo(() => shown.reduce((n, g) => n + wasted(g), 0), [shown]);
@@ -206,6 +206,10 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
   const sel = found >= 0 ? found : resolved ? Math.min(lastAt.current, Math.max(0, shown.length - 1)) : 0;
   lastAt.current = sel;
   const group = shown[sel];
+  // The group on screen is the selection, so full screen opens it and a later sort or filter keeps it.
+  useEffect(() => {
+    if (group && group.hash !== dupSel) useStore.setState({ dupSel: group.hash });
+  }, [group, dupSel]);
   // Default to keeping the copy you've organized most (tags, favorite, collections); ties keep the first.
   const score = (a: Asset) => a.tags.length + (a.favorite ? 1 : 0) + collections.filter((c) => c.assetIds.includes(a.id)).length;
   const keepId = group ? (keepBy[group.hash] ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best)).id) : null;
@@ -282,7 +286,6 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
                 <CopyCard
                   key={a.id}
                   a={a}
-                  hash={group.hash}
                   keep={a.id === keepId}
                   collections={collections}
                   onKeep={() => setKeepBy((k) => ({ ...k, [group.hash]: a.id }))}
