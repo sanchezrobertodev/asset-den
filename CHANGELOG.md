@@ -11,6 +11,11 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+
+## [0.3.4] - 2026-10-24
+
+### Added
+
 - **Duplicates** can be sorted and filtered. Sort the groups by space freed, most copies, newest or name. The type
   chips, the search and **More filters** narrow the list to groups with a matching copy, and in Duplicates the search's
   first result does the same. The open group stays open when the sort or filters change.
