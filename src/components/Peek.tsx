@@ -89,7 +89,7 @@ export function useDuplicateOf(a: Asset) {
     const i = dups?.findIndex((g) => g.ids.includes(a.id)) ?? -1;
     if (i < 0) return null;
     const others = dups![i].ids.filter((id) => id !== a.id).map((id) => assets.find((x) => x.id === id)?.name ?? "");
-    return { index: i, names: others.filter(Boolean) };
+    return { hash: dups![i].hash, names: others.filter(Boolean) };
   }, [dups, assets, a.id]);
 }
 
@@ -100,7 +100,7 @@ export function DuplicateBanner({ a }: { a: Asset }) {
   return (
     <button
       type="button"
-      onClick={() => go("duplicates", { dupSel: dup.index })}
+      onClick={() => go("duplicates", { dupSel: dup.hash })}
       className="flex items-center justify-between gap-2.5 rounded-[10px] bg-warn-bg px-3 py-2.5 text-left text-warn-fg"
     >
       <span className="min-w-0">Identical to {dup.names.join(", ")}</span>

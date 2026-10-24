@@ -9,9 +9,13 @@ const PREVIEW_MAX: u32 = 4096;
 
 /// Cache file name for a given version of a file: changes when the file does.
 pub fn cache_name(path: &str, size: i64, mtime: i64) -> String {
-    // OBJ thumbnails from before .mtl support are grey: a new name makes them render again.
-    let v = if path.to_ascii_lowercase().ends_with(".obj") {
-        "|mtl"
+    // The frontend renders model thumbnails. A new version makes old ones render again: some were saved blank after a
+    // lost WebGL context, and OBJs were grey before .mtl support.
+    let ext = path
+        .rsplit_once('.')
+        .map_or(String::new(), |(_, e)| e.to_ascii_lowercase());
+    let v = if crate::kind::kind_of(&ext) == "model" {
+        "|v2"
     } else {
         ""
     };
@@ -90,6 +94,10 @@ mod tests {
         let t = image::open(&out).unwrap();
         assert_eq!((t.width(), t.height()), (256, 128));
         assert_ne!(cache_name("a", 1, 2), cache_name("a", 1, 3));
+        // Model thumbnails carry a version, so a bump re-renders them.
+        let unversioned = |p: &str| format!("{}.png", &blake3::hash(format!("{p}|1|2").as_bytes()).to_hex()[..32]);
+        assert_eq!(cache_name("a.png", 1, 2), unversioned("a.png"));
+        assert_ne!(cache_name("a.GLB", 1, 2), unversioned("a.GLB"));
         assert!(save_png(b"not a png", &dir.path().join("x.png")).is_err());
         assert_eq!(rendered_name("a", (1, 2), (1, 2)), Ok(cache_name("a", 1, 2)));
         assert!(rendered_name("a", (1, 3), (1, 2)).is_err());

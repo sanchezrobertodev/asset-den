@@ -44,6 +44,11 @@ function renderModelThumb(a: Asset): Promise<string | null> {
   const job = queue.then(async () => {
     // Loaded on the first model thumbnail so three.js stays out of the startup bundle.
     const [THREE, { addLights, dispose, frame, loadModel }] = await Promise.all([import("three"), import("./models")]);
+    // A lost context (a GPU reset, or too many 3D views open) draws nothing: start over with a new renderer.
+    if (renderer?.getContext().isContextLost()) {
+      renderer.dispose();
+      renderer = null;
+    }
     renderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setSize(256, 256, false);
     const scene = new THREE.Scene();
@@ -53,6 +58,8 @@ function renderModelThumb(a: Asset): Promise<string | null> {
     scene.add(object);
     frame(camera, object);
     renderer.render(scene, camera);
+    // Never save a blank frame as the thumbnail.
+    if (renderer.getContext().isContextLost()) throw new Error("WebGL context lost");
     const blob = await new Promise<Blob | null>((r) => renderer!.domElement.toBlob(r, "image/png"));
     dispose(object);
     if (!blob) return null;

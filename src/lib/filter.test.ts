@@ -120,6 +120,7 @@ assert.deepEqual(visibleAssets(all, scope({ view: "collections", collection: { i
 const manual = { id: 1, name: "c", assetIds: [1, 2, 3], rule: null };
 const inCol = (o: Partial<Scope>) => visibleAssets(all, scope({ view: "collections", collection: manual, ...o }), null).map((a) => a.id);
 assert.deepEqual(inCol({ folder: { rootId: 1, path: "pack" } }), [1, 2, 3]);
+assert.deepEqual(visibleAssets(all, scope({ view: "duplicates", folder: { rootId: 1, path: "pack" } }), null).length, 3); // nor Duplicates
 assert.deepEqual(inCol({ kinds: ["audio"] }), [3]);
 assert.deepEqual(inCol({ query: "type:image" }), [1, 2]);
 assert.deepEqual(inCol({ filters: f({ minRating: 5 }) }), [1]);

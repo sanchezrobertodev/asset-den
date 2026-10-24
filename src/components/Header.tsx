@@ -91,6 +91,75 @@ function SimilarChip({ chip }: { chip: string }) {
 
 const sortLabels: Record<SortKey, string> = { name: "Name", kind: "Type", size: "Size", mtime: "Modified", folder: "Folder" };
 
+const chip = (on: boolean) =>
+  clsx(
+    "flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border px-3 text-[12.5px] font-medium whitespace-nowrap",
+    on ? "border-invert-bg bg-invert-bg text-invert-fg" : "border-line-strong text-fg-2 hover:border-line-x",
+  );
+
+/** What narrows the list: type chips with their counts, the search, "Find similar" and the Filters panel. */
+export function ScopeChips({ counts, total, className }: { counts: Map<string, number>; total: number; className: string }) {
+  const s = useStore();
+  // Only the library and favorites are narrowed by the open folder, and only they save searches.
+  const browse = s.view === "library" || s.view === "favorites";
+  return (
+    <div className={clsx("flex flex-none flex-wrap items-center gap-1.5", className)}>
+      <button type="button" aria-pressed={!s.kinds.length} className={chip(!s.kinds.length)} onClick={() => s.toggleKind("all")}>
+        <span aria-hidden className="size-[7px] rounded-full bg-muted" />
+        All
+        <span className="font-mono text-[11px] opacity-80">{total.toLocaleString()}</span>
+      </button>
+      {KINDS.filter((k) => counts.get(k)).map((k) => (
+        <button key={k} type="button" aria-pressed={s.kinds.includes(k)} className={chip(s.kinds.includes(k))} onClick={() => s.toggleKind(k)}>
+          <KindDot kind={k} />
+          {kindLabel[k]}
+          <span className="font-mono text-[11px] opacity-80">{counts.get(k)!.toLocaleString()}</span>
+        </button>
+      ))}
+      {browse && s.folder && (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={s.subfolders}
+          onClick={() => s.setSubfolders(!s.subfolders)}
+          className={clsx(
+            "flex h-[30px] flex-none items-center gap-2 rounded-[15px] border px-3 text-[12.5px] font-medium whitespace-nowrap",
+            s.subfolders ? "border-accent bg-accent/15 text-fg" : "border-line-strong text-fg-2 hover:border-line-x",
+          )}
+        >
+          <span
+            aria-hidden
+            className={clsx(
+              "flex size-3 items-center justify-center rounded-[3px] text-[10px] font-bold",
+              s.subfolders ? "bg-accent text-accent-fg" : "border border-line-x",
+            )}
+          >
+            {s.subfolders ? "✓" : ""}
+          </span>
+          Include subfolders
+        </button>
+      )}
+      {s.query && (
+        <button
+          type="button"
+          className={clsx(chip(true), "pr-2")}
+          onClick={() => {
+            s.setQuery("");
+            focusAssets();
+          }}
+          aria-label="Clear search"
+        >
+          “{s.query}”
+          <X aria-hidden className="size-3.5 opacity-55" />
+        </button>
+      )}
+      {s.similar && <SimilarChip chip={chip(true)} />}
+      <FilterButton />
+      {browse && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
+    </div>
+  );
+}
+
 /** Type chips, active-scope chips and the view controls above the library grid. */
 export function BrowseBar({ count, folders, scopeAssets }: { count: number; folders: number; scopeAssets: Asset[] }) {
   const s = useStore();
@@ -100,8 +169,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
     return m;
   }, [scopeAssets]);
   // A collection isn't narrowed by the library's folder, so it gets no folder controls.
-  const inCollection = s.view === "collections";
-  const folder = inCollection ? null : s.folder;
+  const folder = s.view === "collections" ? null : s.folder;
   const node = useMemo(() => (folder ? (pathTo(treeFor(s.assets, s.roots), folder).at(-1) ?? null) : null), [s.assets, s.roots, folder]);
   const exact = node && node.path === folder!.path ? node : null;
   const countText = `${count.toLocaleString()} ${count === 1 ? "asset" : "assets"}`;
@@ -117,68 +185,9 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
     if (!Object.keys(useStore.getState().scanning).length) setSaid(countText);
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const chip = (on: boolean) =>
-    clsx(
-      "flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border px-3 text-[12.5px] font-medium whitespace-nowrap",
-      on ? "border-invert-bg bg-invert-bg text-invert-fg" : "border-line-strong text-fg-2 hover:border-line-x",
-    );
-
   return (
     <>
-      <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-3.5 pb-1">
-        <button type="button" aria-pressed={!s.kinds.length} className={chip(!s.kinds.length)} onClick={() => s.toggleKind("all")}>
-          <span aria-hidden className="size-[7px] rounded-full bg-muted" />
-          All
-          <span className="font-mono text-[11px] opacity-80">{scopeAssets.length.toLocaleString()}</span>
-        </button>
-        {KINDS.filter((k) => counts.get(k)).map((k) => (
-          <button key={k} type="button" aria-pressed={s.kinds.includes(k)} className={chip(s.kinds.includes(k))} onClick={() => s.toggleKind(k)}>
-            <KindDot kind={k} />
-            {kindLabel[k]}
-            <span className="font-mono text-[11px] opacity-80">{counts.get(k)!.toLocaleString()}</span>
-          </button>
-        ))}
-        {folder && (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={s.subfolders}
-            onClick={() => s.setSubfolders(!s.subfolders)}
-            className={clsx(
-              "flex h-[30px] flex-none items-center gap-2 rounded-[15px] border px-3 text-[12.5px] font-medium whitespace-nowrap",
-              s.subfolders ? "border-accent bg-accent/15 text-fg" : "border-line-strong text-fg-2 hover:border-line-x",
-            )}
-          >
-            <span
-              aria-hidden
-              className={clsx(
-                "flex size-3 items-center justify-center rounded-[3px] text-[10px] font-bold",
-                s.subfolders ? "bg-accent text-accent-fg" : "border border-line-x",
-              )}
-            >
-              {s.subfolders ? "✓" : ""}
-            </span>
-            Include subfolders
-          </button>
-        )}
-        {s.query && (
-          <button
-            type="button"
-            className={clsx(chip(true), "pr-2")}
-            onClick={() => {
-              s.setQuery("");
-              focusAssets();
-            }}
-            aria-label="Clear search"
-          >
-            “{s.query}”
-            <X aria-hidden className="size-3.5 opacity-55" />
-          </button>
-        )}
-        {s.similar && <SimilarChip chip={chip(true)} />}
-        <FilterButton />
-        {!inCollection && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
-      </div>
+      <ScopeChips counts={counts} total={scopeAssets.length} className="px-7 pt-3.5 pb-1" />
       {(s.similar || s.filters.color || parseQuery(s.query).colors.length > 0) && <AnalysisNote className="px-7 pt-2 text-xs" />}
       {exact && exact.children.length > 0 && (
         <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">

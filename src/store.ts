@@ -41,7 +41,8 @@ interface State extends Prefs {
   /** Open collection in the Collections view. */
   colSel: number | null;
   dups: DupGroup[] | null;
-  dupSel: number;
+  /** The open duplicate group, by hash. */
+  dupSel: string | null;
   /** Folder-tree nodes that are open, by folder key. */
   expanded: Set<string>;
   /** Most recently opened folders, newest first. */
@@ -249,7 +250,7 @@ export const useStore = create<State>((set, get) => {
     similar: null,
     colSel: null,
     dups: null,
-    dupSel: 0,
+    dupSel: null,
     expanded: new Set(),
     recentFolders: [],
 

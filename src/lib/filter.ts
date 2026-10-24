@@ -170,7 +170,7 @@ export function matchesQuery(a: Asset, q: Query, notes: Notes = {}, palettes?: P
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-const compare: Record<SortKey, (a: Asset, b: Asset) => number> = {
+export const compare: Record<SortKey, (a: Asset, b: Asset) => number> = {
   name: (a, b) => collator.compare(a.name, b.name),
   kind: (a, b) => a.kind.localeCompare(b.kind) || collator.compare(a.name, b.name),
   size: (a, b) => a.size - b.size,
@@ -221,8 +221,8 @@ export function visibleAssets(assets: Asset[], s: Scope, sort: { key: SortKey; d
     if (s.view === "favorites" && !a.favorite) return false;
     if (rank && !rank.has(a.id)) return false;
     if (s.kinds.length && !s.kinds.includes(a.kind)) return false;
-    // The library's open folder doesn't narrow a collection.
-    if (s.folder && s.view !== "collections") {
+    // Only the library and favorites show the open folder, so only they are narrowed by it.
+    if (s.folder && (s.view === "library" || s.view === "favorites")) {
       if (a.rootId !== s.folder.rootId) return false;
       if (!s.subfolders) {
         if (folderOf(a.relPath) !== s.folder.path) return false;

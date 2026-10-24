@@ -2,9 +2,11 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import clsx from "clsx";
 import { Maximize2 } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { compare } from "../lib/filter";
 import { ago, bytes } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset, Collection } from "../types";
+import { ScopeChips } from "./Header";
 import { useLocation } from "./Peek";
 import { Thumb } from "./Thumb";
 import { Button, IconButton, Modal } from "./ui";
@@ -17,11 +19,22 @@ interface Group {
 /** Height of one row in the group list, gap included. */
 const ROW = 64;
 
-function openFull(a: Asset) {
-  useStore.setState({ activeId: a.id, selected: new Set([a.id]), full: true });
+const wasted = (g: Group) => g.items[0].size * (g.items.length - 1);
+const newest = (g: Group) => Math.max(...g.items.map((a) => a.mtime));
+type DupSort = "space" | "copies" | "newest" | "name";
+const sorts: Record<DupSort, { label: string; by: (a: Group, b: Group) => number }> = {
+  space: { label: "Space freed", by: (a, b) => wasted(b) - wasted(a) },
+  copies: { label: "Most copies", by: (a, b) => b.items.length - a.items.length || wasted(b) - wasted(a) },
+  newest: { label: "Newest", by: (a, b) => newest(b) - newest(a) },
+  name: { label: "Name", by: (a, b) => compare.name(a.items[0], b.items[0]) },
+};
+
+/** Full screen steps through the copies of the group it opens from. */
+function openFull(a: Asset, hash: string) {
+  useStore.setState({ activeId: a.id, selected: new Set([a.id]), full: true, dupSel: hash });
 }
 
-function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; collections: Collection[]; onKeep: () => void }) {
+function CopyCard({ a, hash, keep, collections, onKeep }: { a: Asset; hash: string; keep: boolean; collections: Collection[]; onKeep: () => void }) {
   const where = useLocation(a);
   const colls = collections.filter((c) => c.assetIds.includes(a.id)).map((c) => c.name);
   return (
@@ -31,7 +44,7 @@ function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; c
       className={clsx("flex min-w-0 cursor-pointer flex-col gap-3.5 rounded-[14px] border-[1.5px] bg-card p-3.5", keep ? "border-invert-bg" : "border-line-strong")}
     >
       <div
-        onDoubleClick={() => openFull(a)}
+        onDoubleClick={() => openFull(a, hash)}
         className="checker relative flex h-[min(260px,30vh)] items-center justify-center overflow-hidden rounded-[10px]"
       >
         <Thumb asset={a} className="aspect-square h-[86%] max-w-[92%] rounded-md" />
@@ -41,7 +54,7 @@ function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; c
           className="absolute top-2 right-2 bg-card"
           onClick={(e) => {
             e.stopPropagation();
-            openFull(a);
+            openFull(a, hash);
           }}
         >
           <Maximize2 className="size-4" />
@@ -92,7 +105,7 @@ const GroupRow = memo(function GroupRow({ g, i, current }: { g: Group; i: number
       id={`dup-${i}`}
       role="option"
       aria-selected={current}
-      onClick={() => useStore.setState({ dupSel: i })}
+      onClick={() => useStore.setState({ dupSel: g.hash })}
       className={clsx(
         "flex h-[58px] cursor-pointer items-center gap-3 rounded-[10px] border px-3 hover:bg-field",
         current ? "border-line-strong bg-field group-focus-visible/list:ring-2 group-focus-visible/list:ring-fg" : "border-transparent",
@@ -135,7 +148,7 @@ function GroupList({ groups, sel }: { groups: Group[]; sel: number }) {
         const to = { ArrowDown: sel + 1, ArrowUp: sel - 1, PageDown: sel + page, PageUp: sel - page, Home: 0, End: groups.length - 1 }[e.key];
         if (to === undefined) return;
         e.preventDefault();
-        useStore.setState({ dupSel: Math.max(0, Math.min(groups.length - 1, to)) });
+        useStore.setState({ dupSel: groups[Math.max(0, Math.min(groups.length - 1, to))].hash });
       }}
       className={clsx("group/list min-h-0 flex-1 overflow-y-auto px-3.5 pb-5", shown ? "focus-visible:outline-none" : "-outline-offset-2")}
     >
@@ -151,23 +164,48 @@ function GroupList({ groups, sel }: { groups: Group[]; sel: number }) {
 }
 
 // Memoized: the app re-renders on every store change, and this view only needs its own slices.
-export const DuplicatesView = memo(function DuplicatesView() {
+/** `visible` and `scopeAssets` are the assets in the type chips, search and filters, and the same without the chips. */
+export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAssets }: { visible: Asset[]; scopeAssets: Asset[] }) {
   const assets = useStore((s) => s.assets);
   const dups = useStore((s) => s.dups);
   const dupSel = useStore((s) => s.dupSel);
   const collections = useStore((s) => s.collections);
   const ignoreDuplicate = useStore((s) => s.ignoreDuplicate);
   const trashDuplicates = useStore((s) => s.trashDuplicates);
+  const clearFilters = useStore((s) => s.clearFilters);
   const byId = useMemo(() => new Map(assets.map((a) => [a.id, a])), [assets]);
   const groups = useMemo(
     () => (dups ?? []).map((g) => ({ hash: g.hash, items: g.ids.map((id) => byId.get(id)).filter((a): a is Asset => !!a) })).filter((g) => g.items.length > 1),
     [dups, byId],
   );
-  const reclaim = useMemo(() => groups.reduce((n, g) => n + g.items[0].size * (g.items.length - 1), 0), [groups]);
+  const [sort, setSort] = useState<DupSort>("space");
+  // A group shows when any of its copies passes the type chips, search and filters. The chips count groups.
+  const shown = useMemo(() => {
+    const ids = new Set(visible.map((a) => a.id));
+    return groups.filter((g) => g.items.some((a) => ids.has(a.id))).sort(sorts[sort].by);
+  }, [groups, visible, sort]);
+  const chips = useMemo(() => {
+    const ids = new Set(scopeAssets.map((a) => a.id));
+    const counts = new Map<string, number>();
+    let total = 0;
+    for (const g of groups)
+      if (g.items.some((a) => ids.has(a.id))) {
+        total++;
+        counts.set(g.items[0].kind, (counts.get(g.items[0].kind) ?? 0) + 1);
+      }
+    return { counts, total };
+  }, [groups, scopeAssets]);
+  const reclaim = useMemo(() => shown.reduce((n, g) => n + wasted(g), 0), [shown]);
   const [keepBy, setKeepBy] = useState<Record<string, number>>({});
   const [confirming, setConfirming] = useState(false);
-  const sel = Math.min(dupSel, Math.max(0, groups.length - 1));
-  const group = groups[sel];
+  // The open group stays open through sorting and filtering. Filtered out, the first group opens instead; resolved, the
+  // group that took its place in the list does.
+  const lastAt = useRef(0);
+  const found = shown.findIndex((g) => g.hash === dupSel);
+  const resolved = !groups.some((g) => g.hash === dupSel);
+  const sel = found >= 0 ? found : resolved ? Math.min(lastAt.current, Math.max(0, shown.length - 1)) : 0;
+  lastAt.current = sel;
+  const group = shown[sel];
   // Default to keeping the copy you've organized most (tags, favorite, collections); ties keep the first.
   const score = (a: Asset) => a.tags.length + (a.favorite ? 1 : 0) + collections.filter((c) => c.assetIds.includes(a.id)).length;
   const keepId = group ? (keepBy[group.hash] ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best)).id) : null;
@@ -179,18 +217,41 @@ export const DuplicatesView = memo(function DuplicatesView() {
     <div className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)]">
       <div className="flex min-h-0 flex-col gap-3.5 border-r border-line-soft pt-5">
         <div className="flex flex-col gap-1.5 px-5">
-          <span className="text-[15px] font-semibold">
-            {groups.length ? `${groups.length.toLocaleString()} duplicate ${groups.length === 1 ? "group" : "groups"}` : "Duplicates"}
+          <span role="status" className="text-[15px] font-semibold">
+            {groups.length
+              ? `${shown.length === groups.length ? "" : `${shown.length.toLocaleString()} of `}${groups.length.toLocaleString()} duplicate ${groups.length === 1 ? "group" : "groups"}`
+              : "Duplicates"}
           </span>
           <span className="leading-[1.45] text-muted">
             {dups === null
               ? "Checking files with the same size…"
-              : groups.length
+              : shown.length
                 ? `Files with identical content. Removing the extra copies frees ${bytes(reclaim)}.`
-                : "Nothing to review."}
+                : groups.length
+                  ? "Files with identical content."
+                  : "Nothing to review."}
           </span>
         </div>
-        {groups.length > 0 && <GroupList groups={groups} sel={sel} />}
+        {groups.length > 0 && (
+          <>
+            <ScopeChips counts={chips.counts} total={chips.total} className="px-5" />
+            <label className="flex items-center gap-1.5 px-5 text-muted">
+              Sort
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as DupSort)}
+                className="h-[30px] rounded-lg border border-line-strong bg-field px-1.5 text-fg"
+              >
+                {Object.entries(sorts).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+        {shown.length > 0 && <GroupList groups={shown} sel={sel} />}
       </div>
 
       <div className="flex min-h-0 flex-col gap-5 overflow-auto px-[30px] py-6">
@@ -221,6 +282,7 @@ export const DuplicatesView = memo(function DuplicatesView() {
                 <CopyCard
                   key={a.id}
                   a={a}
+                  hash={group.hash}
                   keep={a.id === keepId}
                   collections={collections}
                   onKeep={() => setKeepBy((k) => ({ ...k, [group.hash]: a.id }))}
@@ -229,7 +291,7 @@ export const DuplicatesView = memo(function DuplicatesView() {
             </div>
             <div className="flex flex-wrap items-center gap-2.5 border-t border-line-soft pt-4">
               <span className="text-muted">
-                Group {(sel + 1).toLocaleString()} of {groups.length.toLocaleString()}
+                Group {(sel + 1).toLocaleString()} of {shown.length.toLocaleString()}
               </span>
               <Button variant="ghost" size="lg" className="ml-auto" onClick={() => void ignoreDuplicate(group.hash)}>
                 Not duplicates
@@ -242,6 +304,14 @@ export const DuplicatesView = memo(function DuplicatesView() {
               </Button>
             </div>
           </>
+        ) : groups.length > 0 ? (
+          <div className="m-auto flex flex-col items-center gap-2 text-muted">
+            <span className="text-base font-medium text-fg">No duplicate groups match these filters</span>
+            <span>Try removing a type, search or filter.</span>
+            <Button className="mt-2" onClick={clearFilters}>
+              Clear search and filters
+            </Button>
+          </div>
         ) : (
           dups !== null && (
             <div className="m-auto flex flex-col items-center gap-2 text-muted">

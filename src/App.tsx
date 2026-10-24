@@ -150,9 +150,8 @@ export default function App() {
   );
   // In Duplicates, full screen steps through the copies of the open group.
   const copies = useMemo(() => {
-    if (s.view !== "duplicates" || !s.dups?.length) return null;
-    const g = s.dups[Math.min(s.dupSel, s.dups.length - 1)];
-    return g.ids.map((id) => s.assets.find((a) => a.id === id)).filter((a): a is Asset => !!a);
+    const g = s.view === "duplicates" ? s.dups?.find((d) => d.hash === s.dupSel) : null;
+    return g ? g.ids.map((id) => s.assets.find((a) => a.id === id)).filter((a): a is Asset => !!a) : null;
   }, [s.view, s.dups, s.dupSel, s.assets]);
   const order = useMemo(() => copies ?? (groups ? groups.flatMap((g) => g.items) : visible), [copies, groups, visible]);
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
@@ -294,7 +293,7 @@ export default function App() {
             </>
           )}
           {s.view === "collections" && <CollectionsView items={order} groups={groups} scopeAssets={scopeAssets} />}
-          {s.view === "duplicates" && <DuplicatesView />}
+          {s.view === "duplicates" && <DuplicatesView visible={visible} scopeAssets={scopeAssets} />}
           {s.view === "insights" && <InsightsView />}
           {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
             <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
