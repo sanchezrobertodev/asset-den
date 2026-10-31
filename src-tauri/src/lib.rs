@@ -155,11 +155,11 @@ fn path_key(p: &str) -> PathBuf {
     }
 }
 
-#[tauri::command]
+// Off the main thread, and the check below without the db lock: an offline network share can take seconds to answer.
+#[tauri::command(async)]
 fn list_roots(state: State<'_, AppState>) -> Result<Vec<Root>, String> {
     let mut roots = with_db(&state, db::roots)?;
-    // A missing root's startup scan ends before the UI listens for scan-progress. Checked without the lock: an
-    // offline network share can take seconds to answer.
+    // A missing root's startup scan ends before the UI listens for scan-progress.
     for r in &mut roots {
         r.missing = !Path::new(&r.path).is_dir();
     }

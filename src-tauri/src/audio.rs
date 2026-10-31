@@ -83,11 +83,13 @@ const BATCH: usize = 500;
 
 /// Reads audio details for a root's audio files that have none yet or changed since, [`BATCH`] files per transaction.
 /// The to-do list is read under the lock, the files off it. Unreadable files get an empty row so they aren't retried
-/// until they change. `report(conn, ids)` gets each batch's ids, lock held.
+/// until they change; files under the scan's `unread` paths wait for the next one. `report(conn, ids)` gets each
+/// batch's ids, lock held.
 pub fn fill_audio(
     db: &Mutex<Connection>,
     root_id: i64,
     root: &Path,
+    unread: &[String],
     mut report: impl FnMut(&Connection, &[i64]),
 ) -> Result<()> {
     let todo: Vec<(i64, String, String, i64, i64)> = {
@@ -102,6 +104,10 @@ pub fn fill_audio(
         })?
         .collect::<Result<_>>()?
     };
+    let todo: Vec<_> = todo
+        .into_iter()
+        .filter(|(_, rel, ..)| !crate::scan::unreadable(rel, unread))
+        .collect();
     let root = root.to_string_lossy();
     for batch in todo.chunks(BATCH) {
         // On a thread of its own at low priority (see low_priority); this one stores, with the lock.
@@ -206,7 +212,7 @@ pub mod tests {
         // Nothing left to do: every audio file has a row, the unreadable one an empty one.
         let db = Mutex::new(conn);
         let mut reported = Vec::new();
-        fill_audio(&db, 1, r, |_, ids| reported.extend_from_slice(ids)).unwrap();
+        fill_audio(&db, 1, r, &[], |_, ids| reported.extend_from_slice(ids)).unwrap();
         assert!(reported.is_empty());
         let mut conn = db.into_inner().unwrap();
 

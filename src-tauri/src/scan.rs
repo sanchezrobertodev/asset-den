@@ -165,6 +165,11 @@ fn under(rel: &str, dir: &str) -> bool {
     rel == dir || rel.strip_prefix(dir).is_some_and(|r| r.starts_with('/'))
 }
 
+/// Whether `rel` is under one of the `unread` paths of a scan.
+pub(crate) fn unreadable(rel: &str, unread: &[String]) -> bool {
+    unread.iter().any(|d| under(rel, d))
+}
+
 const BATCH: usize = 500;
 
 /// Full rescan of a root: upserts every file, then drops rows for files that are gone. Commits every
@@ -221,7 +226,7 @@ pub fn scan_root(
         // Files under a folder that couldn't be read may well still be there.
         let gone: Vec<i64> = stale
             .into_iter()
-            .filter(|(_, rel)| !unread.iter().any(|d| under(rel, d)))
+            .filter(|(_, rel)| !unreadable(rel, &unread))
             .map(|(id, _)| id)
             .collect();
         for id in &gone {
@@ -230,34 +235,47 @@ pub fn scan_root(
         tx.commit()?;
         report(&conn, count, &gone);
     }
-    fill_dimensions(db, root_id, root, |conn, ids| report(conn, count, ids))?;
-    crate::audio::fill_audio(db, root_id, root, |conn, ids| report(conn, count, ids))?;
+    fill_dimensions(db, root_id, root, &unread, |conn, ids| report(conn, count, ids))?;
+    crate::audio::fill_audio(db, root_id, root, &unread, |conn, ids| report(conn, count, ids))?;
     Ok(Some(count))
 }
 
 /// Reads image dimensions for rows that don't have them yet, from file headers, in parallel and in batches.
-/// Unreadable files get 0x0 so they aren't retried every scan. `report(conn, ids)` gets each batch's ids, lock held.
+/// Unreadable files get 0x0 so they aren't retried every scan; files under the scan's `unread` paths wait for the next
+/// one. `report(conn, ids)` gets each batch's ids, lock held.
 pub fn fill_dimensions(
     db: &Mutex<Connection>,
     root_id: i64,
     root: &Path,
+    unread: &[String],
     mut report: impl FnMut(&Connection, &[i64]),
 ) -> Result<()> {
     let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
+    // By id, so rows skipped (left without dimensions) aren't selected again.
     let sql = format!(
-        "SELECT id, rel_path, ext FROM assets WHERE root_id = ?1 AND width IS NULL AND ext IN ({exts}) LIMIT {BATCH}"
+        "SELECT id, rel_path, ext FROM assets
+         WHERE root_id = ?1 AND id > ?2 AND width IS NULL AND ext IN ({exts}) ORDER BY id LIMIT {BATCH}"
     );
     let root_str = root.to_string_lossy();
     let workers = std::thread::available_parallelism().map_or(4, |n| n.get().min(8));
+    let mut after = 0;
     loop {
         let todo: Vec<(i64, String, String)> = {
             let conn = db.lock().unwrap();
             let mut stmt = conn.prepare(&sql)?;
-            stmt.query_map([root_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+            stmt.query_map(params![root_id, after], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
                 .collect::<Result<_>>()?
         };
-        if todo.is_empty() {
+        let Some(last) = todo.last() else {
             return Ok(());
+        };
+        after = last.0;
+        let todo: Vec<_> = todo
+            .into_iter()
+            .filter(|(_, rel, _)| !unreadable(rel, unread))
+            .collect();
+        if todo.is_empty() {
+            continue;
         }
         let root_str = &root_str;
         let dims: Vec<(i64, (u32, u32))> = std::thread::scope(|s| {
@@ -472,6 +490,33 @@ pub mod tests {
         // The sweep keeps what's under a subfolder that couldn't be read.
         assert!(under("art/a.png", "art") && under("art", "art"));
         assert!(!under("artwork/a.png", "art") && !under("b.ogg", "art"));
+    }
+
+    #[test]
+    fn passes_leave_unreadable_files_for_later() {
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        fs::create_dir_all(r.join("art")).unwrap();
+        png(&r.join("art/a.png"), 4, 4);
+        fs::write(r.join("art/b.ogg"), "x").unwrap();
+        png(&r.join("c.png"), 2, 2);
+        scan(&mut conn, root, r);
+        // As if a scan stopped before the passes, and art/ couldn't be read on the next one.
+        conn.execute("UPDATE assets SET width = NULL, height = NULL", [])
+            .unwrap();
+        conn.execute("DELETE FROM audio_info", []).unwrap();
+        fs::rename(r.join("art"), r.join("away")).unwrap();
+
+        let db = Mutex::new(conn);
+        let unread = ["art".to_string()];
+        fill_dimensions(&db, root, r, &unread, |_, _| {}).unwrap();
+        crate::audio::fill_audio(&db, root, r, &unread, |_, _| {}).unwrap();
+        let conn = db.into_inner().unwrap();
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        // Only c.png was read; art/a.png and art/b.ogg wait for a scan that can read them.
+        assert_eq!(count("SELECT count(*) FROM assets WHERE width IS NULL"), 2);
+        assert_eq!(count("SELECT count(*) FROM audio_info"), 0);
+        assert_eq!(count("SELECT width FROM assets WHERE rel_path = 'c.png'"), 2);
     }
 
     #[test]
