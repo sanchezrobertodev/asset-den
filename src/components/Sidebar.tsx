@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
@@ -228,6 +228,7 @@ function FolderTree() {
     const open = s.expanded.has(n.key);
     const active = s.view === "library" && s.folder?.rootId === n.rootId && s.folder.path === n.path;
     const scanning = isRoot ? s.scanning[n.rootId] : undefined;
+    const missing = isRoot && s.missing[n.rootId];
     const Icon = active ? FolderOpen : Folder;
     return (
       <div key={n.key} role="listitem" className="group relative flex items-center">
@@ -246,7 +247,12 @@ function FolderTree() {
         </span>
         <button
           type="button"
-          title={isRoot ? s.roots.find((r) => r.id === n.rootId)?.path : n.path}
+          title={
+            isRoot
+              ? s.roots.find((r) => r.id === n.rootId)?.path +
+                (missing ? "\nCan't reach this folder. Its assets keep their tags and collections; rescan once it's back." : "")
+              : n.path
+          }
           onClick={() => s.go("library", { folder: { rootId: n.rootId, path: n.path } })}
           onDoubleClick={() => n.children.length && s.toggleExpanded(n.key)}
           aria-current={active ? "page" : undefined}
@@ -256,7 +262,11 @@ function FolderTree() {
             isRoot && !active && "font-medium",
           )}
         >
-          <Icon aria-hidden className={clsx("size-3.5 flex-none", active ? "text-accent" : "text-muted")} />
+          {missing ? (
+            <FolderX role="img" aria-label="Can't reach this folder:" className="size-3.5 flex-none text-warn-fg" />
+          ) : (
+            <Icon aria-hidden className={clsx("size-3.5 flex-none", active ? "text-accent" : "text-muted")} />
+          )}
           <span className="min-w-0 flex-1 truncate">{n.name}</span>
           <span className={clsx("flex items-center gap-1 font-mono text-[11px] text-faint", isRoot && "group-hover:invisible group-focus-within:invisible")}>
             {scanning !== undefined && <LoaderCircle role="img" aria-label="Scanning" className="size-3 animate-spin" />}

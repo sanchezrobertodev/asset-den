@@ -84,6 +84,8 @@ pub fn open_memory() -> Connection {
 pub struct Root {
     pub id: i64,
     pub path: String,
+    /// The folder can't be reached right now. Only `list_roots` checks; elsewhere it's false.
+    pub missing: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -139,6 +141,7 @@ pub fn roots(conn: &Connection) -> Result<Vec<Root>> {
         Ok(Root {
             id: r.get(0)?,
             path: r.get(1)?,
+            missing: false,
         })
     })?
     .collect()
@@ -149,6 +152,7 @@ pub fn root(conn: &Connection, id: i64) -> Result<Root> {
         Ok(Root {
             id: r.get(0)?,
             path: r.get(1)?,
+            missing: false,
         })
     })
 }

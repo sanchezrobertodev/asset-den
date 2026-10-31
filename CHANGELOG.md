@@ -12,6 +12,14 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 
+### Fixed
+
+- A library folder that can't be reached when Asset Den scans it (an unplugged drive, a renamed or moved folder) no
+  longer loses its assets. Before, the scan treated every file as deleted, and their tags, ratings, notes, favorites,
+  collections and sprite sheet settings went with them. Now the assets stay as they were, the folder shows a warning
+  icon in the sidebar, and a rescan once it's back picks up where it left off. A subfolder that can't be read keeps its
+  assets the same way.
+
 ## [0.3.4] - 2026-10-24
 
 ### Added

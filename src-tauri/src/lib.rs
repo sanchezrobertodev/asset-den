@@ -59,6 +59,8 @@ struct ScanProgress {
     root_id: i64,
     count: usize,
     done: bool,
+    /// The root folder couldn't be read (an unplugged drive, a renamed folder), so its assets were kept as they were.
+    missing: bool,
 }
 
 /// Changed or added rows and removed ids, numbered so the UI can tell when it missed one and must reload.
@@ -93,13 +95,14 @@ fn spawn_scan(app: AppHandle, root: Root) {
     }
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<AppState>();
-        let progress = |count, done| {
+        let progress = |count, done, missing| {
             let _ = app.emit(
                 "scan-progress",
                 ScanProgress {
                     root_id: root.id,
                     count,
                     done,
+                    missing,
                 },
             );
         };
@@ -108,13 +111,14 @@ fn spawn_scan(app: AppHandle, root: Root) {
         let result = scan::scan_root(&state.db, root.id, Path::new(&root.path), |conn, n, touched| {
             emit_delta(&app, conn, touched);
             changed.extend_from_slice(touched);
-            progress(n, false);
+            progress(n, false, false);
         });
         state.scanning.lock().unwrap().remove(&root.id);
-        if let Err(e) = &result {
+        let scanned = result.unwrap_or_else(|e| {
             eprintln!("scan {}: {e}", root.path);
-        }
-        progress(result.unwrap_or(0), true);
+            Some(0)
+        });
+        progress(scanned.unwrap_or(0), true, scanned.is_none());
         let _ = app.emit("assets-changed", root.id);
         analysis::changed(&app, &changed);
     });
@@ -151,9 +155,15 @@ fn path_key(p: &str) -> PathBuf {
     }
 }
 
-#[tauri::command]
+// Off the main thread, and the check below without the db lock: an offline network share can take seconds to answer.
+#[tauri::command(async)]
 fn list_roots(state: State<'_, AppState>) -> Result<Vec<Root>, String> {
-    with_db(&state, db::roots)
+    let mut roots = with_db(&state, db::roots)?;
+    // A missing root's startup scan ends before the UI listens for scan-progress.
+    for r in &mut roots {
+        r.missing = !Path::new(&r.path).is_dir();
+    }
+    Ok(roots)
 }
 
 #[tauri::command]
@@ -179,6 +189,7 @@ fn add_root(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<
         Ok(Root {
             id: c.last_insert_rowid(),
             path: path.clone(),
+            missing: false,
         })
     })?;
     activate_root(&app, &root);
@@ -198,6 +209,10 @@ fn remove_root(state: State<'_, AppState>, id: i64) -> Result<(), String> {
 #[tauri::command]
 fn rescan(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let root = with_db(&state, |c| db::root(c, id))?;
+    // A folder that couldn't be reached at startup has no watcher yet.
+    if !state.watchers.lock().unwrap().contains_key(&id) {
+        activate_root(&app, &root);
+    }
     spawn_scan(app, root);
     Ok(())
 }
