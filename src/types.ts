@@ -40,6 +40,8 @@ export interface SpriteSheet {
 export interface Root {
   id: number;
   path: string;
+  /** The folder couldn't be reached when the roots were listed. */
+  missing: boolean;
 }
 
 /** A smart collection's saved search. Missing filter fields mean "any", so older rules keep working. */
@@ -81,6 +83,8 @@ export interface ScanProgress {
   rootId: number;
   count: number;
   done: boolean;
+  /** The root folder couldn't be read (an unplugged drive, a renamed folder), so its assets were kept as they were. */
+  missing: boolean;
 }
 
 export interface TextPreview {

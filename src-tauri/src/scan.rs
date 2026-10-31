@@ -135,8 +135,9 @@ pub fn upsert_file(
     Ok(true)
 }
 
-/// Files under `dir`, with the metadata the directory listing already provides (no extra stat on Windows).
-fn walk(dir: &Path) -> impl Iterator<Item = (PathBuf, Metadata)> {
+/// Files under `dir`, with the metadata the directory listing already provides (no extra stat on Windows). A folder or
+/// file that can't be read (missing, on an unplugged drive, no access) comes as `Err(path)`.
+fn walk(dir: &Path) -> impl Iterator<Item = std::result::Result<(PathBuf, Metadata), PathBuf>> {
     WalkDir::new(dir)
         .follow_links(false)
         .into_iter()
@@ -149,9 +150,19 @@ fn walk(dir: &Path) -> impl Iterator<Item = (PathBuf, Metadata)> {
                     ignored_name(&name)
                 }
         })
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .filter_map(|e| e.metadata().ok().map(|m| (e.into_path(), m)))
+        .filter_map(move |e| match e {
+            Err(err) => Some(Err(err.path().unwrap_or(dir).to_path_buf())),
+            Ok(e) if !e.file_type().is_file() => None,
+            Ok(e) => Some(match e.metadata() {
+                Ok(m) => Ok((e.into_path(), m)),
+                Err(_) => Err(e.into_path()),
+            }),
+        })
+}
+
+/// Whether `rel` is the path `dir` or under it.
+fn under(rel: &str, dir: &str) -> bool {
+    rel == dir || rel.strip_prefix(dir).is_some_and(|r| r.starts_with('/'))
 }
 
 const BATCH: usize = 500;
@@ -159,26 +170,34 @@ const BATCH: usize = 500;
 /// Full rescan of a root: upserts every file, then drops rows for files that are gone. Commits every
 /// [`BATCH`] files and releases the lock in between, so the UI can show (and thumbnail) assets while it runs.
 /// `report(conn, count, touched)` is called after every batch, including the sweep and the dimensions pass, with the
-/// lock still held and the ids of the rows that batch added, changed or removed.
+/// lock still held and the ids of the rows that batch added, changed or removed. Returns the number of files, or None
+/// when the root itself can't be read: then every row is kept as it was.
 pub fn scan_root(
     db: &Mutex<Connection>,
     root_id: i64,
     root: &Path,
     mut report: impl FnMut(&Connection, usize, &[i64]),
-) -> Result<usize> {
+) -> Result<Option<usize>> {
     let seen = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(1, |d| d.as_nanos() as i64);
     let mut count = 0;
+    // What couldn't be read, relative to the root ("" for the root itself).
+    let mut unread = Vec::new();
     let mut files = walk(root).peekable();
     while files.peek().is_some() {
         let batch: Vec<_> = files.by_ref().take(BATCH).collect();
         let mut touched = Vec::new();
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
-        for (path, meta) in &batch {
-            if upsert_file(&tx, root_id, root, path, meta, seen, false, &mut touched)? {
-                count += 1;
+        for file in &batch {
+            match file {
+                Ok((path, meta)) => {
+                    if upsert_file(&tx, root_id, root, path, meta, seen, false, &mut touched)? {
+                        count += 1;
+                    }
+                }
+                Err(path) => unread.push(rel_of(root, path).unwrap_or_default()),
             }
         }
         tx.commit()?;
@@ -187,17 +206,33 @@ pub fn scan_root(
         // The mutex isn't fair: without a pause this thread re-locks at once and UI commands starve until the end.
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
+    // An unplugged drive or a renamed folder isn't a library whose files were all deleted. The passes below would also
+    // store every file not read yet as unreadable, for good.
+    if unread.iter().any(|d| d.is_empty()) {
+        return Ok(None);
+    }
     {
-        let conn = db.lock().unwrap();
-        let gone: Vec<i64> = conn
-            .prepare("DELETE FROM assets WHERE root_id = ?1 AND seen != ?2 RETURNING id")?
-            .query_map(params![root_id, seen], |r| r.get(0))?
+        let mut conn = db.lock().unwrap();
+        let tx = conn.transaction()?;
+        let stale: Vec<(i64, String)> = tx
+            .prepare("SELECT id, rel_path FROM assets WHERE root_id = ?1 AND seen != ?2")?
+            .query_map(params![root_id, seen], |r| Ok((r.get(0)?, r.get(1)?)))?
             .collect::<Result<_>>()?;
+        // Files under a folder that couldn't be read may well still be there.
+        let gone: Vec<i64> = stale
+            .into_iter()
+            .filter(|(_, rel)| !unread.iter().any(|d| under(rel, d)))
+            .map(|(id, _)| id)
+            .collect();
+        for id in &gone {
+            tx.execute("DELETE FROM assets WHERE id = ?1", [id])?;
+        }
+        tx.commit()?;
         report(&conn, count, &gone);
     }
     fill_dimensions(db, root_id, root, |conn, ids| report(conn, count, ids))?;
     crate::audio::fill_audio(db, root_id, root, |conn, ids| report(conn, count, ids))?;
-    Ok(count)
+    Ok(Some(count))
 }
 
 /// Reads image dimensions for rows that don't have them yet, from file headers, in parallel and in batches.
@@ -271,7 +306,7 @@ fn delete_under(conn: &Connection, root_id: i64, rel: &str, touched: &mut Vec<i6
 pub fn refresh_path(conn: &Connection, root_id: i64, root: &Path, path: &Path, touched: &mut Vec<i64>) -> Result<()> {
     let Some(rel) = rel_of(root, path) else { return Ok(()) };
     if path.is_dir() {
-        for (f, meta) in walk(path) {
+        for (f, meta) in walk(path).flatten() {
             upsert_file(conn, root_id, root, &f, &meta, 0, true, touched)?;
         }
     } else if let Some(meta) = std::fs::metadata(path).ok().filter(|m| m.is_file()) {
@@ -353,11 +388,11 @@ pub mod tests {
 
     /// Runs a full scan on a plain connection (the app passes its shared Mutex). Returns the file count.
     pub fn scan(conn: &mut Connection, root: i64, r: &Path) -> usize {
-        scan_touched(conn, root, r).0
+        scan_touched(conn, root, r).0.unwrap()
     }
 
     /// A full scan, with every id its batches reported.
-    fn scan_touched(conn: &mut Connection, root: i64, r: &Path) -> (usize, Vec<i64>) {
+    fn scan_touched(conn: &mut Connection, root: i64, r: &Path) -> (Option<usize>, Vec<i64>) {
         let db = Mutex::new(std::mem::replace(conn, Connection::open_in_memory().unwrap()));
         let mut touched = Vec::new();
         let n = scan_root(&db, root, r, |_, _, ids| touched.extend_from_slice(ids)).unwrap();
@@ -410,6 +445,33 @@ pub mod tests {
         let all = db::assets(&conn, None).unwrap();
         assert_eq!(all.len(), 1);
         assert_eq!((all[0].id, all[0].tags.clone()), (hero.id, vec!["player".to_string()]));
+    }
+
+    #[test]
+    fn a_missing_root_keeps_its_rows() {
+        let (dir, mut conn, root) = setup();
+        let lib = dir.path().join("lib");
+        fs::create_dir_all(lib.join("art")).unwrap();
+        png(&lib.join("art/a.png"), 4, 4);
+        fs::write(lib.join("b.ogg"), "x").unwrap();
+        scan(&mut conn, root, &lib);
+        let ids: Vec<i64> = db::assets(&conn, None).unwrap().iter().map(|a| a.id).collect();
+        db::add_tag(&conn, &ids, "keep").unwrap();
+
+        // An unplugged drive or a renamed folder isn't a library whose files were all deleted.
+        fs::rename(&lib, dir.path().join("away")).unwrap();
+        assert_eq!(scan_touched(&mut conn, root, &lib), (None, vec![]));
+        let all = db::assets(&conn, None).unwrap();
+        assert_eq!(rels(&conn), ["art/a.png", "b.ogg"]);
+        assert!(all.iter().all(|a| a.tags == ["keep"]));
+
+        // Back again: a rescan finds the same rows.
+        fs::rename(dir.path().join("away"), &lib).unwrap();
+        assert_eq!(scan_touched(&mut conn, root, &lib), (Some(2), vec![]));
+
+        // The sweep keeps what's under a subfolder that couldn't be read.
+        assert!(under("art/a.png", "art") && under("art", "art"));
+        assert!(!under("artwork/a.png", "art") && !under("b.ogg", "art"));
     }
 
     #[test]
@@ -646,7 +708,8 @@ mod bench {
         let n = super::scan_root(&db, 1, &dir, |_, _, _| {
             first.get_or_insert(t.elapsed());
         })
-        .unwrap();
+        .unwrap()
+        .expect("BENCH_DIR can't be read");
         println!(
             "cold scan: {n} files in {:?}, first batch visible after {:?}",
             t.elapsed(),

@@ -25,8 +25,8 @@ const asset = (id: number, relPath: string, size = 10, rootId = 1): Asset => ({
   bits: null,
 });
 const roots = [
-  { id: 1, path: "C:\\games\\game-assets" },
-  { id: 2, path: "/home/me/sample-lib" },
+  { id: 1, path: "C:\\games\\game-assets", missing: false },
+  { id: 2, path: "/home/me/sample-lib", missing: false },
 ];
 const all = [
   asset(1, "characters/hero/idle/a.png"),

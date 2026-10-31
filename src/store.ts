@@ -23,6 +23,8 @@ interface State extends Prefs {
   collections: Collection[];
   /** Files indexed so far, per root being scanned. */
   scanning: Record<number, number>;
+  /** Roots whose folder couldn't be read on their last scan. */
+  missing: Record<number, boolean>;
   view: ViewName;
   kinds: Kind[];
   folder: FolderFilter | null;
@@ -231,6 +233,7 @@ export const useStore = create<State>((set, get) => {
     assets: [],
     collections: [],
     scanning: {},
+    missing: {},
     view: "library",
     kinds: [],
     folder: null,
@@ -262,9 +265,9 @@ export const useStore = create<State>((set, get) => {
       await api.onScanProgress((p) =>
         set((s) => {
           const scanning = { ...s.scanning };
-          if (p.done) delete scanning[p.rootId];
-          else scanning[p.rootId] = p.count;
-          return { scanning };
+          if (!p.done) return { scanning: { ...scanning, [p.rootId]: p.count } };
+          delete scanning[p.rootId];
+          return { scanning, missing: { ...s.missing, [p.rootId]: p.missing } };
         }),
       );
       await api.onImageFeatures((colors) => {
@@ -306,6 +309,7 @@ export const useStore = create<State>((set, get) => {
         const ids = new Set(list.assets.map((a) => a.id));
         set((s) => ({
           roots,
+          missing: Object.fromEntries(roots.map((r) => [r.id, r.missing])),
           assets: list.assets,
           collections,
           colSel: collections.some((c) => c.id === s.colSel) ? s.colSel : (collections[0]?.id ?? null),
