@@ -11,6 +11,9 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+- **Locate** a library folder that moved. A folder Asset Den can't reach shows a locate button in the sidebar: pick
+  where it is now, and its assets keep their tags, ratings, notes, favorites and collections. If some of its files
+  aren't in the new place, Asset Den says how many it found and asks before the rescan drops the rest.
 
 ## [0.3.5] - 2026-10-31
 

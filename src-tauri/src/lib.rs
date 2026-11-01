@@ -90,9 +90,13 @@ pub(crate) fn emit_delta(app: &AppHandle, conn: &Connection, touched: &[i64]) {
 
 /// Rescans a root on a worker thread, reporting progress. Skips if that root is already being scanned.
 fn spawn_scan(app: AppHandle, root: Root) {
-    if !app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
-        return;
+    if app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
+        run_scan(app, root);
     }
+}
+
+/// The scan itself, for a caller that holds the root's scan slot; frees the slot when it's done.
+fn run_scan(app: AppHandle, root: Root) {
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<AppState>();
         let progress = |count, done, missing| {
@@ -166,16 +170,17 @@ fn list_roots(state: State<'_, AppState>) -> Result<Vec<Root>, String> {
     Ok(roots)
 }
 
-#[tauri::command]
-fn add_root(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<Root, String> {
-    let dir = Path::new(&path);
+/// Checks `path` can be a library folder and returns it tidied. `except` is the root being relinked, which may overlap
+/// its own old path.
+fn root_path(state: &AppState, path: &str, except: Option<i64>) -> Result<String, String> {
+    let dir = Path::new(path);
     if !dir.is_absolute() || !dir.is_dir() {
         return Err(format!("{path} is not a folder."));
     }
-    let key = path_key(&path);
-    for r in with_db(&state, db::roots)? {
+    let key = path_key(path);
+    for r in with_db(state, db::roots)? {
         let other = path_key(&r.path);
-        if key.starts_with(&other) || other.starts_with(&key) {
+        if Some(r.id) != except && (key.starts_with(&other) || other.starts_with(&key)) {
             return Err(format!(
                 "{path} overlaps a folder that's already in the library ({}).",
                 r.path
@@ -183,7 +188,12 @@ fn add_root(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<
         }
     }
     let path = path.trim_end_matches(['/', '\\']).to_string();
-    let path = if path.ends_with(':') { format!("{path}\\") } else { path }; // keep drive roots valid
+    Ok(if path.ends_with(':') { format!("{path}\\") } else { path }) // keep drive roots valid
+}
+
+#[tauri::command]
+fn add_root(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<Root, String> {
+    let path = root_path(&state, &path, None)?;
     let root = with_db(&state, |c| {
         c.execute("INSERT INTO roots (path) VALUES (?1)", [&path])?;
         Ok(Root {
@@ -208,13 +218,67 @@ fn remove_root(state: State<'_, AppState>, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 fn rescan(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let root = with_db(&state, |c| db::root(c, id))?;
+    // Takes the scan slot before reading the path, so a relink can't change it in between. Already scanning: that scan
+    // covers it.
+    if !state.scanning.lock().unwrap().insert(id) {
+        return Ok(());
+    }
+    let root = with_db(&state, |c| db::root(c, id)).inspect_err(|_| {
+        state.scanning.lock().unwrap().remove(&id);
+    })?;
     // A folder that couldn't be reached at startup has no watcher yet.
     if !state.watchers.lock().unwrap().contains_key(&id) {
         activate_root(&app, &root);
     }
-    spawn_scan(app, root);
+    run_scan(app, root);
     Ok(())
+}
+
+#[derive(Serialize)]
+struct RelinkCheck {
+    found: usize,
+    checked: usize,
+}
+
+/// How many of a root's files (a random sample) are at `path`, so the UI can warn before a relink whose rescan would
+/// drop the rest along with their tags.
+#[tauri::command(async)]
+fn check_relink(state: State<'_, AppState>, id: i64, path: String) -> Result<RelinkCheck, String> {
+    let dir = PathBuf::from(root_path(&state, &path, Some(id))?);
+    let rels: Vec<String> = with_db(&state, |c| {
+        c.prepare("SELECT rel_path FROM assets WHERE root_id = ?1 ORDER BY random() LIMIT 200")?
+            .query_map([id], |r| r.get(0))?
+            .collect()
+    })?;
+    let found = rels.iter().filter(|r| dir.join(r.as_str()).is_file()).count();
+    Ok(RelinkCheck {
+        found,
+        checked: rels.len(),
+    })
+}
+
+/// Points a root at the folder it moved to. Assets keep their ids, so tags, ratings, notes and collections stay; the
+/// rescan then sweeps the files that aren't there.
+#[tauri::command(async)]
+fn relink_root(app: AppHandle, state: State<'_, AppState>, id: i64, path: String) -> Result<Root, String> {
+    // Holds the scan slot from before the path changes until the new scan starts: a running scan would carry on in
+    // the old place, and one starting meanwhile could read the old path.
+    if !state.scanning.lock().unwrap().insert(id) {
+        return Err("This folder is being scanned. Try again when it's done.".into());
+    }
+    let relinked = root_path(&state, &path, Some(id)).and_then(|path| {
+        with_db(&state, |c| {
+            c.execute("UPDATE roots SET path = ?1 WHERE id = ?2", rusqlite::params![path, id])?;
+            db::root(c, id)
+        })
+    });
+    let root = relinked.inspect_err(|_| {
+        state.scanning.lock().unwrap().remove(&id);
+    })?;
+    state.watchers.lock().unwrap().remove(&id);
+    activate_root(&app, &root);
+    run_scan(app, root.clone());
+    Ok(root)
 }
 
 #[derive(Serialize)]
@@ -830,6 +894,8 @@ pub fn run() {
             add_root,
             remove_root,
             rescan,
+            check_relink,
+            relink_root,
             list_assets,
             thumbnail,
             save_thumbnail,

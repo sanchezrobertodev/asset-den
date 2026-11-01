@@ -490,6 +490,30 @@ pub mod tests {
         // The sweep keeps what's under a subfolder that couldn't be read.
         assert!(under("art/a.png", "art") && under("art", "art"));
         assert!(!under("artwork/a.png", "art") && !under("b.ogg", "art"));
+
+        // Moved for good and relinked: rows are matched by their path in the root, so they keep ids and tags.
+        let moved = dir.path().join("moved");
+        let a_id = db::assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .find(|a| a.rel_path == "art/a.png")
+            .unwrap()
+            .id;
+        fs::rename(&lib, &moved).unwrap();
+        fs::remove_file(moved.join("b.ogg")).unwrap();
+        conn.execute(
+            "UPDATE roots SET path = ?1 WHERE id = ?2",
+            rusqlite::params![moved.to_str(), root],
+        )
+        .unwrap();
+        assert_eq!(scan_touched(&mut conn, root, &moved).0, Some(1));
+        let all = db::assets(&conn, None).unwrap();
+        assert_eq!(
+            all.iter().map(|a| (a.id, a.rel_path.as_str())).collect::<Vec<_>>(),
+            [(a_id, "art/a.png")]
+        );
+        assert_eq!(all[0].tags, ["keep"]);
+        assert!(all[0].path.starts_with(moved.to_str().unwrap()));
     }
 
     #[test]

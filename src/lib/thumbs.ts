@@ -121,7 +121,11 @@ export function fontFamily(a: Asset, url: string): Promise<string | null> {
         document.fonts.add(f);
         return family;
       })
-      .catch(() => null);
+      .catch(() => {
+        // Not cached, so a later try (say, after its folder is relinked) loads it again.
+        fonts.delete(a.id);
+        return null;
+      });
     fonts.set(a.id, p);
   }
   return p;

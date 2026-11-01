@@ -27,6 +27,9 @@ export const api = {
   listRoots: () => invoke<Root[]>("list_roots"),
   addRoot: (path: string) => invoke<Root>("add_root", { path }),
   removeRoot: (id: number) => invoke<void>("remove_root", { id }),
+  /** How many of a sample of the folder's files are at `path`. */
+  checkRelink: (id: number, path: string) => invoke<{ found: number; checked: number }>("check_relink", { id, path }),
+  relinkRoot: (id: number, path: string) => invoke<Root>("relink_root", { id, path }),
   rescan: (id: number) => invoke<void>("rescan", { id }),
   /** Every asset, with the number of the last delta it includes. */
   listAssets: () => invoke<{ seq: number; assets: Asset[] }>("list_assets"),

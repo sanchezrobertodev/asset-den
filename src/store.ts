@@ -6,6 +6,7 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
+import { forgetThumbnails } from "./lib/thumbs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
 
 export interface Toast {
@@ -65,6 +66,8 @@ interface State extends Prefs {
   importFolder: () => Promise<void>;
   removeRoot: (id: number) => Promise<void>;
   rescan: (id: number) => Promise<void>;
+  /** Points a library folder at the place it moved to, keeping its assets' tags and collections. */
+  relinkRoot: (id: number, path: string) => Promise<void>;
   setError: (e: unknown) => void;
   showToast: (message: string, undo?: Toast["undo"], action?: string) => void;
   dismissToast: () => void;
@@ -348,6 +351,23 @@ export const useStore = create<State>((set, get) => {
     rescan: async (id) => {
       set((s) => ({ scanning: { ...s.scanning, [id]: 0 } }));
       await write(() => api.rescan(id));
+    },
+    relinkRoot: async (id, path) => {
+      // Before the call: a small folder's scan can finish (and clear this) before the call returns.
+      set((s) => ({ scanning: { ...s.scanning, [id]: 0 } }));
+      if (!(await write(() => api.relinkRoot(id, path)))) {
+        set((s) => {
+          const scanning = { ...s.scanning };
+          delete scanning[id];
+          return { scanning };
+        });
+        return;
+      }
+      // Asset paths come from the root's path, so reload them before the rescan's changes arrive, and retry the
+      // thumbnails that failed while the folder was unreachable.
+      forgetThumbnails();
+      await get().reload();
+      get().showToast(`Now looking for this folder's assets in ${path}.`);
     },
 
     setError: (e) => {
