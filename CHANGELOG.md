@@ -11,6 +11,11 @@ All notable changes to Asset Den are documented here. The format follows
   AppImage and a `.deb`. The macOS app and the AppImage update themselves like the Windows app; a `.deb` install
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
+
+## [0.3.7] - 2026-11-01
+
+### Added
+
 - Asset Den is open source: the code is at [github.com/sanchezrobertodev/asset-den](https://github.com/sanchezrobertodev/asset-den),
   under the MIT License. **Settings → About** links to it, and to Ko-fi if you'd like to support it.
 
