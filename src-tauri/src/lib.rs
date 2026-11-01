@@ -90,9 +90,13 @@ pub(crate) fn emit_delta(app: &AppHandle, conn: &Connection, touched: &[i64]) {
 
 /// Rescans a root on a worker thread, reporting progress. Skips if that root is already being scanned.
 fn spawn_scan(app: AppHandle, root: Root) {
-    if !app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
-        return;
+    if app.state::<AppState>().scanning.lock().unwrap().insert(root.id) {
+        run_scan(app, root);
     }
+}
+
+/// The scan itself, for a caller that holds the root's scan slot; frees the slot when it's done.
+fn run_scan(app: AppHandle, root: Root) {
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<AppState>();
         let progress = |count, done, missing| {
@@ -214,12 +218,19 @@ fn remove_root(state: State<'_, AppState>, id: i64) -> Result<(), String> {
 
 #[tauri::command]
 fn rescan(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let root = with_db(&state, |c| db::root(c, id))?;
+    // Takes the scan slot before reading the path, so a relink can't change it in between. Already scanning: that scan
+    // covers it.
+    if !state.scanning.lock().unwrap().insert(id) {
+        return Ok(());
+    }
+    let root = with_db(&state, |c| db::root(c, id)).inspect_err(|_| {
+        state.scanning.lock().unwrap().remove(&id);
+    })?;
     // A folder that couldn't be reached at startup has no watcher yet.
     if !state.watchers.lock().unwrap().contains_key(&id) {
         activate_root(&app, &root);
     }
-    spawn_scan(app, root);
+    run_scan(app, root);
     Ok(())
 }
 
@@ -250,18 +261,23 @@ fn check_relink(state: State<'_, AppState>, id: i64, path: String) -> Result<Rel
 /// rescan then sweeps the files that aren't there.
 #[tauri::command(async)]
 fn relink_root(app: AppHandle, state: State<'_, AppState>, id: i64, path: String) -> Result<Root, String> {
-    // A running scan would carry on in the old place and keep the new one from starting.
-    if state.scanning.lock().unwrap().contains(&id) {
+    // Holds the scan slot from before the path changes until the new scan starts: a running scan would carry on in
+    // the old place, and one starting meanwhile could read the old path.
+    if !state.scanning.lock().unwrap().insert(id) {
         return Err("This folder is being scanned. Try again when it's done.".into());
     }
-    let path = root_path(&state, &path, Some(id))?;
-    state.watchers.lock().unwrap().remove(&id);
-    let root = with_db(&state, |c| {
-        c.execute("UPDATE roots SET path = ?1 WHERE id = ?2", rusqlite::params![path, id])?;
-        db::root(c, id)
+    let relinked = root_path(&state, &path, Some(id)).and_then(|path| {
+        with_db(&state, |c| {
+            c.execute("UPDATE roots SET path = ?1 WHERE id = ?2", rusqlite::params![path, id])?;
+            db::root(c, id)
+        })
+    });
+    let root = relinked.inspect_err(|_| {
+        state.scanning.lock().unwrap().remove(&id);
     })?;
+    state.watchers.lock().unwrap().remove(&id);
     activate_root(&app, &root);
-    spawn_scan(app, root.clone());
+    run_scan(app, root.clone());
     Ok(root)
 }
 

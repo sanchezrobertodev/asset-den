@@ -353,8 +353,16 @@ export const useStore = create<State>((set, get) => {
       await write(() => api.rescan(id));
     },
     relinkRoot: async (id, path) => {
-      if (!(await write(() => api.relinkRoot(id, path)))) return;
+      // Before the call: a small folder's scan can finish (and clear this) before the call returns.
       set((s) => ({ scanning: { ...s.scanning, [id]: 0 } }));
+      if (!(await write(() => api.relinkRoot(id, path)))) {
+        set((s) => {
+          const scanning = { ...s.scanning };
+          delete scanning[id];
+          return { scanning };
+        });
+        return;
+      }
       // Asset paths come from the root's path, so reload them before the rescan's changes arrive, and retry the
       // thumbnails that failed while the folder was unreachable.
       forgetThumbnails();
