@@ -175,7 +175,7 @@ hand to publish the macOS and Linux builds.
 ## Support
 
 Asset Den is free and open source. If it saves you time, you can support it on
-[Ko-fi](https://ko-fi.com/sanchezrobertodev) or [GitHub Sponsors](https://github.com/sponsors/sanchezrobertodev).
+[Ko-fi](https://ko-fi.com/sanchezrobertodev).
 
 ## License
 

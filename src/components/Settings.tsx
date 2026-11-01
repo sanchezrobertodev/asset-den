@@ -131,10 +131,7 @@ export function SettingsDialog() {
           </div>
         </Row>
         <Row label="Support Asset Den" hint="It's free. Tips keep it going.">
-          <div className="flex gap-2">
-            <Link to="ko-fi">Ko-fi</Link>
-            <Link to="sponsors">GitHub Sponsors</Link>
-          </div>
+          <Link to="ko-fi">Ko-fi</Link>
         </Row>
       </Section>
     </Modal>

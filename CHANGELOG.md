@@ -12,7 +12,7 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 - Asset Den is open source: the code is at [github.com/sanchezrobertodev/asset-den](https://github.com/sanchezrobertodev/asset-den),
-  under the MIT License. **Settings → About** links to it, and to Ko-fi and GitHub Sponsors if you'd like to support it.
+  under the MIT License. **Settings → About** links to it, and to Ko-fi if you'd like to support it.
 
 ### Changed
 

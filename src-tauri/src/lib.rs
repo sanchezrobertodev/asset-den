@@ -838,7 +838,6 @@ fn open_link(app: AppHandle, link: String) -> Result<(), String> {
         "releases" => "https://github.com/sanchezrobertodev/asset-den/releases",
         "source" => "https://github.com/sanchezrobertodev/asset-den",
         "ko-fi" => "https://ko-fi.com/sanchezrobertodev",
-        "sponsors" => "https://github.com/sponsors/sanchezrobertodev",
         _ => return Err(format!("Unknown link {link}.")),
     };
     app.opener().open_url(url, None::<&str>).map_err(err)
