@@ -12,6 +12,8 @@ All notable changes to Asset Den are documented here. The format follows
   updates by installing the next `.deb`. The macOS app isn't notarized, so macOS asks for confirmation the first time
   it opens.
 
+## [0.3.5] - 2026-10-31
+
 ### Fixed
 
 - A library folder that can't be reached when Asset Den scans it (an unplugged drive, a renamed or moved folder) no
