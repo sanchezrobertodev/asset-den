@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds, signs and publishes Asset Den, plus the update feed the in-app updater reads.
 //
-//   node scripts/release.mjs              build + sign the Windows installer, publish it to asset-den-releases
+//   node scripts/release.mjs              build + sign the Windows installer, publish it to the repo's releases
 //   node scripts/release.mjs --dry-run    build + sign + write release/v<version>/, upload nothing
 //   node scripts/release.mjs --build-only signed installers for this OS (unsigned, with a warning, if no key)
 //   node scripts/release.mjs --add-platforms <dir>
@@ -22,7 +22,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeFeed } from "./feed.mjs";
 
-const RELEASES_REPO = "sanchezrobertodev/asset-den-releases";
+const RELEASES_REPO = "sanchezrobertodev/asset-den";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const argv = process.argv.slice(2);
 const args = new Set(argv);
@@ -101,6 +101,7 @@ if (!signed) fail(`No signing key. Expected ${keyDefault}, or set TAURI_SIGNING_
 const installer = `AssetDen_${version}_x64-setup.exe`;
 if (!dryRun) {
   run("gh", ["auth", "status"], { quiet: true });
+  buildCommit(); // fail before the build, not after it
   if (releaseAssets()?.includes(installer))
     fail(`${RELEASES_REPO} already has ${tag} with ${installer}. Bump the version (tauri.conf.json, package.json, Cargo.toml) and add a CHANGELOG section first.`);
 }
@@ -150,6 +151,8 @@ function publish(files, platforms, { draft }) {
     run("gh", [
       "release", "create", tag,
       "--repo", RELEASES_REPO,
+      // Tags the commit these files were built from, not wherever the default branch is now.
+      "--target", buildCommit(),
       "--title", `Asset Den ${version}`,
       "--notes-file", join(out, "notes.md"),
       draft ? "--draft" : "--latest",
@@ -165,7 +168,7 @@ function publish(files, platforms, { draft }) {
   console.log(`Feed platforms: ${Object.keys(feed.platforms).join(", ")}`);
 }
 
-/** Asset names of this version's release in asset-den-releases (drafts too), or null when there is none yet. */
+/** Asset names of this version's release (drafts too), or null when there is none yet. */
 function releaseAssets() {
   const r = spawnSync(
     "gh",
@@ -187,6 +190,14 @@ function changelogSection(v) {
   const body = lines.slice(start + 1, end).join("\n").trim();
   if (!body) fail(`The CHANGELOG.md section for ${v} is empty.`);
   return body;
+}
+
+/** The checked-out commit, which the build used; refuses uncommitted changes, which the tag wouldn't contain. */
+function buildCommit() {
+  const git = (...a) => spawnSync("git", a, { cwd: root, encoding: "utf8" }).stdout.trim();
+  if (git("status", "--porcelain", "--untracked-files=no"))
+    fail("The working tree has uncommitted changes, so the release's tag wouldn't match the build. Commit or stash them.");
+  return git("rev-parse", "HEAD");
 }
 
 function run(cmd, argv, opts = {}) {

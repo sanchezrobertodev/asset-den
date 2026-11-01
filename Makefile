@@ -48,7 +48,7 @@ dev:
 build:
 	node scripts/release.mjs --build-only
 
-## release: build, sign and publish the Windows installer and its update-feed entries to asset-den-releases
+## release: build, sign and publish the Windows installer and its update-feed entries to the repo's releases
 ## (macOS and Linux come from the Release workflow; see README)
 release:
 	node scripts/release.mjs

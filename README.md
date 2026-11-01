@@ -70,7 +70,7 @@ Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side 
 ## Install
 
 Download the file for your OS from the
-[latest release](https://github.com/sanchezrobertodev/asset-den-releases/releases/latest). From then on the app
+[latest release](https://github.com/sanchezrobertodev/asset-den/releases/latest). From then on the app
 updates itself (see [Updates](#updates)).
 
 | OS | File | Notes |
@@ -93,10 +93,11 @@ The installers land in `src-tauri/target/release/bundle/` (`nsis/` or `msi/` on 
 
 ## Updates
 
-Installed copies check [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases), a public repo
-holding only installers and the update feed, quietly on launch, and whenever you press **Check for updates** in the
-sidebar footer or the search palette. A new version shows its CHANGELOG notes, and **Install & restart** downloads it,
-verifies its signature and relaunches.
+Installed copies check this repo's [releases](https://github.com/sanchezrobertodev/asset-den/releases) quietly on
+launch, and whenever you press **Check for updates** in the sidebar footer or the search palette. A new version shows
+its CHANGELOG notes, and **Install & restart** downloads it, verifies its signature and relaunches. Versions up to 0.3.6
+checked the old [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases) repo instead; its last
+feed points them to 0.3.7 here, which checks this repo from then on.
 
 Windows x64, macOS (both architectures) and the Linux AppImage update themselves. A `.deb` install, or a platform the
 feed has no build for, hides **Check for updates**, so it never hits a missing-platform error. The first version with
@@ -113,7 +114,7 @@ entries into the release's `latest.json` instead of replacing it, so they can ru
    the in-app "What's new". Push the commit.
 3. Run the **Release** workflow from the Actions tab on that branch, with the version (`x.y.z`), or
    `gh workflow run Release --ref master -f version=x.y.z`. It builds the universal macOS `.app` and `.dmg` and the
-   Linux AppImage and `.deb`, signs the update bundles, and adds them to release `vx.y.z` in asset-den-releases,
+   Linux AppImage and `.deb`, signs the update bundles, and adds them to release `vx.y.z`,
    creating it as a draft if it doesn't exist yet.
 4. Run `make release-dry` to build, sign and write `release/vx.y.z/` (installer, `latest.json`, notes) without
    uploading, then `make release` to upload the Windows installer, merge its feed entries and publish the release as
@@ -130,13 +131,12 @@ Updates are signed with `~/.tauri/asset-den.key`, created with `npx tauri signer
 it, so losing it means users must reinstall by hand. `make build` signs too when the key is present, and otherwise
 builds plain installers with a warning.
 
-The workflow needs three repository secrets in asset-den (Settings → Secrets and variables → Actions):
+The workflow needs two repository secrets (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 |---|---|
 | `TAURI_SIGNING_PRIVATE_KEY` | The contents of `~/.tauri/asset-den.key` |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Its password. Skip it if the key has none: GitHub doesn't store empty secrets, and an unset one reads as empty. |
-| `RELEASES_TOKEN` | A fine-grained personal access token limited to asset-den-releases, with **Contents: Read and write** |
 
 ## Develop
 
@@ -171,6 +171,11 @@ hand to publish the macOS and Linux builds.
 - Syntax highlighting for text and code is not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
   `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.
+
+## Support
+
+Asset Den is free and open source. If it saves you time, you can support it on
+[Ko-fi](https://ko-fi.com/sanchezrobertodev).
 
 ## License
 
