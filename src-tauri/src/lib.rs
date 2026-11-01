@@ -831,15 +831,17 @@ async fn clear_thumbnail_cache(state: State<'_, AppState>) -> Result<(), String>
         .map_err(|e| format!("Couldn't clear the thumbnail cache: {e}"))
 }
 
-/// Opens the public releases page (installers and release notes) in the browser.
+/// Opens one of the app's web pages in the browser: a fixed list, so the webview can't open arbitrary URLs.
 #[tauri::command]
-fn open_releases(app: AppHandle) -> Result<(), String> {
-    app.opener()
-        .open_url(
-            "https://github.com/sanchezrobertodev/asset-den-releases/releases",
-            None::<&str>,
-        )
-        .map_err(err)
+fn open_link(app: AppHandle, link: String) -> Result<(), String> {
+    let url = match link.as_str() {
+        "releases" => "https://github.com/sanchezrobertodev/asset-den/releases",
+        "source" => "https://github.com/sanchezrobertodev/asset-den",
+        "ko-fi" => "https://ko-fi.com/sanchezrobertodev",
+        "sponsors" => "https://github.com/sponsors/sanchezrobertodev",
+        _ => return Err(format!("Unknown link {link}.")),
+    };
+    app.opener().open_url(url, None::<&str>).map_err(err)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -936,7 +938,7 @@ pub fn run() {
             set_ignored_folders,
             cache_size,
             clear_thumbnail_cache,
-            open_releases
+            open_link
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

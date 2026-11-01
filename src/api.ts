@@ -84,7 +84,7 @@ export const api = {
   /** Bytes used by the app's own thumbnail and preview caches. */
   cacheSize: () => invoke<number>("cache_size"),
   clearThumbnailCache: () => invoke<void>("clear_thumbnail_cache"),
-  openReleases: () => invoke<void>("open_releases"),
+  openLink: (link: "releases" | "source" | "ko-fi" | "sponsors") => invoke<void>("open_link", { link }),
   pickFolder: async (title = "Import an asset folder") => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;

@@ -33,6 +33,15 @@ function Row({ label, hint, children }: { label: string; hint?: ReactNode; child
   );
 }
 
+function Link({ to, children }: { to: Parameters<typeof api.openLink>[0]; children: ReactNode }) {
+  const setError = useStore((s) => s.setError);
+  return (
+    <Button size="sm" onClick={() => void api.openLink(to).catch(setError)}>
+      {children} <ExternalLink aria-hidden className="size-3.5" />
+    </Button>
+  );
+}
+
 function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
     <button
@@ -115,10 +124,17 @@ export function SettingsDialog() {
         </Section>
       )}
       <Section title="About">
-        <Row label={version ? `Asset Den ${version}` : "Asset Den"} hint="MIT License">
-          <Button size="sm" onClick={() => void api.openReleases().catch(s.setError)}>
-            Releases <ExternalLink aria-hidden className="size-3.5" />
-          </Button>
+        <Row label={version ? `Asset Den ${version}` : "Asset Den"} hint="Open source, MIT License">
+          <div className="flex gap-2">
+            <Link to="releases">Releases</Link>
+            <Link to="source">Source code</Link>
+          </div>
+        </Row>
+        <Row label="Support Asset Den" hint="It's free. Tips keep it going.">
+          <div className="flex gap-2">
+            <Link to="ko-fi">Ko-fi</Link>
+            <Link to="sponsors">GitHub Sponsors</Link>
+          </div>
         </Row>
       </Section>
     </Modal>
