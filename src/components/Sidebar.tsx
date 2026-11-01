@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderSearch, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
@@ -11,7 +11,8 @@ import { baseName, bytes, kindLabel } from "../lib/format";
 import type { Theme } from "../lib/prefs";
 import { useStore } from "../store";
 import { KINDS, type ViewName } from "../types";
-import { IconButton, Label } from "./ui";
+import { api } from "../api";
+import { Button, IconButton, Label, Modal } from "./ui";
 
 /** Collection colors from the design, by position. */
 const COLL_HUES = [75, 25, 250, 152, 300];
@@ -160,9 +161,7 @@ export function Sidebar() {
             <Plus className="size-4" />
           </IconButton>
         </div>
-        <div role="list" aria-label="Folders" className="flex flex-col gap-px">
-          <FolderTree />
-        </div>
+        <FolderTree />
         {!s.roots.length && (
           <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
             + Import a folder
@@ -222,8 +221,22 @@ function FolderTree() {
   };
   // Roots with nothing indexed yet still get a row (e.g. while their first scan runs).
   s.roots.forEach((r) => walk(tree.find((t) => t.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: baseName(r.path), count: 0, bytes: 0, children: [] }, 0));
+  // A relink whose new folder lacks some of the files, waiting for the user to confirm.
+  const [relink, setRelink] = useState<{ id: number; name: string; path: string; found: number; checked: number } | null>(null);
 
-  return rows.map(({ node: n, depth }) => {
+  const locate = async (id: number, name: string) => {
+    const path = await api.pickFolder(`Locate ${name}`);
+    if (!path) return;
+    try {
+      const m = await api.checkRelink(id, path);
+      if (m.found === m.checked) void s.relinkRoot(id, path);
+      else setRelink({ id, name, path, ...m });
+    } catch (e) {
+      s.setError(e);
+    }
+  };
+
+  const items = rows.map(({ node: n, depth }) => {
     const isRoot = depth === 0;
     const open = s.expanded.has(n.key);
     const active = s.view === "library" && s.folder?.rootId === n.rootId && s.folder.path === n.path;
@@ -250,7 +263,7 @@ function FolderTree() {
           title={
             isRoot
               ? s.roots.find((r) => r.id === n.rootId)?.path +
-                (missing ? "\nCan't reach this folder. Its assets keep their tags and collections; rescan once it's back." : "")
+                (missing ? "\nCan't reach this folder. Its assets keep their tags and collections: locate it if it moved, or rescan once it's back." : "")
               : n.path
           }
           onClick={() => s.go("library", { folder: { rootId: n.rootId, path: n.path } })}
@@ -275,6 +288,11 @@ function FolderTree() {
         </button>
         {isRoot && (
           <div className="absolute top-0 right-1 hidden h-full items-center gap-0.5 group-focus-within:flex group-hover:flex">
+            {missing && (
+              <IconButton label={`Locate ${n.name} (if it moved)`} className="size-6 -outline-offset-2" onClick={() => void locate(n.rootId, n.name)}>
+                <FolderSearch className="size-3.5" />
+              </IconButton>
+            )}
             <IconButton label={`Rescan ${n.name}`} className="size-6 -outline-offset-2" onClick={() => void s.rescan(n.rootId)}>
               <RefreshCw className="size-3.5" />
             </IconButton>
@@ -286,4 +304,40 @@ function FolderTree() {
       </div>
     );
   });
+
+  return (
+    <>
+      <div role="list" aria-label="Folders" className="flex flex-col gap-px">
+        {items}
+      </div>
+      {relink && (
+        <Modal
+          title={relink.found ? `Only some of ${relink.name}'s files are there` : `None of ${relink.name}'s files are there`}
+          onClose={() => setRelink(null)}
+          footer={
+            <>
+              <Button data-autofocus onClick={() => setRelink(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="invert"
+                onClick={() => {
+                  setRelink(null);
+                  void s.relinkRoot(relink.id, relink.path);
+                }}
+              >
+                Relink anyway
+              </Button>
+            </>
+          }
+        >
+          <p className="leading-relaxed">
+            Asset Den checked {relink.checked.toLocaleString()} of this folder's files and found {relink.found.toLocaleString()} in{" "}
+            <span className="text-fg">{relink.path}</span>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and
+            collections. Your files aren't touched.
+          </p>
+        </Modal>
+      )}
+    </>
+  );
 }
