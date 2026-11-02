@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-11-02
+
 ### Changed
 
 - Removing a folder from the library asks first, and says how many assets it forgets.
