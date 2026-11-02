@@ -84,6 +84,24 @@ export const api = {
   /** Bytes used by the app's own thumbnail and preview caches. */
   cacheSize: () => invoke<number>("cache_size"),
   clearThumbnailCache: () => invoke<void>("clear_thumbnail_cache"),
+  /** Saves a copy of the library (not the asset files) into `dest`; returns the new file's path. */
+  backupLibrary: (dest: string) => invoke<string>("backup_library", { dest }),
+  /** Folder of the automatic backups and the copies saved before a restore. */
+  backupsFolder: () => invoke<string>("backups_folder"),
+  /** Checks the backup, then restarts the app to replace the library with it. The current one is saved first. */
+  restoreLibrary: (path: string) => invoke<void>("restore_library", { path }),
+  /** True once after a launch that restored a backup; rejects if restoring failed. */
+  restoreResult: () => invoke<boolean>("restore_result"),
+  pickBackup: async (defaultPath: string) => {
+    const picked = await open({
+      title: "Restore a library backup",
+      defaultPath,
+      multiple: false,
+      directory: false,
+      filters: [{ name: "Asset Den backup", extensions: ["db"] }],
+    });
+    return typeof picked === "string" ? picked : null;
+  },
   openLink: (link: "releases" | "source" | "ko-fi") => invoke<void>("open_link", { link }),
   pickFolder: async (title = "Import an asset folder") => {
     const picked = await open({ directory: true, multiple: false, title });

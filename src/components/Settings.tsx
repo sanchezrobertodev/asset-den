@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { getVersion } from "@tauri-apps/api/app";
 import { ExternalLink, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { useAppUpdate } from "../appUpdate";
 import { bytes } from "../lib/format";
@@ -112,6 +112,9 @@ export function SettingsDialog() {
       <Section title="Library">
         <IgnoredFolders />
         <ImageAnalysis />
+      </Section>
+      <Section title="Backups">
+        <Backups />
       </Section>
       <Section title="Storage">
         <ThumbnailCache />
@@ -278,6 +281,90 @@ function ImageAnalysis() {
         hint="Analyses images as they're added or changed while Asset Den is open. Turns on by itself after the first full analysis."
       >
         <Switch label="Keep new and changed images analysed" on={a.keep} onChange={(on) => void api.setKeepAnalysed(on).catch(useStore.getState().setError)} />
+      </Row>
+    </>
+  );
+}
+
+const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
+
+function Backups() {
+  const { setError, showToast } = useStore();
+  const [busy, setBusy] = useState(false);
+  // A backup picked to restore, waiting for confirmation.
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const confirm = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!restoring) return;
+    const focus = () => confirm.current?.focus();
+    focus();
+    // The file dialog can still hold focus here; when the window gets it back, the webview would refocus elsewhere.
+    window.addEventListener("focus", focus, { once: true });
+    return () => window.removeEventListener("focus", focus);
+  }, [restoring]);
+
+  const backUp = async () => {
+    const dest = await api.pickFolder("Save a library backup to…");
+    if (!dest) return;
+    setBusy(true);
+    try {
+      showToast(`Saved ${fileName(await api.backupLibrary(dest))} in ${dest}.`);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pick = async () => {
+    try {
+      setRestoring(await api.pickBackup(await api.backupsFolder()));
+    } catch (e) {
+      setError(e);
+    }
+  };
+  const restore = async (path: string) => {
+    setBusy(true);
+    try {
+      await api.restoreLibrary(path); // Restarts the app when it works.
+    } catch (e) {
+      setError(e);
+      setBusy(false);
+      setRestoring(null);
+    }
+  };
+
+  return (
+    <>
+      {restoring ? (
+        <Row
+          label={`Restore ${fileName(restoring)}?`}
+          hint="It replaces your library: folders, tags, ratings, notes, collections and sprite grids. The current library is saved in the backups folder first. Asset Den restarts to finish."
+        >
+          <div className="flex flex-none gap-2">
+            <Button size="sm" disabled={busy} onClick={() => setRestoring(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" ref={confirm} variant="invert" disabled={busy} onClick={() => void restore(restoring)}>
+              {busy ? "Restoring…" : "Restore and restart"}
+            </Button>
+          </div>
+        </Row>
+      ) : (
+        <Row label="Library backup" hint="Folders, tags, ratings, notes, collections and sprite grids. Your asset files aren't included.">
+          <div className="flex flex-none gap-2">
+            <Button size="sm" disabled={busy} onClick={() => void backUp()}>
+              {busy ? "Backing up…" : "Back up…"}
+            </Button>
+            <Button size="sm" disabled={busy} onClick={() => void pick()}>
+              Restore…
+            </Button>
+          </div>
+        </Row>
+      )}
+      <Row label="Automatic backups" hint="One a day when Asset Den opens. The last 5 are kept.">
+        <Button size="sm" onClick={() => void api.backupsFolder().then(api.revealPath).catch(setError)}>
+          Show folder
+        </Button>
       </Row>
     </>
   );

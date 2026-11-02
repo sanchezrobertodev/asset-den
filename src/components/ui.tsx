@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ComponentProps, type ReactNode } from "react";
 import { kindLabel } from "../lib/format";
 import type { Kind } from "../types";
 
@@ -12,7 +12,7 @@ export function Button({
   className,
   children,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
+}: ComponentProps<"button"> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
   return (
     <button
       type="button"
