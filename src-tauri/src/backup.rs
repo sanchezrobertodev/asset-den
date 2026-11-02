@@ -22,11 +22,45 @@ fn stamp(conn: &Connection) -> Result<String, String> {
     .map_err(|e| e.to_string())
 }
 
-/// A consistent copy of `conn`'s database at `dest`, which must not exist yet (SQLite refuses to overwrite it).
+/// A consistent copy of `conn`'s database at `dest`, which must not exist yet (SQLite refuses to overwrite it). A copy
+/// that fails partway is removed, so no half-written file looks like a backup.
 fn vacuum_into(conn: &Connection, dest: &Path) -> Result<(), String> {
+    let existed = dest.exists();
     conn.execute("VACUUM INTO ?1", [dest.to_string_lossy()])
         .map(|_| ())
-        .map_err(|e| format!("Couldn't write {}: {e}", dest.display()))
+        .map_err(|e| {
+            if !existed {
+                let _ = std::fs::remove_file(dest);
+            }
+            format!("Couldn't write {}: {e}", dest.display())
+        })
+}
+
+/// Checks `path` is an intact library, then opens it the way the app does at launch and reads it, so a file that
+/// passes can't stop the app from starting. Brings its schema up to date, so only use it on a copy.
+fn check_library(path: &Path) -> Result<(), String> {
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE).map_err(|e| e.to_string())?;
+    let ok = conn
+        .query_row("PRAGMA quick_check", [], |r| r.get::<_, String>(0))
+        .is_ok_and(|r| r == "ok");
+    // Before opening it like the app does, which would create any missing table (an empty file would pass).
+    let tables: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN ('roots', 'assets', 'asset_tags')",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+    if !ok || tables != 3 {
+        return Err("it isn't an Asset Den library, or it's damaged".into());
+    }
+    drop(conn);
+    let conn = crate::db::open(path).map_err(|e| e.to_string())?;
+    conn.execute_batch(crate::analysis::SCHEMA).map_err(|e| e.to_string())?;
+    crate::db::roots(&conn).map_err(|e| e.to_string())?;
+    crate::db::assets(&conn, None).map_err(|e| e.to_string())?;
+    crate::db::ignored_folders(&conn).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Saves a copy of the library at `db` into `dir`, next to anything already there. Returns the new file.
@@ -61,22 +95,21 @@ pub fn auto(db: &Path, dir: &Path) -> Result<(), String> {
 /// Checks `src` is an Asset Den library and copies it to `pending`, to replace the library on the next launch.
 /// `src` is only read.
 pub fn stage(src: &Path, pending: &Path) -> Result<(), String> {
-    let conn = read_only(src).map_err(|_| "That file isn't an Asset Den backup.".to_string())?;
-    let ok = conn
-        .query_row("PRAGMA quick_check", [], |r| r.get::<_, String>(0))
-        .is_ok_and(|r| r == "ok");
-    let tables: i64 = conn
-        .query_row(
-            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN ('roots', 'assets', 'asset_tags')",
-            [],
-            |r| r.get(0),
-        )
-        .unwrap_or(0);
-    if !ok || tables != 3 {
-        return Err("That file isn't an Asset Den backup, or it's damaged.".into());
+    let refused = || "That file isn't an Asset Den backup, or it's damaged.".to_string();
+    let conn = read_only(src).map_err(|_| refused())?;
+    // Fails on a file that isn't SQLite at all, so it gets this message rather than a copy error.
+    conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get::<_, i64>(0))
+        .map_err(|_| refused())?;
+    // Copied and checked under another name: a file at `pending` is always a complete library the app can open.
+    let part = pending.with_extension("part");
+    let _ = std::fs::remove_file(&part);
+    let staged = vacuum_into(&conn, &part)
+        .and_then(|()| check_library(&part).map_err(|_| refused()))
+        .and_then(|()| std::fs::rename(&part, pending).map_err(|e| e.to_string()));
+    if staged.is_err() {
+        let _ = std::fs::remove_file(&part);
     }
-    let _ = std::fs::remove_file(pending);
-    vacuum_into(&conn, pending)
+    staged
 }
 
 /// Replaces the library at `db` with a staged backup, after saving the current one into `dir`. Returns whether there
@@ -86,6 +119,8 @@ pub fn apply_pending(db: &Path, pending: &Path, dir: &Path) -> Result<bool, Stri
         return Ok(false);
     }
     let result = (|| {
+        check_library(pending)
+            .map_err(|e| format!("Couldn't restore the backup: {e}. Your library wasn't changed."))?;
         let mut conn = Connection::open(db).map_err(|e| e.to_string())?;
         vacuum_into(&conn, &dir.join(format!("before-restore-{}.db", stamp(&conn)?)))?;
         conn.restore(MAIN_DB, pending, None::<fn(Progress)>)
@@ -152,6 +187,26 @@ mod tests {
             .execute("CREATE TABLE t (x)", [])
             .unwrap();
         assert!(stage(&other, &pending).is_err());
+        // The right table names with the wrong columns would stop the app from starting.
+        let wrong = dir.path().join("wrong.db");
+        Connection::open(&wrong)
+            .unwrap()
+            .execute_batch("CREATE TABLE roots (x); CREATE TABLE assets (x); CREATE TABLE asset_tags (x);")
+            .unwrap();
+        assert!(stage(&wrong, &pending).is_err());
+        assert!(!pending.exists());
+        assert!(!pending.with_extension("part").exists());
+    }
+
+    #[test]
+    fn launch_skips_a_staged_file_that_isnt_a_library() {
+        let dir = tempfile::tempdir().unwrap();
+        let (live, pending) = (dir.path().join("asset-den.db"), dir.path().join("restore.db"));
+        library(&live, "C:/assets");
+        // What a copy that failed partway could leave behind.
+        std::fs::write(&pending, "").unwrap();
+        assert!(apply_pending(&live, &pending, dir.path()).is_err());
+        assert_eq!(folders(&live), ["C:/assets"]);
         assert!(!pending.exists());
     }
 
