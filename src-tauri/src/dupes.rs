@@ -3,22 +3,23 @@
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use notify_debouncer_full::file_id::get_file_id;
 use rusqlite::{Connection, Result, params};
 
 use crate::db::{self, abs_path};
 
 const SAME_SIZE: &str = "SELECT size FROM assets WHERE size > 0 GROUP BY size HAVING count(*) > 1";
 
-/// Same-size files that still need a hash.
-pub fn unhashed(conn: &Connection) -> Result<Vec<(i64, PathBuf)>> {
+/// Same-size files that still need a hash: id, size, mtime and path.
+pub fn unhashed(conn: &Connection) -> Result<Vec<(i64, i64, i64, PathBuf)>> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT a.id, r.path, a.rel_path FROM assets a JOIN roots r ON r.id = a.root_id
+        "SELECT a.id, a.size, a.mtime, r.path, a.rel_path FROM assets a JOIN roots r ON r.id = a.root_id
          WHERE a.hash IS NULL AND a.size IN ({SAME_SIZE})"
     ))?;
     stmt.query_map([], |r| {
-        let root: String = r.get(1)?;
-        let rel: String = r.get(2)?;
-        Ok((r.get(0)?, abs_path(&root, &rel)))
+        let root: String = r.get(3)?;
+        let rel: String = r.get(4)?;
+        Ok((r.get(0)?, r.get(1)?, r.get(2)?, abs_path(&root, &rel)))
     })?
     .collect()
 }
@@ -29,9 +30,13 @@ pub fn hash_file(path: &Path) -> std::io::Result<String> {
     Ok(h.finalize().to_hex().to_string())
 }
 
-pub fn store(conn: &Connection, hashes: &[(i64, String)]) -> Result<()> {
-    for (id, hash) in hashes {
-        conn.execute("UPDATE assets SET hash = ?2 WHERE id = ?1", params![id, hash])?;
+/// Stores hashes of the file versions (size, mtime) they were computed from; a file that changed since keeps no hash.
+pub fn store(conn: &Connection, hashes: &[(i64, i64, i64, String)]) -> Result<()> {
+    for (id, size, mtime, hash) in hashes {
+        conn.execute(
+            "UPDATE assets SET hash = ?4 WHERE id = ?1 AND size = ?2 AND mtime = ?3",
+            params![id, size, mtime, hash],
+        )?;
     }
     Ok(())
 }
@@ -40,7 +45,7 @@ const BATCH: usize = 500;
 
 /// Hashes `todo` [`BATCH`] files at a time and stores each batch in one transaction. The lock is only held
 /// while a batch is written, so scans and UI commands get in between. Unreadable files are skipped.
-pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, PathBuf)]) -> Result<()> {
+pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, i64, i64, PathBuf)]) -> Result<()> {
     for batch in todo.chunks(BATCH) {
         // On a thread of its own at low priority (see low_priority); this one stores, with the lock.
         let hashes: Vec<_> = std::thread::scope(|s| {
@@ -48,7 +53,7 @@ pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, PathBuf)]) -> Result
                 crate::low_priority();
                 batch
                     .iter()
-                    .filter_map(|(id, p)| hash_file(p).ok().map(|h| (*id, h)))
+                    .filter_map(|(id, size, mtime, p)| hash_file(p).ok().map(|h| (*id, *size, *mtime, h)))
                     .collect()
             })
             .join()
@@ -63,6 +68,32 @@ pub fn hash_and_store(db: &Mutex<Connection>, todo: &[(i64, PathBuf)]) -> Result
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
     Ok(())
+}
+
+/// Which of `copies` (id and path) can go to the trash as copies of `keep`. `keep` itself is left out, and none can go
+/// if one is the same file as `keep` or as another copy (reached by two paths: a junction, a mapped drive, a hard
+/// link), or isn't byte for byte identical to `keep` anymore.
+pub fn trashable(keep: (i64, &Path), copies: &[(i64, PathBuf)]) -> std::result::Result<Vec<i64>, String> {
+    let want = hash_file(keep.1).map_err(|e| e.to_string())?;
+    // By volume and file id, not canonical path: one file can canonicalize differently (Z:\ vs \\nas\share).
+    let mut files = vec![(get_file_id(keep.1).map_err(|e| e.to_string())?, keep.1)];
+    let mut ids = Vec::new();
+    for (id, p) in copies.iter().filter(|(id, _)| *id != keep.0) {
+        let file = get_file_id(p).map_err(|e| e.to_string())?;
+        if let Some((_, other)) = files.iter().find(|(f, _)| *f == file) {
+            return Err(format!(
+                "{} is the same file as {}, not a copy of it, so nothing was moved.",
+                p.display(),
+                other.display()
+            ));
+        }
+        if hash_file(p).map_err(|e| e.to_string())? != want {
+            return Err(format!("{} is no longer identical, so nothing was moved.", p.display()));
+        }
+        files.push((file, p));
+        ids.push(*id);
+    }
+    Ok(ids)
 }
 
 #[derive(serde::Serialize, Clone, Debug)]
@@ -148,7 +179,10 @@ mod tests {
 
         let todo = unhashed(&conn).unwrap();
         assert_eq!(todo.len(), 3);
-        let hashes: Vec<_> = todo.iter().map(|(id, p)| (*id, hash_file(p).unwrap())).collect();
+        let hashes: Vec<_> = todo
+            .iter()
+            .map(|(id, size, mtime, p)| (*id, *size, *mtime, hash_file(p).unwrap()))
+            .collect();
         store(&conn, &hashes).unwrap();
         assert!(unhashed(&conn).unwrap().is_empty());
 
@@ -177,7 +211,7 @@ mod tests {
         let hashes: Vec<_> = unhashed(&conn)
             .unwrap()
             .iter()
-            .map(|(id, p)| (*id, hash_file(p).unwrap()))
+            .map(|(id, size, mtime, p)| (*id, *size, *mtime, hash_file(p).unwrap()))
             .collect();
         store(&conn, &hashes).unwrap();
         let g = groups(&conn).unwrap().remove(0);
@@ -262,7 +296,56 @@ mod tests {
         let conn = db.into_inner().unwrap();
         let left = unhashed(&conn).unwrap();
         assert_eq!(left.len(), 1);
-        assert!(left[0].1.ends_with("3.png"));
+        assert!(left[0].3.ends_with("3.png"));
         assert_eq!(groups(&conn).unwrap()[0].ids.len(), 2);
+    }
+
+    #[test]
+    fn a_file_saved_while_hashing_keeps_no_old_hash() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "same").unwrap();
+        fs::write(r.join("b.png"), "same").unwrap();
+        let mut conn = db::open_memory();
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [r.display().to_string()])
+            .unwrap();
+        scan::tests::scan(&mut conn, 1, r);
+        let todo = unhashed(&conn).unwrap();
+        // b.png is saved again before its batch is stored: the watcher gives it the new mtime and clears its hash.
+        conn.execute(
+            "UPDATE assets SET mtime = mtime + 1, hash = NULL WHERE rel_path = 'b.png'",
+            [],
+        )
+        .unwrap();
+
+        let db = Mutex::new(conn);
+        hash_and_store(&db, &todo).unwrap();
+        let left = unhashed(&db.into_inner().unwrap()).unwrap();
+        assert_eq!(left.len(), 1);
+        assert!(left[0].3.ends_with("b.png"));
+    }
+
+    #[test]
+    fn only_real_identical_copies_are_trashable() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        fs::create_dir(r.join("sub")).unwrap();
+        fs::write(r.join("a.png"), "same").unwrap();
+        fs::write(r.join("b.png"), "same").unwrap();
+        fs::write(r.join("c.png"), "diff").unwrap();
+        let (a, b) = (r.join("a.png"), r.join("b.png"));
+        let keep = (1, a.as_path());
+
+        // The kept file in the list is left out; a real copy can go.
+        assert_eq!(trashable(keep, &[(1, a.clone()), (2, b.clone())]), Ok(vec![2]));
+        // A copy that changed since the check.
+        assert!(trashable(keep, &[(2, b.clone()), (3, r.join("c.png"))]).is_err());
+        // The kept file, or a copy, reached by a second path: trashing "the copy" would delete the only file.
+        assert!(trashable(keep, &[(2, r.join("sub/../a.png"))]).is_err());
+        assert!(trashable(keep, &[(2, b.clone()), (3, b.clone())]).is_err());
+        assert!(trashable(keep, &[(2, b), (3, r.join("sub/../b.png"))]).is_err());
+        // A hard link has a path of its own, but it's the one file.
+        fs::hard_link(&a, r.join("link.png")).unwrap();
+        assert!(trashable(keep, &[(2, r.join("link.png"))]).is_err());
     }
 }

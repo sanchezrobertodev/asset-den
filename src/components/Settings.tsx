@@ -4,7 +4,7 @@ import { ExternalLink, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { useAppUpdate } from "../appUpdate";
-import { bytes } from "../lib/format";
+import { baseName, bytes } from "../lib/format";
 import { forgetThumbnails } from "../lib/thumbs";
 import { useStore } from "../store";
 import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
@@ -286,8 +286,6 @@ function ImageAnalysis() {
   );
 }
 
-const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
-
 function Backups() {
   const { setError, showToast } = useStore();
   const [busy, setBusy] = useState(false);
@@ -308,7 +306,7 @@ function Backups() {
     if (!dest) return;
     setBusy(true);
     try {
-      showToast(`Saved ${fileName(await api.backupLibrary(dest))} in ${dest}.`);
+      showToast(`Saved ${baseName(await api.backupLibrary(dest))} in ${dest}.`);
     } catch (e) {
       setError(e);
     } finally {
@@ -337,7 +335,7 @@ function Backups() {
     <>
       {restoring ? (
         <Row
-          label={`Restore ${fileName(restoring)}?`}
+          label={`Restore ${baseName(restoring)}?`}
           hint="It replaces your library: folders, tags, ratings, notes, collections and sprite grids. The current library is saved in the backups folder first. Asset Den restarts to finish."
         >
           <div className="flex flex-none gap-2">

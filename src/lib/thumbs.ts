@@ -108,13 +108,14 @@ function renderVideoThumb(a: Asset): Promise<string | null> {
     });
 }
 
-const fonts = new Map<number, Promise<string | null>>();
+// Keyed by family, which includes mtime, so an edited font (or a new one reusing an id) loads afresh.
+const fonts = new Map<string, Promise<string | null>>();
 
 /** Registers the font file as a FontFace and returns its family name, or null if it fails to load. */
 export function fontFamily(a: Asset, url: string): Promise<string | null> {
-  let p = fonts.get(a.id);
+  const family = `asset-font-${a.id}-${a.mtime}`;
+  let p = fonts.get(family);
   if (!p) {
-    const family = `asset-font-${a.id}-${a.mtime}`;
     p = new FontFace(family, `url("${url}")`)
       .load()
       .then((f) => {
@@ -123,10 +124,10 @@ export function fontFamily(a: Asset, url: string): Promise<string | null> {
       })
       .catch(() => {
         // Not cached, so a later try (say, after its folder is relinked) loads it again.
-        fonts.delete(a.id);
+        fonts.delete(family);
         return null;
       });
-    fonts.set(a.id, p);
+    fonts.set(family, p);
   }
   return p;
 }

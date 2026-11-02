@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import type { Asset } from "../types";
 import { groupByFolder, noFilters, visibleAssets, type Scope } from "./filter.ts";
-import { ancestorKeys, buildTree, findNode, parentOf, pathTo } from "./folders.ts";
+import { ancestorKeys, buildTree, parentOf, pathTo } from "./folders.ts";
 
 const asset = (id: number, relPath: string, size = 10, rootId = 1): Asset => ({
   id,
@@ -40,12 +40,12 @@ const all = [
 
 const tree = buildTree(all, roots);
 assert.deepEqual(tree.map((t) => [t.name, t.count]), [["game-assets", 6], ["sample-lib", 1]]);
-const hero = findNode(tree, { rootId: 1, path: "characters/hero" })!;
+const hero = pathTo(tree, { rootId: 1, path: "characters/hero" }).at(-1)!;
 assert.equal(hero.count, 4);
 assert.equal(hero.bytes, 40);
 assert.deepEqual(hero.children.map((c) => [c.name, c.count]), [["idle", 2], ["run", 1]]);
 assert.deepEqual(tree[0].children.map((c) => c.name), ["characters"]);
-assert.equal(findNode(tree, { rootId: 1, path: "nope" }), null);
+assert.deepEqual(pathTo(tree, { rootId: 1, path: "nope" }).map((n) => n.name), ["game-assets"]);
 assert.deepEqual(pathTo(tree, { rootId: 1, path: "characters/hero/run" }).map((n) => n.name), ["game-assets", "characters", "hero", "run"]);
 assert.deepEqual(ancestorKeys({ rootId: 1, path: "characters/hero" }), ["1:", "1:characters", "1:characters/hero"]);
 assert.deepEqual(parentOf({ rootId: 1, path: "characters/hero" }), { rootId: 1, path: "characters" });

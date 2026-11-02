@@ -5,6 +5,7 @@ import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
 import { baseName, kindLabel } from "../lib/format";
 import type { SortKey } from "../lib/prefs";
+import { isMac } from "../lib/shortcuts";
 import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
 import { AnalysisNote } from "./Analysis";
@@ -12,7 +13,6 @@ import { FilterButton } from "./FilterPanel";
 import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented } from "./ui";
 
 const titles = { library: "Library", favorites: "Favorites", collections: "Collections", duplicates: "Duplicates", insights: "Insights" };
-const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 
 export function Header() {
   const { view, query, folder, setPalette, importFolder } = useStore();

@@ -223,6 +223,9 @@ function FolderTree() {
   s.roots.forEach((r) => walk(tree.find((t) => t.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: baseName(r.path), count: 0, bytes: 0, children: [] }, 0));
   // A relink whose new folder lacks some of the files, waiting for the user to confirm.
   const [relink, setRelink] = useState<{ id: number; name: string; path: string; found: number; checked: number } | null>(null);
+  // A library folder whose X was clicked, waiting for the user to confirm.
+  const [removing, setRemoving] = useState<{ id: number; name: string } | null>(null);
+  const removeCount = removing ? s.assets.filter((a) => a.rootId === removing.id).length : 0;
 
   const locate = async (id: number, name: string) => {
     const path = await api.pickFolder(`Locate ${name}`);
@@ -287,7 +290,8 @@ function FolderTree() {
           </span>
         </button>
         {isRoot && (
-          <div className="absolute top-0 right-1 hidden h-full items-center gap-0.5 group-focus-within:flex group-hover:flex">
+          // Faded, not display:none, so a confirm dialog can hand focus back to its button after Cancel.
+          <div className="absolute top-0 right-1 flex h-full items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
             {missing && (
               <IconButton label={`Locate ${n.name} (if it moved)`} className="size-6 -outline-offset-2" onClick={() => void locate(n.rootId, n.name)}>
                 <FolderSearch className="size-3.5" />
@@ -296,7 +300,7 @@ function FolderTree() {
             <IconButton label={`Rescan ${n.name}`} className="size-6 -outline-offset-2" onClick={() => void s.rescan(n.rootId)}>
               <RefreshCw className="size-3.5" />
             </IconButton>
-            <IconButton label={`Remove ${n.name} from the library (files stay on disk)`} className="size-6 -outline-offset-2 hover:text-danger" onClick={() => void s.removeRoot(n.rootId)}>
+            <IconButton label={`Remove ${n.name} from the library (files stay on disk)`} className="size-6 -outline-offset-2 hover:text-danger" onClick={() => setRemoving({ id: n.rootId, name: n.name })}>
               <X className="size-3.5" />
             </IconButton>
           </div>
@@ -335,6 +339,33 @@ function FolderTree() {
             Asset Den checked {relink.checked.toLocaleString()} of this folder's files and found {relink.found.toLocaleString()} in{" "}
             <span className="text-fg">{relink.path}</span>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and
             collections. Your files aren't touched.
+          </p>
+        </Modal>
+      )}
+      {removing && (
+        <Modal
+          title={`Remove ${removing.name} from the library?`}
+          onClose={() => setRemoving(null)}
+          footer={
+            <>
+              <Button data-autofocus onClick={() => setRemoving(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setRemoving(null);
+                  void s.removeRoot(removing.id);
+                }}
+              >
+                Remove
+              </Button>
+            </>
+          }
+        >
+          <p className="leading-relaxed">
+            This removes {removeCount ? `the ${removeCount.toLocaleString()} ${removeCount === 1 ? "asset" : "assets"} in this folder` : "its assets"} from the
+            library, with their tags, ratings, notes, collection memberships and sprite grids. Your files stay on disk.
           </p>
         </Modal>
       )}

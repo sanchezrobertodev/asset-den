@@ -34,14 +34,18 @@ pub fn rendered_name(path: &str, current: (i64, i64), rendered: (i64, i64)) -> R
 
 /// Decodes the whole original image (PSD: its flattened composite).
 pub fn decode(path: &Path, ext: &str) -> Result<DynamicImage, String> {
-    if ext == "psd" {
-        // shortcut: uses the flattened composite only, so some layered/16-bit files fail and show an icon instead.
-        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-        let psd = psd::Psd::from_bytes(&bytes).map_err(|e| e.to_string())?;
-        let img = RgbaImage::from_raw(psd.width(), psd.height(), psd.rgba()).ok_or("PSD has an unexpected size")?;
-        return Ok(DynamicImage::ImageRgba8(img));
-    }
-    image::open(path).map_err(|e| e.to_string())
+    // Decoders can panic on a bad file (psd does on ZIP-compressed and truncated ones): that file then fails instead.
+    std::panic::catch_unwind(|| {
+        if ext == "psd" {
+            // shortcut: uses the flattened composite only, so some layered/16-bit files fail and show an icon instead.
+            let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+            let psd = psd::Psd::from_bytes(&bytes).map_err(|e| e.to_string())?;
+            let img = RgbaImage::from_raw(psd.width(), psd.height(), psd.rgba()).ok_or("PSD has an unexpected size")?;
+            return Ok(DynamicImage::ImageRgba8(img));
+        }
+        image::open(path).map_err(|e| e.to_string())
+    })
+    .unwrap_or_else(|_| Err("Asset Den couldn't read this image.".into()))
 }
 
 /// Writes a PNG of at most `max` px on its long side to `out`, unless it's already cached.
@@ -102,5 +106,19 @@ mod tests {
         assert_eq!(rendered_name("a", (1, 2), (1, 2)), Ok(cache_name("a", 1, 2)));
         assert!(rendered_name("a", (1, 3), (1, 2)).is_err());
         assert!(rendered_name("a", (5, 2), (1, 2)).is_err());
+    }
+
+    #[test]
+    fn a_psd_the_decoder_panics_on_is_an_error() {
+        // 1×1 RGB with empty colour, resource and layer sections, then ZIP-compressed image data: psd 0.3 panics on it.
+        let mut psd = b"8BPS\0\x01\0\0\0\0\0\0\0\x03".to_vec();
+        psd.extend_from_slice(&[0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0, 3]);
+        psd.extend_from_slice(&[0; 12]);
+        psd.extend_from_slice(&[0, 2]);
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("deep.psd");
+        std::fs::write(&src, psd).unwrap();
+        assert!(decode(&src, "psd").is_err());
+        assert!(thumbnail(&src, "psd", &dir.path().join("t.png")).is_err());
     }
 }

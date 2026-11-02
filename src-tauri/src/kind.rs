@@ -39,7 +39,10 @@ pub fn ignored_name(name: &str) -> bool {
         || n.ends_with(".meta")
         || n.ends_with(".import")
         || n.ends_with(".uid")
-        || matches!(n.as_str(), "thumbs.db" | "desktop.ini" | "node_modules")
+        || matches!(
+            n.as_str(),
+            "thumbs.db" | "desktop.ini" | "node_modules" | "$recycle.bin" | "system volume information"
+        )
 }
 
 /// A folder is also skipped when its name is on the user's list; a file with that name is not.
@@ -81,5 +84,8 @@ mod tests {
         assert!(ignored_rel("art/.cache/a.png", || false));
         assert!(ignored_rel("art/x.png.meta", || false));
         assert!(!ignored_rel("art/sprites/a.png", || false));
+        // A drive-root library: files deleted in Explorer move into the Recycle Bin.
+        assert!(ignored_rel("$RECYCLE.BIN/S-1-5-21-1/$RAB12CD.png", || false));
+        assert!(ignored_name("System Volume Information"));
     }
 }

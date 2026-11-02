@@ -175,6 +175,33 @@ fn path_key(p: &str) -> PathBuf {
     }
 }
 
+/// Whether one folder is the other or inside it.
+fn overlaps(a: &str, b: &str) -> bool {
+    let (a, b) = (path_key(a), path_key(b));
+    a.starts_with(&b) || b.starts_with(&a)
+}
+
+/// Refuses `path` when it holds, or is inside, one of the app's `own` folders (data, cache): indexing its database and
+/// caches would never settle, as each commit changes a file it watches.
+fn not_own_folder(path: &str, own: [&Path; 2]) -> Result<(), String> {
+    for own in own {
+        if overlaps(path, &own.to_string_lossy()) {
+            return Err(format!(
+                "{path} overlaps the folder where Asset Den keeps its own data ({}). Choose the folder your assets are in instead.",
+                own.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// The user's ignored folder names, plus the app's data and cache folders (both named after its identifier), so a
+/// library folder added before root_path refused ones holding them doesn't index them.
+fn ignore_folders(names: &[String], data_dir: &Path) {
+    let own = data_dir.file_name().map(|n| n.to_string_lossy().into_owned());
+    kind::set_extra_ignored(&[names, own.as_slice()].concat());
+}
+
 // Off the main thread, and the check below without the db lock: an offline network share can take seconds to answer.
 #[tauri::command(async)]
 fn list_roots(state: State<'_, AppState>) -> Result<Vec<Root>, String> {
@@ -193,10 +220,12 @@ fn root_path(state: &AppState, path: &str, except: Option<i64>) -> Result<String
     if !dir.is_absolute() || !dir.is_dir() {
         return Err(format!("{path} is not a folder."));
     }
-    let key = path_key(path);
+    not_own_folder(
+        path,
+        [&state.data_dir, state.thumbs_dir.parent().unwrap_or(&state.thumbs_dir)],
+    )?;
     for r in with_db(state, db::roots)? {
-        let other = path_key(&r.path);
-        if Some(r.id) != except && (key.starts_with(&other) || other.starts_with(&key)) {
+        if Some(r.id) != except && overlaps(path, &r.path) {
             return Err(format!(
                 "{path} overlaps a folder that's already in the library ({}).",
                 r.path
@@ -553,25 +582,16 @@ fn set_duplicate_ignored(state: State<'_, AppState>, hash: String, ignored: bool
 #[tauri::command]
 async fn trash_duplicates(state: State<'_, AppState>, keep: i64, remove: Vec<i64>) -> Result<usize, String> {
     let kept = asset(&state, keep)?;
-    let copies = remove
+    let mut copies = remove
         .iter()
-        .filter(|id| **id != keep)
         .map(|id| asset(&state, *id))
         .collect::<Result<Vec<_>, _>>()?;
-    let paths: Vec<PathBuf> = copies.iter().map(|a| PathBuf::from(&a.path)).collect();
+    let paths: Vec<(i64, PathBuf)> = copies.iter().map(|a| (a.id, PathBuf::from(&a.path))).collect();
     let keep_path = PathBuf::from(&kept.path);
-    let identical = tauri::async_runtime::spawn_blocking(move || {
-        let want = dupes::hash_file(&keep_path).map_err(err)?;
-        for p in &paths {
-            if dupes::hash_file(p).map_err(err)? != want {
-                return Err(format!("{} is no longer identical, so nothing was moved.", p.display()));
-            }
-        }
-        Ok::<_, String>(())
-    })
-    .await
-    .map_err(err)?;
-    identical?;
+    let ids = tauri::async_runtime::spawn_blocking(move || dupes::trashable((keep, &keep_path), &paths))
+        .await
+        .map_err(err)??;
+    copies.retain(|a| ids.contains(&a.id));
     let mut done = 0;
     for copy in &copies {
         trash::delete(&copy.path).map_err(|e| format!("Couldn't move {} to the trash: {e}", copy.name))?;
@@ -797,7 +817,7 @@ fn ignored_folders(state: State<'_, AppState>) -> Result<Vec<String>, String> {
 #[tauri::command]
 fn set_ignored_folders(state: State<'_, AppState>, names: Vec<String>) -> Result<Vec<String>, String> {
     let names = db::set_ignored_folders(&state.db.lock().unwrap(), &names)?;
-    kind::set_extra_ignored(&names);
+    ignore_folders(&names, &state.data_dir);
     Ok(names)
 }
 
@@ -929,7 +949,7 @@ pub fn run() {
             conn.execute_batch(analysis::SCHEMA)?;
             let roots = db::roots(&conn)?;
             // Before the catch-up scans below, so they skip the user's ignored folders too.
-            kind::set_extra_ignored(&db::ignored_folders(&conn)?);
+            ignore_folders(&db::ignored_folders(&conn)?, &data);
             app.manage(AppState {
                 db: Mutex::new(conn),
                 thumbs_dir,
@@ -1105,6 +1125,21 @@ mod tests {
         super::delete_files(&dirs).unwrap();
         assert_eq!(super::files_size(&dirs), 0);
         assert!(thumbs.join("sub/keep.png").exists() && dir.path().join("drag-icon.png").exists());
+    }
+
+    #[test]
+    fn folders_overlap_when_one_holds_the_other() {
+        let data = "/home/you/.local/share/dev.sanchezroberto.assetden";
+        let own = [
+            std::path::Path::new(data),
+            std::path::Path::new("/home/you/.cache/dev.sanchezroberto.assetden"),
+        ];
+        assert!(super::not_own_folder("/home/you", own).is_err());
+        assert!(super::not_own_folder("/", own).is_err());
+        assert!(super::not_own_folder(&format!("{data}/backups/"), own).is_err());
+        assert!(super::not_own_folder("/home/you/.cache/dev.sanchezroberto.assetden/previews", own).is_err());
+        assert!(super::not_own_folder("/home/you/Pictures", own).is_ok());
+        assert!(super::not_own_folder("/home/you/.local/share/dev.sanchezroberto.assetden2", own).is_ok());
     }
 
     #[test]
