@@ -212,7 +212,8 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
   }, [group, dupSel]);
   // Default to keeping the copy you've organized most (tags, favorite, collections); ties keep the first.
   const score = (a: Asset) => a.tags.length + (a.favorite ? 1 : 0) + collections.filter((c) => c.assetIds.includes(a.id)).length;
-  const keepId = group ? (keepBy[group.hash] ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best)).id) : null;
+  // A remembered pick whose copy is gone falls back to the default.
+  const keepId = group ? (group.items.find((a) => a.id === keepBy[group.hash]) ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best))).id : null;
   const remove = group ? group.items.filter((a) => a.id !== keepId) : [];
   const kept = group?.items.find((a) => a.id === keepId);
   const removeLabel = remove.length === 1 ? remove[0].name : `${remove.length} copies`;

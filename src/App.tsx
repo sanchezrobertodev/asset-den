@@ -220,7 +220,8 @@ export default function App() {
         st.select(order[((i < 0 ? 0 : i + d) + order.length) % order.length].id);
       } else if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey) {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
-        const items = st.assets.filter((a) => ids.includes(a.id));
+        const want = new Set(ids);
+        const items = st.assets.filter((a) => want.has(a.id));
         if (items.length) void st.setFavorite(ids, !items.every((a) => a.favorite));
       } else if (/^[0-5]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];

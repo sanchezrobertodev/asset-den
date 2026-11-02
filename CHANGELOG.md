@@ -5,6 +5,31 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Removing a folder from the library asks first, and says how many assets it forgets.
+- Folders named `$RECYCLE.BIN` and `System Volume Information` are skipped, and so is Asset Den's own data folder.
+  Adding a folder that holds it, or sits inside it, is refused.
+- Tagging, favoriting or collecting a big selection is faster.
+
+### Fixed
+
+- **Move to Trash** on the Duplicates page no longer trashes a "copy" that is really the same file reached another
+  way (a hard link, or the same folder through a mapped drive), which could have left no copy at all.
+- A file saved while Asset Den was checking it for duplicates could keep the old file's fingerprint and show as a
+  duplicate of something it no longer matched.
+- Files added while a folder was rescanning could disappear from the library until the next rescan.
+- An image the decoder chokes on (some damaged PSD files) shows "couldn't read this image" instead of closing the app.
+  The same goes for damaged audio files.
+- Images on a drive that's unplugged during **Analyse images** wait until it's back, instead of being marked
+  unreadable.
+- Full screen no longer plays a sound or video twice, and closes when its file is deleted.
+- If the library failed to load at startup, changes from the folder watcher now load it once it can, instead of
+  waiting for a restart.
+- A folder removal or a duplicate ignore that fails to save no longer looks done.
+- The Duplicates page keeps the default copy selected when the copy you picked earlier is gone.
+- A font file edited while the app is open shows its new glyphs.
+
 ## [0.3.8] - 2026-11-01
 
 ### Added

@@ -25,6 +25,11 @@ pub struct AudioInfo {
 const MAX_PACKETS: usize = 50_000;
 
 pub fn read_info(path: &Path, ext: &str) -> Option<AudioInfo> {
+    // A demuxer panic on a malformed file mustn't take the app down: it runs on every launch (fill_audio).
+    std::panic::catch_unwind(|| probe(path, ext)).ok().flatten()
+}
+
+fn probe(path: &Path, ext: &str) -> Option<AudioInfo> {
     let file = std::fs::File::open(path).ok()?;
     let mut hint = Hint::new();
     hint.with_extension(ext);
@@ -83,13 +88,14 @@ const BATCH: usize = 500;
 
 /// Reads audio details for a root's audio files that have none yet or changed since, [`BATCH`] files per transaction.
 /// The to-do list is read under the lock, the files off it. Unreadable files get an empty row so they aren't retried
-/// until they change; files under the scan's `unread` paths wait for the next one. `report(conn, ids)` gets each
-/// batch's ids, lock held.
+/// until they change; files under the scan's `unread` paths wait for the next one. With `only`, just those rows (the
+/// watcher's). `report(conn, ids)` gets each batch's ids, lock held.
 pub fn fill_audio(
     db: &Mutex<Connection>,
     root_id: i64,
     root: &Path,
     unread: &[String],
+    only: Option<&[i64]>,
     mut report: impl FnMut(&Connection, &[i64]),
 ) -> Result<()> {
     let todo: Vec<(i64, String, String, i64, i64)> = {
@@ -106,7 +112,7 @@ pub fn fill_audio(
     };
     let todo: Vec<_> = todo
         .into_iter()
-        .filter(|(_, rel, ..)| !crate::scan::unreadable(rel, unread))
+        .filter(|(id, rel, ..)| only.is_none_or(|o| o.contains(id)) && !crate::scan::unreadable(rel, unread))
         .collect();
     let root = root.to_string_lossy();
     for batch in todo.chunks(BATCH) {
@@ -212,7 +218,7 @@ pub mod tests {
         // Nothing left to do: every audio file has a row, the unreadable one an empty one.
         let db = Mutex::new(conn);
         let mut reported = Vec::new();
-        fill_audio(&db, 1, r, &[], |_, ids| reported.extend_from_slice(ids)).unwrap();
+        fill_audio(&db, 1, r, &[], None, |_, ids| reported.extend_from_slice(ids)).unwrap();
         assert!(reported.is_empty());
         let mut conn = db.into_inner().unwrap();
 

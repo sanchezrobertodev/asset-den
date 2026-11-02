@@ -8,7 +8,8 @@
 //                                         publish the signed macOS and Linux bundles the Release workflow built
 //
 // One release holds every OS. Windows (make release) and macOS/Linux (the Release workflow) publish in either order:
-// the first creates the release, the second adds its files and merges its entries into latest.json. The workflow
+// the first creates the release, the second adds its files and merges its entries into latest.json. Both must be
+// built from the same commit (the second refuses otherwise). The workflow
 // creates it as a draft, so the feed never announces a version Windows can't install yet; make release publishes it.
 //
 // The signing key defaults to ~/.tauri/asset-den.key (override with TAURI_SIGNING_PRIVATE_KEY, a path or the key
@@ -168,14 +169,24 @@ function publish(files, platforms, { draft }) {
   console.log(`Feed platforms: ${Object.keys(feed.platforms).join(", ")}`);
 }
 
-/** Asset names of this version's release (drafts too), or null when there is none yet. */
+/**
+ * Asset names of this version's release (drafts too), or null when there is none yet. Fails when the release was
+ * made from another commit, so one version never mixes builds of two commits.
+ */
 function releaseAssets() {
   const r = spawnSync(
     "gh",
-    ["release", "view", tag, "--repo", RELEASES_REPO, "--json", "assets", "--jq", ".assets[].name"],
+    ["release", "view", tag, "--repo", RELEASES_REPO, "--json", "assets,targetCommitish"],
     { cwd: root, env, encoding: "utf8" },
   );
-  if (r.status === 0) return r.stdout.split(/\r?\n/).filter(Boolean);
+  if (r.status === 0) {
+    // The commit publish() passed as --target; a draft has no tag yet, so this is the only record of it.
+    const { assets, targetCommitish } = JSON.parse(r.stdout);
+    const head = buildCommit();
+    if (targetCommitish !== head)
+      fail(`${RELEASES_REPO} already has ${tag} built from commit ${targetCommitish.slice(0, 7)}, but this checkout is ${head.slice(0, 7)}. Build ${tag} from that commit, or bump the version (tauri.conf.json, package.json, Cargo.toml) and add a CHANGELOG section first.`);
+    return assets.map((a) => a.name);
+  }
   if (/not found/i.test(r.stderr)) return null;
   fail(`gh release view ${tag} failed: ${r.stderr.trim()}`);
 }

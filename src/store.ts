@@ -128,6 +128,8 @@ let seq = -1;
 /** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
 let loading = 0;
 let incoming: AssetsDelta[] = [];
+/** A full load failed. Until one succeeds (`seq` >= 0), each new delta retries it. */
+let loadFailed = false;
 /** The last note save; each one waits for the one before. */
 let noteSaves: Promise<unknown> = Promise.resolve();
 /** Colours reported while the palettes load, applied on top of what the load returns. */
@@ -178,18 +180,32 @@ export const useStore = create<State>((set, get) => {
     return { query: [query.trim(), ...types].filter(Boolean).join(" "), filters };
   };
   /** Forgets selection, the active asset, duplicate entries and cached slicings for assets that are gone. */
-  const keepOnly = (s: State, has: (id: number) => boolean): Partial<State> => ({
-    selected: new Set([...s.selected].filter(has)),
-    activeId: s.activeId !== null && has(s.activeId) ? s.activeId : null,
-    dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter(has) })).filter((g) => g.ids.length > 1) ?? null,
-    // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
-    sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => has(Number(id)))),
-    notes: Object.fromEntries(Object.entries(s.notes).filter(([id]) => has(Number(id)))),
-    palettes: s.palettes && new Map([...s.palettes].filter(([id]) => has(id))),
-  });
-  /** Patches `assets` with the deltas received so far, or reloads everything if one went missing. True if it patched. */
+  const keepOnly = (s: State, has: (id: number) => boolean): Partial<State> => {
+    const kept = s.activeId === null || has(s.activeId);
+    return {
+      selected: new Set([...s.selected].filter(has)),
+      activeId: kept ? s.activeId : null,
+      // Left open with nothing to show, the panel or full screen would pop up on the next click.
+      peek: kept && s.peek,
+      full: kept && s.full,
+      dups: s.dups?.map((g) => ({ ...g, ids: g.ids.filter(has) })).filter((g) => g.ids.length > 1) ?? null,
+      // SQLite can reuse a deleted asset's id, so a removed asset's slicing must not stick to a new one.
+      sheets: Object.fromEntries(Object.entries(s.sheets).filter(([id]) => has(Number(id)))),
+      notes: Object.fromEntries(Object.entries(s.notes).filter(([id]) => has(Number(id)))),
+      palettes: s.palettes && new Map([...s.palettes].filter(([id]) => has(id))),
+    };
+  };
+  /**
+   * Patches `assets` with the deltas received so far, or reloads everything if one went missing or the first load
+   * failed. True if it patched.
+   */
   const applyIncoming = () => {
-    if (loading || seq < 0) return false;
+    if (loading) return false;
+    if (seq < 0) {
+      // Before the first load, deltas wait for it. A failed load clears `incoming`, so it doesn't retry itself forever.
+      if (loadFailed && incoming.length) void get().reload();
+      return false;
+    }
     const next = deltasAfter(seq, incoming);
     if (!next) {
       void get().reload();
@@ -323,8 +339,9 @@ export const useStore = create<State>((set, get) => {
           notes,
         }));
       } catch (e) {
-        // Keeping a gap would retry the failing load at once, forever. The next delta finds the gap and retries.
+        // Keeping a gap would retry the failing load at once, forever. The next delta finds the gap (or no load) and retries.
         incoming = [];
+        loadFailed = true;
         get().setError(e);
       } finally {
         loading--;
@@ -346,7 +363,7 @@ export const useStore = create<State>((set, get) => {
     },
     removeRoot: async (id) => {
       const root = get().roots.find((r) => r.id === id);
-      await write(() => api.removeRoot(id));
+      if (!(await write(() => api.removeRoot(id)))) return;
       set((s) => ({ folder: s.folder?.rootId === id ? null : s.folder, recentFolders: s.recentFolders.filter((f) => f.rootId !== id) }));
       await get().reload();
       if (root) get().showToast(`Removed ${root.path} from the library. Files are untouched.`);
@@ -621,11 +638,12 @@ export const useStore = create<State>((set, get) => {
     },
     setInCollection: async (collection, ids, member) => {
       const name = get().collections.find((c) => c.id === collection)?.name ?? "collection";
+      const rm = new Set(ids);
       set((s) => ({
         collections: s.collections.map((c) =>
           c.id !== collection
             ? c
-            : { ...c, assetIds: member ? [...new Set([...c.assetIds, ...ids])] : c.assetIds.filter((id) => !ids.includes(id)) },
+            : { ...c, assetIds: member ? [...new Set([...c.assetIds, ...ids])] : c.assetIds.filter((id) => !rm.has(id)) },
         ),
       }));
       if (!(await write(() => api.setInCollection(collection, ids, member)))) return;
@@ -659,7 +677,11 @@ export const useStore = create<State>((set, get) => {
     },
     ignoreDuplicate: async (hash) => {
       set((s) => ({ dups: s.dups?.filter((g) => g.hash !== hash) ?? null }));
-      if (!(await write(() => api.setDuplicateIgnored(hash, true)))) return;
+      if (!(await write(() => api.setDuplicateIgnored(hash, true)))) {
+        // The reload doesn't fetch duplicates: bring the hidden group back.
+        await get().findDuplicates();
+        return;
+      }
       get().showToast("Marked as not duplicates", async () => {
         await api.setDuplicateIgnored(hash, false);
         await get().findDuplicates();

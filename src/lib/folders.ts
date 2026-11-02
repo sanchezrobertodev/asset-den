@@ -54,17 +54,6 @@ export function buildTree(assets: Asset[], roots: Root[]): FolderNode[] {
   return tops;
 }
 
-export function findNode(tree: FolderNode[], f: FolderFilter | null): FolderNode | null {
-  if (!f) return null;
-  let n = tree.find((r) => r.rootId === f.rootId);
-  if (!n || !f.path) return n ?? null;
-  for (const seg of f.path.split("/")) {
-    n = n.children.find((c) => c.name === seg);
-    if (!n) return null;
-  }
-  return n;
-}
-
 /** The chain from the root down to `f`, for breadcrumbs. */
 export function pathTo(tree: FolderNode[], f: FolderFilter): FolderNode[] {
   const out: FolderNode[] = [];

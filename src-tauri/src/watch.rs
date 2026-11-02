@@ -42,16 +42,36 @@ pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, Str
         }
         let state = app.state::<AppState>();
         let touched = {
-            let conn = state.db.lock().unwrap();
+            let mut conn = state.db.lock().unwrap();
+            // One commit (one fsync) for the whole batch, so copying in a big pack doesn't hold the lock for long.
+            let tx = match conn.transaction() {
+                Ok(tx) => tx,
+                Err(e) => {
+                    eprintln!("watch: {e}");
+                    return;
+                }
+            };
             let touched: Vec<i64> = events
                 .iter()
-                .flat_map(|e| apply(&conn, root_id, &handler_root, &e.kind, &e.paths))
+                .flat_map(|e| apply(&tx, root_id, &handler_root, &e.kind, &e.paths))
                 .collect();
+            if let Err(e) = tx.commit() {
+                eprintln!("watch: {e}");
+            }
             crate::emit_delta(&app, &conn, &touched);
             touched
         };
         let _ = app.emit("assets-changed", root_id);
         crate::analysis::changed(&app, &touched);
+        // Audio details are read without the lock: an MP3 is read to the end to count its frames.
+        if !touched.is_empty()
+            && let Err(e) =
+                crate::audio::fill_audio(&state.db, root_id, &handler_root, &[], Some(&touched), |conn, ids| {
+                    crate::emit_delta(&app, conn, ids)
+                })
+        {
+            eprintln!("watch: {e}");
+        }
     })
     .map_err(|e| e.to_string())?;
     debouncer

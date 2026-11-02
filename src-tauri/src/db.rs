@@ -221,9 +221,10 @@ pub fn asset(conn: &Connection, id: i64) -> std::result::Result<Asset, String> {
 }
 
 pub fn set_favorite(conn: &Connection, ids: &[i64], favorite: bool) -> Result<()> {
-    for id in ids {
-        conn.execute("UPDATE assets SET favorite = ?2 WHERE id = ?1", params![id, favorite])?;
-    }
+    conn.execute(
+        "UPDATE assets SET favorite = ?2 WHERE id IN (SELECT value FROM json_each(?1))",
+        params![serde_json::to_string(ids).unwrap_or_default(), favorite],
+    )?;
     Ok(())
 }
 
@@ -303,23 +304,21 @@ pub fn set_ignored_folders(conn: &Connection, names: &[String]) -> std::result::
     save().map_err(|e| e.to_string())
 }
 
+/// One statement for all `ids`, so it applies to all or none; ids that are gone by now are skipped.
 pub fn add_tag(conn: &Connection, ids: &[i64], tag: &str) -> Result<()> {
-    for id in ids {
-        conn.execute(
-            "INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?1, ?2)",
-            params![id, tag],
-        )?;
-    }
+    conn.execute(
+        "INSERT OR IGNORE INTO asset_tags (asset_id, tag)
+         SELECT value, ?2 FROM json_each(?1) WHERE value IN (SELECT id FROM assets)",
+        params![serde_json::to_string(ids).unwrap_or_default(), tag],
+    )?;
     Ok(())
 }
 
 pub fn remove_tag(conn: &Connection, ids: &[i64], tag: &str) -> Result<()> {
-    for id in ids {
-        conn.execute(
-            "DELETE FROM asset_tags WHERE asset_id = ?1 AND tag = ?2",
-            params![id, tag],
-        )?;
-    }
+    conn.execute(
+        "DELETE FROM asset_tags WHERE tag = ?2 AND asset_id IN (SELECT value FROM json_each(?1))",
+        params![serde_json::to_string(ids).unwrap_or_default(), tag],
+    )?;
     Ok(())
 }
 
@@ -400,15 +399,15 @@ pub fn rename_collection(conn: &Connection, id: i64, name: &str) -> std::result:
     Ok(name)
 }
 
+/// Like [`add_tag`]: one statement, skipping ids that are gone.
 pub fn set_in_collection(conn: &Connection, collection: i64, ids: &[i64], member: bool) -> Result<()> {
     let sql = if member {
-        "INSERT OR IGNORE INTO collection_assets (collection_id, asset_id) VALUES (?1, ?2)"
+        "INSERT OR IGNORE INTO collection_assets (collection_id, asset_id)
+         SELECT ?1, value FROM json_each(?2) WHERE value IN (SELECT id FROM assets)"
     } else {
-        "DELETE FROM collection_assets WHERE collection_id = ?1 AND asset_id = ?2"
+        "DELETE FROM collection_assets WHERE collection_id = ?1 AND asset_id IN (SELECT value FROM json_each(?2))"
     };
-    for id in ids {
-        conn.execute(sql, params![collection, id])?;
-    }
+    conn.execute(sql, params![collection, serde_json::to_string(ids).unwrap_or_default()])?;
     Ok(())
 }
 
@@ -487,6 +486,28 @@ mod tests {
 
         conn.execute("DELETE FROM assets WHERE id = 1", []).unwrap();
         assert!(notes(&conn).unwrap().is_empty());
+    }
+
+    #[test]
+    fn bulk_edits_skip_missing_ids() {
+        let conn = with_assets(3);
+        conn.execute("DELETE FROM assets WHERE id = 2", []).unwrap();
+        add_tag(&conn, &[1, 2, 3], "keep").unwrap();
+        set_favorite(&conn, &[1, 2, 3], true).unwrap();
+        let c = create_collection(&conn, "Level", None).unwrap();
+        set_in_collection(&conn, c, &[1, 2, 3], true).unwrap();
+        let tagged: Vec<(Vec<String>, bool)> = assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .map(|a| (a.tags, a.favorite))
+            .collect();
+        assert_eq!(tagged, vec![(vec!["keep".to_string()], true); 2]);
+        assert_eq!(collections(&conn).unwrap()[0].asset_ids, vec![1, 3]);
+
+        remove_tag(&conn, &[1, 2, 3], "keep").unwrap();
+        set_in_collection(&conn, c, &[3, 2], false).unwrap();
+        assert!(assets(&conn, None).unwrap().iter().all(|a| a.tags.is_empty()));
+        assert_eq!(collections(&conn).unwrap()[0].asset_ids, vec![1]);
     }
 
     #[test]

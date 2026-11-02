@@ -265,14 +265,14 @@ export function NoteEditor({ a }: { a: Asset }) {
 
 export function CollectionChecks({ items }: { items: Asset[] }) {
   const { collections: all, setInCollection, newCollection } = useStore();
-  // Smart collections pick their own members.
-  const collections = all.filter((c) => !c.rule);
+  // Smart collections pick their own members. Sets, so checking a big selection stays fast on every render.
+  const collections = useMemo(() => all.filter((c) => !c.rule).map((c) => ({ ...c, members: new Set(c.assetIds) })), [all]);
   const ids = items.map((a) => a.id);
   return (
     <div className="flex flex-col gap-1.5">
       <Label>Collections</Label>
       {collections.map((c) => {
-        const on = ids.every((id) => c.assetIds.includes(id));
+        const on = ids.every((id) => c.members.has(id));
         return (
           <button key={c.id} type="button" role="checkbox" aria-checked={on} onClick={() => void setInCollection(c.id, ids, !on)} className="flex items-center gap-2.5 py-1 text-left">
             <span
@@ -362,9 +362,12 @@ export function Peek({ list }: { list: Asset[] }) {
             onDoubleClick={() => s.setFull(true)}
             className={clsx("flex h-[250px] flex-none items-center justify-center border-b border-line-soft px-[22px] py-4", a.kind === "image" ? "checker" : "bg-bg")}
           >
-            <PreviewBoundary asset={a}>
-              <Viewer asset={a} pixelated={s.pixelated} />
-            </PreviewBoundary>
+            {/* Full screen covers the panel and has its own player: two would play the sound twice. */}
+            {!s.full && (
+              <PreviewBoundary asset={a}>
+                <Viewer asset={a} pixelated={s.pixelated} />
+              </PreviewBoundary>
+            )}
           </div>
           <PeekBody a={a} />
         </>

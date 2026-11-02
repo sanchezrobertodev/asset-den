@@ -16,7 +16,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::AppState;
-use crate::db::{Asset, abs_path};
+use crate::db::{self, Asset, abs_path};
 use crate::kind::{self, DECODABLE};
 use crate::thumbs;
 
@@ -187,6 +187,8 @@ pub fn features(src: &Path, ext: &str, thumb: &Path) -> std::result::Result<Feat
 pub struct Todo {
     pub id: i64,
     pub path: PathBuf,
+    /// Its library folder.
+    pub root: PathBuf,
     pub ext: String,
     pub size: i64,
     pub mtime: i64,
@@ -194,9 +196,16 @@ pub struct Todo {
 
 impl Todo {
     fn of(a: &Asset) -> Todo {
+        let path = PathBuf::from(&a.path);
         Todo {
             id: a.id,
-            path: PathBuf::from(&a.path),
+            // The path is the root joined with each part of rel_path (abs_path).
+            root: path
+                .ancestors()
+                .nth(a.rel_path.split('/').count())
+                .unwrap_or(&path)
+                .into(),
+            path,
             ext: a.ext.clone(),
             size: a.size,
             mtime: a.mtime,
@@ -230,6 +239,7 @@ pub fn stale(conn: &Connection) -> Result<Vec<Todo>> {
         Ok(Todo {
             id: r.get(0)?,
             path: abs_path(&root, &rel),
+            root: root.into(),
             ext: r.get(3)?,
             size: r.get(4)?,
             mtime: r.get(5)?,
@@ -255,6 +265,8 @@ pub fn is_stale(conn: &Connection, a: &Asset) -> Result<bool> {
 
 /// Images analysed (including ones that couldn't be read, which aren't retried), and images that can be.
 pub fn counts(conn: &Connection) -> Result<(usize, usize)> {
+    // shortcut: images of an unplugged drive stay in the total though no pass analyses them, so "Analyse now" does
+    // nothing until it's back; leave out the roots list_roots finds missing if people find that confusing.
     let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
     conn.query_row(
         &format!(
@@ -380,13 +392,18 @@ pub fn analyse_and_store<G>(
                                 break;
                             };
                             let f = features(&t.path, &t.ext, &t.thumb(thumbs_dir)).ok();
+                            // Its drive was unplugged: left stale for when it's back, not stored as unreadable for good.
+                            if f.is_none() && !t.root.is_dir() {
+                                continue;
+                            }
                             out.push((t.id, t.size, t.mtime, f));
                         }
                         out
                     })
                 })
                 .collect();
-            handles.into_iter().flat_map(|h| h.join().unwrap()).collect()
+            // A worker that panicked stores nothing: its images stay stale, and the pass thread lives on.
+            handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
         });
         // Images that couldn't be read get no colours, so a stale palette of an earlier version is dropped too.
         let colours = rows
@@ -569,7 +586,18 @@ pub fn analyse_all<G>(
         if !ready() {
             return Ok(false);
         }
-        let todo = stale(&db.lock().unwrap())?;
+        // Not the images of a library folder that isn't there (an unplugged drive), or this would never end. Checked
+        // without the lock: an offline network share can take seconds to answer.
+        let roots = db::roots(&db.lock().unwrap())?;
+        let offline: Vec<_> = roots
+            .into_iter()
+            .map(|r| PathBuf::from(r.path))
+            .filter(|p| !p.is_dir())
+            .collect();
+        let todo: Vec<_> = stale(&db.lock().unwrap())?
+            .into_iter()
+            .filter(|t| !offline.contains(&t.root))
+            .collect();
         if todo.is_empty() {
             return Ok(true);
         }
@@ -874,7 +902,7 @@ mod tests {
 
     #[test]
     fn a_viewed_image_is_analysed_from_its_thumbnail() {
-        let (_dir, conn, thumbs_dir) = library(2);
+        let (dir, conn, thumbs_dir) = library(2);
         let a = db::assets(&conn, None).unwrap().remove(0);
         assert!(is_stale(&conn, &a).unwrap());
         // The thumbnail command writes this file, then `viewed` queues the image for the thread that analyses it.
@@ -882,6 +910,7 @@ mod tests {
         thumbs::thumbnail(Path::new(&a.path), &a.ext, &thumb).unwrap();
         let t = Todo::of(&a);
         assert_eq!(t.thumb(&thumbs_dir), thumb);
+        assert_eq!(t.root, dir.path().join("lib"));
         let db = Mutex::new(conn);
         analyse_and_store(&db, &[t], 1, &thumbs_dir, || Some(()), |_, _| {}).unwrap();
         let conn = db.into_inner().unwrap();
@@ -918,6 +947,36 @@ mod tests {
         analyse_and_store(&db, &work, 2, &thumbs_dir, || Some(()), |_, _| {}).unwrap();
         let conn = db.into_inner().unwrap();
         assert_eq!(counts(&conn).unwrap(), (1, 4));
+    }
+
+    #[test]
+    fn images_of_an_unplugged_drive_wait_until_it_is_back() {
+        let (dir, conn, thumbs_dir) = library(2);
+        let usb = dir.path().join("usb");
+        conn.execute("INSERT INTO roots (path) VALUES (?1)", [usb.display().to_string()])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO assets (root_id, rel_path, name, ext, kind, size, mtime, seen) VALUES (?1, 'a.png', 'a.png', 'png', 'image', 1, 1, 1)",
+            [conn.last_insert_rowid()],
+        )
+        .unwrap();
+        let usb_image = conn.last_insert_rowid();
+        let db = Mutex::new(conn);
+        // Unplugged after the pass made its list: the image can't be read, and isn't stored as unreadable.
+        let work = stale(&db.lock().unwrap()).unwrap();
+        analyse_and_store(&db, &work, 1, &thumbs_dir, || Some(()), |_, _| {}).unwrap();
+        assert_eq!(counts(&db.lock().unwrap()).unwrap(), (2, 3));
+        // A whole-library pass leaves it out, so it ends, rather than trying it round after round.
+        let rounds = AtomicUsize::new(0);
+        let ready = || rounds.fetch_add(1, SeqCst) < 2;
+        assert!(analyse_all(&db, 1, &thumbs_dir, ready, || Some(()), |_, _| {}).unwrap());
+        // Plugged back in: analysed.
+        std::fs::create_dir(&usb).unwrap();
+        RgbaImage::from_pixel(8, 8, Rgba([0, 200, 0, 255]))
+            .save(usb.join("a.png"))
+            .unwrap();
+        assert!(analyse_all(&db, 1, &thumbs_dir, || true, || Some(()), |_, _| {}).unwrap());
+        assert!(dhash_of(&db.lock().unwrap(), usb_image).unwrap().is_some());
     }
 
     /// Writes an image into the library folder and indexes it, as a scan or the watcher would.

@@ -4,6 +4,7 @@ use std::fs::Metadata;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::time::UNIX_EPOCH;
 
 use rusqlite::{Connection, OptionalExtension, Result, params};
@@ -50,9 +51,23 @@ fn dimensions(path: &Path, ext: &str) -> Option<(u32, u32)> {
     }
 }
 
+/// The last `seen` stamp handed out, so stamps only go up even when the clock steps back.
+static LAST_SEEN: AtomicI64 = AtomicI64::new(0);
+
+/// Now, as a `seen` stamp, above every stamp before it. A scan's sweep keeps rows stamped after it began, such as
+/// files the watcher saw change.
+fn seen_now() -> i64 {
+    let now = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(1, |d| d.as_nanos() as i64);
+    let last = LAST_SEEN.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |l| Some(now.max(l + 1)));
+    now.max(last.unwrap() + 1)
+}
+
 /// Inserts or refreshes one file's row; returns false if it isn't an indexable file. Adds the row's id to `touched`
 /// when it was added or changed. Unchanged files keep their hash and dimensions. With `with_dims` false, changed images get their dimensions
-/// later from [`fill_dimensions`], so a big scan isn't slowed down by opening every image.
+/// later from [`fill_dimensions`], so a big scan isn't slowed down by opening every image. Audio details always come
+/// later, from [`crate::audio::fill_audio`], which reads the files without holding the db lock.
 #[allow(clippy::too_many_arguments)]
 pub fn upsert_file(
     conn: &Connection,
@@ -122,15 +137,6 @@ pub fn upsert_file(
         ],
         |r| r.get(0),
     )?;
-    if with_dims && kind == "audio" {
-        crate::audio::store(
-            conn,
-            id,
-            size,
-            mtime,
-            &crate::audio::read_info(path, &ext).unwrap_or_default(),
-        )?;
-    }
     touched.push(id);
     Ok(true)
 }
@@ -183,9 +189,15 @@ pub fn scan_root(
     root: &Path,
     mut report: impl FnMut(&Connection, usize, &[i64]),
 ) -> Result<Option<usize>> {
-    let seen = std::time::SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(1, |d| d.as_nanos() as i64);
+    // Above every stamp already stored, even ones from a clock that was ahead, so the sweep sees all of them.
+    let seen = {
+        let conn = db.lock().unwrap();
+        let max: Option<i64> = conn.query_row("SELECT MAX(seen) FROM assets WHERE root_id = ?1", [root_id], |r| {
+            r.get(0)
+        })?;
+        LAST_SEEN.fetch_max(max.unwrap_or(0), Ordering::Relaxed);
+        seen_now()
+    };
     let mut count = 0;
     // What couldn't be read, relative to the root ("" for the root itself).
     let mut unread = Vec::new();
@@ -220,7 +232,7 @@ pub fn scan_root(
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
         let stale: Vec<(i64, String)> = tx
-            .prepare("SELECT id, rel_path FROM assets WHERE root_id = ?1 AND seen != ?2")?
+            .prepare("SELECT id, rel_path FROM assets WHERE root_id = ?1 AND seen < ?2")?
             .query_map(params![root_id, seen], |r| Ok((r.get(0)?, r.get(1)?)))?
             .collect::<Result<_>>()?;
         // Files under a folder that couldn't be read may well still be there.
@@ -236,7 +248,7 @@ pub fn scan_root(
         report(&conn, count, &gone);
     }
     fill_dimensions(db, root_id, root, &unread, |conn, ids| report(conn, count, ids))?;
-    crate::audio::fill_audio(db, root_id, root, &unread, |conn, ids| report(conn, count, ids))?;
+    crate::audio::fill_audio(db, root_id, root, &unread, None, |conn, ids| report(conn, count, ids))?;
     Ok(Some(count))
 }
 
@@ -323,12 +335,13 @@ fn delete_under(conn: &Connection, root_id: i64, rel: &str, touched: &mut Vec<i6
 /// added, changed or removed to `touched`.
 pub fn refresh_path(conn: &Connection, root_id: i64, root: &Path, path: &Path, touched: &mut Vec<i64>) -> Result<()> {
     let Some(rel) = rel_of(root, path) else { return Ok(()) };
+    let seen = seen_now();
     if path.is_dir() {
         for (f, meta) in walk(path).flatten() {
-            upsert_file(conn, root_id, root, &f, &meta, 0, true, touched)?;
+            upsert_file(conn, root_id, root, &f, &meta, seen, true, touched)?;
         }
     } else if let Some(meta) = std::fs::metadata(path).ok().filter(|m| m.is_file()) {
-        upsert_file(conn, root_id, root, path, &meta, 0, true, touched)?;
+        upsert_file(conn, root_id, root, path, &meta, seen, true, touched)?;
     } else {
         delete_under(conn, root_id, &rel, touched)?;
     }
@@ -534,7 +547,7 @@ pub mod tests {
         let db = Mutex::new(conn);
         let unread = ["art".to_string()];
         fill_dimensions(&db, root, r, &unread, |_, _| {}).unwrap();
-        crate::audio::fill_audio(&db, root, r, &unread, |_, _| {}).unwrap();
+        crate::audio::fill_audio(&db, root, r, &unread, None, |_, _| {}).unwrap();
         let conn = db.into_inner().unwrap();
         let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
         // Only c.png was read; art/a.png and art/b.ogg wait for a scan that can read them.
@@ -590,6 +603,43 @@ pub mod tests {
         fs::write(r.join("a.png"), "longer").unwrap();
         let (_, touched) = scan_touched(&mut conn, root, r);
         assert_eq!(delta(&conn, &touched), (vec!["a.png".into()], vec![gone]));
+    }
+
+    #[test]
+    fn files_the_watcher_sees_during_a_scan_survive_its_sweep() {
+        let (dir, mut conn, root) = setup();
+        let r = dir.path();
+        fs::write(r.join("a.png"), "x").unwrap();
+        fs::write(r.join("b.png"), "x").unwrap();
+        scan(&mut conn, root, r);
+        let a = db::assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .find(|x| x.name == "a.png")
+            .unwrap()
+            .id;
+        db::add_tag(&conn, &[a], "keep").unwrap();
+
+        fs::remove_file(r.join("b.png")).unwrap();
+        // b.png was last seen while the clock was an hour ahead: it's still swept.
+        conn.execute("UPDATE assets SET seen = seen + 3600000000000 WHERE name = 'b.png'", [])
+            .unwrap();
+        let shared = Mutex::new(conn);
+        let mut first = true;
+        scan_root(&shared, root, r, |conn, _, _| {
+            // After the files were walked, before the sweep: a.png is saved and renamed, and the watcher catches up.
+            if std::mem::take(&mut first) {
+                fs::write(r.join("a.png"), "edited").unwrap();
+                refresh_path(conn, root, r, &r.join("a.png"), &mut vec![]).unwrap();
+                fs::rename(r.join("a.png"), r.join("c.png")).unwrap();
+                rename_path(conn, root, r, &r.join("a.png"), &r.join("c.png"), &mut vec![]).unwrap();
+            }
+        })
+        .unwrap();
+        let conn = shared.into_inner().unwrap();
+        let all = db::assets(&conn, None).unwrap();
+        assert_eq!(rels(&conn), ["c.png"]);
+        assert_eq!((all[0].id, all[0].tags.clone()), (a, vec!["keep".to_string()]));
     }
 
     #[test]
@@ -757,6 +807,23 @@ pub mod tests {
         fs::write(r.join("x.png.meta"), "x").unwrap();
         refresh_path(&conn, root, r, &r.join("x.png.meta"), &mut vec![]).unwrap();
         assert!(rels(&conn).is_empty());
+
+        // Audio details aren't read under the lock: the watcher fills in just the files it saw, after it.
+        crate::audio::tests::wav(&r.join("a.wav"), 8_000, 1, 16, 8_000);
+        crate::audio::tests::wav(&r.join("b.wav"), 8_000, 1, 16, 8_000);
+        refresh_path(&conn, root, r, &r.join("b.wav"), &mut vec![]).unwrap();
+        let mut touched = vec![];
+        refresh_path(&conn, root, r, &r.join("a.wav"), &mut touched).unwrap();
+        let shared = Mutex::new(conn);
+        crate::audio::fill_audio(&shared, root, r, &[], Some(&touched), |_, _| {}).unwrap();
+        let conn = shared.into_inner().unwrap();
+        let mut got: Vec<_> = db::assets(&conn, None)
+            .unwrap()
+            .into_iter()
+            .map(|a| (a.name, a.duration_ms))
+            .collect();
+        got.sort();
+        assert_eq!(got, [("a.wav".to_string(), Some(1000)), ("b.wav".to_string(), None)]);
     }
 }
 
