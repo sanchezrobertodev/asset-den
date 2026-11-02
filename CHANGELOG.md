@@ -5,6 +5,8 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-11-01
+
 ### Added
 
 - Library backups: **Settings → Backups** saves your folders, tags, ratings, notes, collections and sprite grids to a
