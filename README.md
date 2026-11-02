@@ -101,7 +101,7 @@ feed points them to 0.3.7 here, which checks this repo from then on.
 
 Windows x64, macOS (both architectures) and the Linux AppImage update themselves. A `.deb` install, or a platform the
 feed has no build for, hides **Check for updates**, so it never hits a missing-platform error. The first version with
-the updater has to be installed by hand: 0.2.0 on Windows, and the first release with macOS and Linux builds there.
+the updater has to be installed by hand: 0.2.0 on Windows, 0.3.7 on macOS and Linux.
 
 ### Publishing a release
 
