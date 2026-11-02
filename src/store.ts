@@ -286,6 +286,9 @@ export const useStore = create<State>((set, get) => {
       });
       await api.onAnalysisStatus((analysis) => set({ analysis }));
       api.analysisStatus().then((analysis) => set({ analysis }), get().setError);
+      api
+        .restoreResult()
+        .then((r) => r && get().showToast("Restored the library from the backup. The one it replaced is in the backups folder."), get().setError);
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
         // A scan or a burst of file events ended: catch up once, then refresh collections and re-check duplicates.

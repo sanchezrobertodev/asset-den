@@ -36,6 +36,9 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   files into a folder for a build or a handoff. **Save as smart collection** turns the current search and filters into
   a collection that keeps itself up to date. An open collection has the same type chips, search, filters, sort and
   layouts as the library. Most changes show a toast with **Undo**.
+- **Backups**: **Settings → Backups** saves a copy of the library (folders, tags, ratings, notes, collections, sprite
+  grids) wherever you like, and restores one. Asset Den also keeps a backup a day, the last 5. Restoring saves the
+  current library first, so you can switch back.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
 - **Find similar** and **search by colour**: the side panel finds images that look like the open one (resized,
   recoloured or lightly cropped copies included), and the Colour filter or `color:red` / `color:#ff8800` finds images by
@@ -154,6 +157,7 @@ hand to publish the macOS and Linux builds.
 | What | Where |
 |---|---|
 | Index, tags, favorites, ratings, notes, collections, ignored folder names, image analysis | `asset-den.db` (SQLite) in the app data folder |
+| Automatic backups, and the library saved before each restore | `backups/` in the app data folder (**Settings → Backups → Show folder**) |
 | Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete, or **Settings → Clear thumbnail cache**) |
 | UI preferences | browser storage in the app's webview |
 

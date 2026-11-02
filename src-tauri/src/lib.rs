@@ -1,5 +1,6 @@
 mod analysis;
 mod audio;
+mod backup;
 mod db;
 mod dupes;
 mod kind;
@@ -30,6 +31,21 @@ pub struct AppState {
     scanning: Mutex<HashSet<i64>>,
     /// Number of the last `assets-delta` sent. Only changed with the db lock held, so it matches what's committed.
     seq: AtomicU64,
+    data_dir: PathBuf,
+    /// How restoring a backup at launch went, until the frontend asks.
+    restored: Mutex<Option<Result<(), String>>>,
+}
+
+impl AppState {
+    fn db_path(&self) -> PathBuf {
+        self.data_dir.join("asset-den.db")
+    }
+    fn backups_dir(&self) -> PathBuf {
+        self.data_dir.join("backups")
+    }
+    fn pending_restore(&self) -> PathBuf {
+        self.data_dir.join("restore.db")
+    }
 }
 
 fn err(e: impl std::fmt::Display) -> String {
@@ -831,6 +847,44 @@ async fn clear_thumbnail_cache(state: State<'_, AppState>) -> Result<(), String>
         .map_err(|e| format!("Couldn't clear the thumbnail cache: {e}"))
 }
 
+/// Saves a copy of the library (tags, ratings, notes, collections, sprite grids, settings) into `dest`. Returns its path.
+#[tauri::command]
+async fn backup_library(state: State<'_, AppState>, dest: String) -> Result<String, String> {
+    let db = state.db_path();
+    tauri::async_runtime::spawn_blocking(move || backup::backup_to(&db, Path::new(&dest)))
+        .await
+        .map_err(err)?
+        .map(|p| p.display().to_string())
+}
+
+/// Where the automatic backups, and the copies saved before a restore, are kept.
+#[tauri::command]
+fn backups_folder(state: State<'_, AppState>) -> String {
+    state.backups_dir().display().to_string()
+}
+
+/// Checks `path` is a library backup, then restarts to swap it in before anything else opens the database.
+#[tauri::command]
+async fn restore_library(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let pending = state.pending_restore();
+    tauri::async_runtime::spawn_blocking(move || backup::stage(Path::new(&path), &pending))
+        .await
+        .map_err(err)??;
+    app.restart()
+}
+
+/// Whether this launch restored a backup. Answers once.
+#[tauri::command]
+fn restore_result(state: State<'_, AppState>) -> Result<bool, String> {
+    state
+        .restored
+        .lock()
+        .unwrap()
+        .take()
+        .map(|r| r.map(|()| true))
+        .unwrap_or(Ok(false))
+}
+
 /// Opens one of the app's web pages in the browser: a fixed list, so the webview can't open arbitrary URLs.
 #[tauri::command]
 fn open_link(app: AppHandle, link: String) -> Result<(), String> {
@@ -856,7 +910,8 @@ pub fn run() {
             let cache = app.path().app_cache_dir()?;
             let thumbs_dir = cache.join("thumbs");
             let previews_dir = cache.join("previews");
-            for d in [&data, &thumbs_dir, &previews_dir] {
+            let backups = data.join("backups");
+            for d in [&data, &thumbs_dir, &previews_dir, &backups] {
                 std::fs::create_dir_all(d)?;
             }
             let drag_icon = cache.join("drag-icon.png");
@@ -865,7 +920,12 @@ pub fn run() {
             }
             app.asset_protocol_scope().allow_directory(&cache, true)?;
 
-            let conn = db::open(&data.join("asset-den.db"))?;
+            let db_path = data.join("asset-den.db");
+            let restored = match backup::apply_pending(&db_path, &data.join("restore.db"), &backups) {
+                Ok(false) => None,
+                r => Some(r.map(|_| ())),
+            };
+            let conn = db::open(&db_path)?;
             conn.execute_batch(analysis::SCHEMA)?;
             let roots = db::roots(&conn)?;
             // Before the catch-up scans below, so they skip the user's ignored folders too.
@@ -882,6 +942,14 @@ pub fn run() {
                 watchers: Mutex::new(HashMap::new()),
                 scanning: Mutex::new(HashSet::new()),
                 seq: AtomicU64::new(0),
+                data_dir: data,
+                restored: Mutex::new(restored),
+            });
+            std::thread::spawn(move || {
+                low_priority();
+                if let Err(e) = backup::auto(&db_path, &backups) {
+                    eprintln!("Automatic backup failed: {e}");
+                }
             });
             // Catch up on anything that changed while the app was closed.
             for root in roots {
@@ -937,6 +1005,10 @@ pub fn run() {
             set_ignored_folders,
             cache_size,
             clear_thumbnail_cache,
+            backup_library,
+            backups_folder,
+            restore_library,
+            restore_result,
             open_link
         ])
         .run(tauri::generate_context!())

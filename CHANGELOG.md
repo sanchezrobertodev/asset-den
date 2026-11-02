@@ -5,6 +5,13 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Library backups: **Settings → Backups** saves your folders, tags, ratings, notes, collections and sprite grids to a
+  file wherever you like, and restores one (Asset Den restarts to finish). Asset Den also makes a backup each day it
+  opens and keeps the last 5. Restoring saves the current library first, so you can switch back. Your asset files are
+  never part of a backup.
+
 ## [0.3.7] - 2026-11-01
 
 ### Added
