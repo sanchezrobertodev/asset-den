@@ -106,35 +106,3 @@ function renderVideoThumb(a: Asset): Promise<string | null> {
       v.load();
     });
 }
-
-// Keyed by family, which includes mtime, so an edited font (or a new one reusing an id) loads afresh. Only the most
-// recently used stay registered, so scrolling through a big font pack doesn't keep every font in memory.
-const FONT_LIMIT = 200;
-const fonts = new Map<string, Promise<FontFace | null>>();
-
-/** Registers the font file as a FontFace and returns its family name, or null if it fails to load. */
-export function fontFamily(a: Asset, url: string): Promise<string | null> {
-  const family = `asset-font-${a.id}-${a.mtime}`;
-  let p = fonts.get(family);
-  fonts.delete(family); // set again below, as the most recent
-  if (!p) {
-    p = new FontFace(family, `url("${url}")`)
-      .load()
-      .then((f) => {
-        document.fonts.add(f);
-        return f;
-      })
-      .catch(() => {
-        // Not cached, so a later try (say, after its folder is relinked) loads it again.
-        fonts.delete(family);
-        return null;
-      });
-    const oldest = fonts.size >= FONT_LIMIT ? fonts.keys().next().value : undefined;
-    if (oldest !== undefined) {
-      void fonts.get(oldest)!.then((f) => f && document.fonts.delete(f));
-      fonts.delete(oldest);
-    }
-  }
-  fonts.set(family, p);
-  return p.then((f) => f && family);
-}

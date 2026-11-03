@@ -3,10 +3,10 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { Download, Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, assetUrl, errorText, fileUrl } from "../api";
+import { holdFont } from "../lib/fonts";
 import { bytes } from "../lib/format";
 import { reducedMotion } from "../lib/prefs";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
-import { fontFamily } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset, SpriteSheet } from "../types";
 import { isTiny } from "./Thumb";
@@ -389,11 +389,7 @@ function FontView({ asset, full }: { asset: Asset; full: boolean }) {
   const fail = usePreviewFailure();
   useEffect(() => {
     setFamily(undefined);
-    let live = true;
-    void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : fail("This font couldn't be loaded.")));
-    return () => {
-      live = false;
-    };
+    return holdFont(asset, fileUrl(asset.path), (f) => (f ? setFamily(f) : fail("This font couldn't be loaded.")));
   }, [asset, fail]);
   if (family === undefined) return <Note busy>Loading font…</Note>;
   return (

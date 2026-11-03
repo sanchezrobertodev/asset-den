@@ -231,8 +231,9 @@ pub fn scan_root(
     if unread.iter().any(|d| d.is_empty()) {
         return Ok(None);
     }
-    // Nor is an empty folder that had files: a mount point with its drive not mounted reads as empty.
-    if count == 0 {
+    // Nor is an empty folder that had files: a mount point with its drive not mounted reads as empty. Only one with
+    // nothing in it at all, though: files now all under ignored folders leave as usual.
+    if count == 0 && std::fs::read_dir(root).is_ok_and(|mut d| d.next().is_none()) {
         let had: bool = db.lock().unwrap().query_row(
             "SELECT EXISTS (SELECT 1 FROM assets WHERE root_id = ?1)",
             [root_id],
@@ -782,6 +783,17 @@ pub mod tests {
         fs::write(r.join("b/exports-zz"), "x").unwrap();
         fs::write(r.join("b.png"), "x").unwrap();
         assert_eq!(scan(&mut conn, root, r), 4);
+        // A second folder whose files are all under a folder about to be ignored.
+        let only = tempfile::tempdir().unwrap();
+        fs::create_dir_all(only.path().join("exports-zz")).unwrap();
+        fs::write(only.path().join("exports-zz/d.png"), "x").unwrap();
+        conn.execute(
+            "INSERT INTO roots (path) VALUES (?1)",
+            [only.path().display().to_string()],
+        )
+        .unwrap();
+        let only_root = conn.last_insert_rowid();
+        assert_eq!(scan(&mut conn, only_root, only.path()), 1);
 
         assert!(db::set_ignored_folders(&conn, &["art/old".into()]).is_err());
         let names = db::set_ignored_folders(
@@ -802,9 +814,15 @@ pub mod tests {
         rename_path(&conn, root, r, &r.join("art-zz"), &r.join("backup-zz"), &mut vec![]).unwrap();
         let renamed = rels(&conn);
         scan(&mut conn, root, r);
+        // Its files leave too: it isn't empty, like an unmounted drive's mount point would be.
+        let only_left = scan_touched(&mut conn, only_root, only.path()).0;
         let skipped = rels(&conn);
         crate::kind::set_extra_ignored(&[]);
-        assert_eq!(renamed, ["Exports-zz/old/a.png", "b.png", "b/exports-zz"]);
+        assert_eq!(only_left, Some(0));
+        assert_eq!(
+            renamed,
+            ["Exports-zz/old/a.png", "b.png", "b/exports-zz", "exports-zz/d.png"]
+        );
         assert_eq!(skipped, ["b.png", "b/exports-zz"]);
 
         scan(&mut conn, root, r);

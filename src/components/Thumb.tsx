@@ -2,8 +2,9 @@ import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { assetUrl, fileUrl } from "../api";
+import { holdFont } from "../lib/fonts";
 import { watchOnScreen } from "../lib/onScreen";
-import { fontFamily, requestThumbnail } from "../lib/thumbs";
+import { requestThumbnail } from "../lib/thumbs";
 import type { Asset } from "../types";
 
 /** Sprites this small are pixel art: scale them up crisp instead of blurry. */
@@ -55,7 +56,7 @@ export function Thumb({
     if (asset.kind === "image" || asset.kind === "model" || asset.kind === "video")
       withdraw = requestThumbnail(asset, (p) => live && (p ? setSrc(convertFileSrc(p)) : setFailed(true)));
     else if (asset.kind === "font")
-      void fontFamily(asset, fileUrl(asset.path)).then((f) => live && (f ? setFamily(f) : setFailed(true)));
+      withdraw = holdFont(asset, fileUrl(asset.path), (f) => (f ? setFamily(f) : setFailed(true)));
     return () => {
       live = false;
       withdraw();
