@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
 ### Changed
 
 - Asset Den is now **Mimikit**, with a new icon: a treasure-chest mimic full of game assets. Your library, tags,
