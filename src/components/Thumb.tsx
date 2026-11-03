@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
-import { fileUrl } from "../api";
+import { assetUrl, fileUrl } from "../api";
 import { watchOnScreen } from "../lib/onScreen";
 import { fontFamily, requestThumbnail } from "../lib/thumbs";
 import type { Asset } from "../types";
@@ -41,7 +41,7 @@ export function Thumb({
   useEffect(() => (box.current ? watchOnScreen(box.current, setOnScreen) : undefined), []);
 
   useEffect(() => {
-    setSrc(asset.kind === "image" && asset.ext === "svg" ? fileUrl(asset.path) : null);
+    setSrc(asset.kind === "image" && asset.ext === "svg" ? assetUrl(asset) : null);
     setFamily(null);
     setFailed(false);
   }, [asset.id, asset.mtime, asset.size, asset.kind, asset.ext, asset.path]);

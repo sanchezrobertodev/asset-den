@@ -17,7 +17,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::AppState;
 use crate::db::{self, Asset, abs_path};
-use crate::kind::{self, DECODABLE};
+use crate::kind;
 use crate::thumbs;
 
 /// Features of one version (size, mtime) of an image. dhash and colors are NULL when it couldn't be decoded, so it isn't
@@ -222,7 +222,7 @@ impl Todo {
 }
 
 fn stale_sql(select: &str) -> String {
-    let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
+    let exts = kind::decodable_sql();
     format!(
         "SELECT {select} FROM assets a JOIN roots r ON r.id = a.root_id
          LEFT JOIN image_features f ON f.asset_id = a.id
@@ -267,7 +267,7 @@ pub fn is_stale(conn: &Connection, a: &Asset) -> Result<bool> {
 pub fn counts(conn: &Connection) -> Result<(usize, usize)> {
     // shortcut: images of an unplugged drive stay in the total though no pass analyses them, so "Analyse now" does
     // nothing until it's back; leave out the roots list_roots finds missing if people find that confusing.
-    let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
+    let exts = kind::decodable_sql();
     conn.query_row(
         &format!(
             "SELECT count(f.asset_id), count(*) FROM assets a

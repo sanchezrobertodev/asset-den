@@ -11,7 +11,7 @@ use rusqlite::{Connection, OptionalExtension, Result, params};
 use walkdir::WalkDir;
 
 use crate::db::abs_path;
-use crate::kind::{DECODABLE, ignored_dir, ignored_name, ignored_rel, kind_of};
+use crate::kind::{DECODABLE, decodable_sql, ignored_dir, ignored_name, ignored_rel, kind_of};
 
 /// `path` relative to `root`, with `/` separators. None when it's outside the root or ignored.
 pub fn rel_of(root: &Path, path: &Path) -> Option<String> {
@@ -46,7 +46,10 @@ fn dimensions(path: &Path, ext: &str) -> Option<(u32, u32)> {
                 (be(&h[18..22]), be(&h[14..18]))
             })
         }
-        e if DECODABLE.contains(&e) => image::image_dimensions(path).ok(),
+        // Caught like in thumbs::decode: a decoder panic here would poison the db lock the watcher holds.
+        e if DECODABLE.contains(&e) => std::panic::catch_unwind(|| image::image_dimensions(path).ok())
+            .ok()
+            .flatten(),
         _ => None,
     }
 }
@@ -182,7 +185,7 @@ const BATCH: usize = 500;
 /// [`BATCH`] files and releases the lock in between, so the UI can show (and thumbnail) assets while it runs.
 /// `report(conn, count, touched)` is called after every batch, including the sweep and the dimensions pass, with the
 /// lock still held and the ids of the rows that batch added, changed or removed. Returns the number of files, or None
-/// when the root itself can't be read: then every row is kept as it was.
+/// when the root itself can't be read, or reads as empty while it has rows: then every row is kept as it was.
 pub fn scan_root(
     db: &Mutex<Connection>,
     root_id: i64,
@@ -228,6 +231,17 @@ pub fn scan_root(
     if unread.iter().any(|d| d.is_empty()) {
         return Ok(None);
     }
+    // Nor is an empty folder that had files: a mount point with its drive not mounted reads as empty.
+    if count == 0 {
+        let had: bool = db.lock().unwrap().query_row(
+            "SELECT EXISTS (SELECT 1 FROM assets WHERE root_id = ?1)",
+            [root_id],
+            |r| r.get(0),
+        )?;
+        if had {
+            return Ok(None);
+        }
+    }
     {
         let mut conn = db.lock().unwrap();
         let tx = conn.transaction()?;
@@ -262,7 +276,7 @@ pub fn fill_dimensions(
     unread: &[String],
     mut report: impl FnMut(&Connection, &[i64]),
 ) -> Result<()> {
-    let exts = DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",");
+    let exts = decodable_sql();
     // By id, so rows skipped (left without dimensions) aren't selected again.
     let sql = format!(
         "SELECT id, rel_path, ext FROM assets
@@ -483,6 +497,8 @@ pub mod tests {
         let (dir, mut conn, root) = setup();
         let lib = dir.path().join("lib");
         fs::create_dir_all(lib.join("art")).unwrap();
+        // A new, empty folder is just empty.
+        assert_eq!(scan_touched(&mut conn, root, &lib), (Some(0), vec![]));
         png(&lib.join("art/a.png"), 4, 4);
         fs::write(lib.join("b.ogg"), "x").unwrap();
         scan(&mut conn, root, &lib);
@@ -495,6 +511,12 @@ pub mod tests {
         let all = db::assets(&conn, None).unwrap();
         assert_eq!(rels(&conn), ["art/a.png", "b.ogg"]);
         assert!(all.iter().all(|a| a.tags == ["keep"]));
+
+        // So isn't an empty folder in its place: a mount point whose drive isn't mounted.
+        fs::create_dir(&lib).unwrap();
+        assert_eq!(scan_touched(&mut conn, root, &lib), (None, vec![]));
+        assert_eq!(rels(&conn), ["art/a.png", "b.ogg"]);
+        fs::remove_dir(&lib).unwrap();
 
         // Back again: a rescan finds the same rows.
         fs::rename(dir.path().join("away"), &lib).unwrap();
@@ -738,9 +760,9 @@ pub mod tests {
         assert_eq!((all.len(), all[0].id, all[0].name.as_str()), (1, id, "run.png"));
         assert_eq!(db::sprite_sheet(&conn, id).unwrap(), Some(faster));
 
-        // Gone with the file.
+        // Gone with the file (the watcher's path: a rescan of a root left empty keeps its rows).
         fs::remove_file(r.join("run.png")).unwrap();
-        scan(&mut conn, root, r);
+        refresh_path(&conn, root, r, &r.join("run.png"), &mut vec![]).unwrap();
         let left: i64 = conn
             .query_row("SELECT count(*) FROM sprite_sheets", [], |r| r.get(0))
             .unwrap();

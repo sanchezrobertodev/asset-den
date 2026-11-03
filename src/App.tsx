@@ -13,9 +13,9 @@ import { Peek } from "./components/Peek";
 import { SettingsDialog } from "./components/Settings";
 import { ShortcutsDialog } from "./components/Shortcuts";
 import { Sidebar } from "./components/Sidebar";
-import { Button, focusAssets, Kbd } from "./components/ui";
+import { Button, focusAssets, Kbd, modalOpen } from "./components/ui";
 import { Welcome } from "./components/Welcome";
-import { activeFilterCount, groupByFolder, parseQuery, visibleAssets } from "./lib/filter";
+import { activeFilterCount, groupByFolder, parseQuery, rulesWantColors, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
 import { baseName, folderOf } from "./lib/format";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
@@ -59,7 +59,7 @@ function Toast() {
               type="button"
               onClick={() => {
                 dismissToast();
-                void toast.undo!();
+                Promise.resolve().then(toast.undo).catch(useStore.getState().setError);
               }}
               className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
             >
@@ -120,10 +120,7 @@ export default function App() {
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
   const similar = s.similar?.ids ?? null;
-  const wantsColors =
-    !!s.filters.color ||
-    parseQuery(s.query).colors.length > 0 ||
-    s.collections.some((c) => c.rule && (!!c.rule.filters.color || parseQuery(c.rule.query).colors.length > 0));
+  const wantsColors = !!s.filters.color || parseQuery(s.query).colors.length > 0 || rulesWantColors(s.collections);
   // Colours only matter to a colour filter; otherwise their updates during an analysis pass mustn't re-sort the list.
   const palettes = wantsColors ? s.palettes : null;
   const scope = { view: s.view, kinds: s.kinds, folder: s.folder, subfolders: s.subfolders, query: s.query, filters: s.filters, collection, notes: s.notes, similar, palettes };
@@ -168,7 +165,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
       // A dialog handles its own keys (Escape closes it).
-      if (st.modal) return;
+      if (st.modal || modalOpen()) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         st.setPalette(!st.palette);

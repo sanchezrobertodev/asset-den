@@ -5,6 +5,33 @@ All notable changes to Asset Den are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Save as smart collection** shows only in Library with no folder open. A smart collection saves the search, type
+  chips and filters, so saving from Favorites or a folder made one with different assets.
+- Thumbnails start loading a little before cards scroll into view, and 3D models no longer hold up image thumbnails.
+- Search keeps up better while a folder scans, and **Analyse images** no longer makes the sidebar recount smart
+  collections that don't search by colour.
+- An already-made preview of a TGA, PSD or TIFF opens without waiting for the thumbnails on screen.
+- Font packs no longer keep every font you scrolled past loaded.
+
+### Fixed
+
+- **Move to Trash** on the Duplicates page moves the copies the dialog named, even if a duplicate check finishes
+  while it's open and puts another group on screen.
+- A library folder that is there but empty (a drive not mounted at its mount point) keeps its assets, tags and
+  collections and shows as missing, instead of losing them all at the next rescan.
+- Rating, favorite, arrow and select-all keys no longer act on the library behind a confirm dialog.
+- The side panel shows an image, SVG or video's new contents after the file is edited.
+- An Undo that fails (say, a deleted collection whose name was taken meanwhile) says so instead of looking done.
+- Search counts and results follow the Filters panel, so "Show all N matches" opens N assets.
+- The links on Insights clear the search and filters first, so "Show untagged" no longer shows nothing when a tag
+  filter is on.
+- On Linux and macOS, a folder whose change events the system dropped (unzipping a big pack) is rescanned, instead
+  of missing files until the next launch.
+- Duplicate checks that overlap (at launch, one per folder) no longer read the same files several times.
+- An image whose header crashes the decoder can no longer break the app until it restarts.
+
 ## [0.3.9] - 2026-11-02
 
 ### Changed

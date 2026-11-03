@@ -35,11 +35,16 @@ export function InsightsView() {
   const dupCount = s.dups?.length ?? 0;
   const rootName = (id: number) => baseName(s.roots.find((r) => r.id === id)?.path ?? "");
   const multi = s.roots.length > 1;
+  // A link shows what its card counts, so it starts from a clear search and Filters panel.
+  const show = (extra?: Parameters<typeof s.go>[1]) => {
+    s.clearFilters();
+    s.go("library", extra);
+  };
 
   const stats = [
     { k: "Files", v: s.assets.length.toLocaleString() },
     { k: "Total size", v: bytes(d.total) },
-    { k: "Untagged", v: d.untagged.toLocaleString(), link: "Show untagged →", run: () => (s.setFilters({ untagged: true }), s.go("library")) },
+    { k: "Untagged", v: d.untagged.toLocaleString(), link: "Show untagged →", run: () => (show(), s.setFilters({ untagged: true })) },
     {
       k: "Duplicate groups",
       v: String(dupCount),
@@ -84,7 +89,7 @@ export function InsightsView() {
             <button
               key={t.k}
               type="button"
-              onClick={() => s.go("library", { kinds: [t.k as Kind], folder: null })}
+              onClick={() => show({ kinds: [t.k as Kind] })}
               className="-mx-2 flex items-center gap-2 rounded-[7px] px-2 py-1.5 text-left hover:bg-active"
             >
               <span aria-hidden data-kind={t.k} className="k-bar size-[9px] rounded-[3px]" />
@@ -105,7 +110,7 @@ export function InsightsView() {
               key={a.id}
               type="button"
               onClick={() => {
-                s.go("library", { kinds: [], folder: null, query: "" });
+                show();
                 s.select(a.id);
                 s.setPeek(true);
               }}
@@ -129,7 +134,7 @@ export function InsightsView() {
             <button
               key={`${f.rootId}:${f.path}`}
               type="button"
-              onClick={() => s.go("library", { kinds: [], folder: { rootId: f.rootId, path: f.path } })}
+              onClick={() => show({ folder: { rootId: f.rootId, path: f.path } })}
               className="-mx-2 grid h-9 grid-cols-[minmax(0,1fr)_40px_minmax(60px,140px)_70px] items-center gap-3.5 rounded-[7px] px-2 text-left hover:bg-active"
             >
               <span className="truncate font-medium">{[multi ? rootName(f.rootId) : "", f.path || (multi ? "" : rootName(f.rootId))].filter(Boolean).join("/")}</span>

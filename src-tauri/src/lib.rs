@@ -383,6 +383,9 @@ async fn preview(state: State<'_, AppState>, id: i64) -> Result<String, String> 
         return Err("No preview for this file type".into());
     }
     let out = state.previews_dir.join(thumbs::cache_name(&a.path, a.size, a.mtime));
+    if out.exists() {
+        return Ok(out.display().to_string());
+    }
     let _permit = state.thumb_permits.acquire().await.map_err(err)?;
     let made = tauri::async_runtime::spawn_blocking(move || thumbs::preview(Path::new(&a.path), &a.ext, &out))
         .await
@@ -489,12 +492,18 @@ fn set_in_collection(state: State<'_, AppState>, collection: i64, ids: Vec<i64>,
 
 #[tauri::command]
 async fn find_duplicates(app: AppHandle, state: State<'_, AppState>) -> Result<Vec<dupes::DupGroup>, String> {
-    let todo = with_db(&state, dupes::unhashed)?;
+    // One check hashes at a time: overlapping ones (launch starts one per root) would read the same files again.
+    static HASHING: Mutex<()> = Mutex::new(());
     // Hashes off the lock and stores in batches, so a big first check doesn't block scans and UI commands.
-    tauri::async_runtime::spawn_blocking(move || dupes::hash_and_store(&app.state::<AppState>().db, &todo))
-        .await
-        .map_err(err)?
-        .map_err(err)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _one = HASHING.lock().unwrap_or_else(|e| e.into_inner());
+        let db = &app.state::<AppState>().db;
+        let todo = dupes::unhashed(&db.lock().unwrap())?;
+        dupes::hash_and_store(db, &todo)
+    })
+    .await
+    .map_err(err)?
+    .map_err(err)?;
     with_db(&state, dupes::groups)
 }
 

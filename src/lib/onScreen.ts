@@ -12,7 +12,8 @@ export function watchOnScreen(el: Element, onChange: (visible: boolean) => void)
     (entries) => {
       for (const e of entries) listeners.get(e.target)?.(e.isIntersecting);
     },
-    { rootMargin: MARGIN },
+    // rootMargin only grows the window's edges; scrollMargin also grows those of the scrolling grid the cards are in.
+    { rootMargin: MARGIN, scrollMargin: MARGIN },
   );
   listeners.set(el, onChange);
   observer.observe(el);

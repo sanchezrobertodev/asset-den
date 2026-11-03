@@ -155,7 +155,8 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
       )}
       {s.similar && <SimilarChip chip={chip(true)} />}
       <FilterButton />
-      {browse && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
+      {/* A smart collection saves only the search, type chips and filters: not Favorites or the open folder. */}
+      {s.view === "library" && !s.folder && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Download, Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepForward } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
-import { api, errorText, fileUrl } from "../api";
+import { api, assetUrl, errorText, fileUrl } from "../api";
 import { bytes } from "../lib/format";
 import { reducedMotion } from "../lib/prefs";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
@@ -72,7 +72,7 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
     setPan({ x: 0, y: 0 });
     setFit(null);
     if (NATIVE_IMAGE.has(asset.ext)) {
-      setSrc(fileUrl(asset.path));
+      setSrc(assetUrl(asset));
       return;
     }
     setSrc(null);
@@ -501,7 +501,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
       return (
         <video
           key={asset.id}
-          src={fileUrl(asset.path)}
+          src={assetUrl(asset)}
           controls
           autoPlay={full && !reducedMotion()}
           onError={() => fail("This video format can't be played here.")}

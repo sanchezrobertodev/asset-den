@@ -201,6 +201,10 @@ export function ruleMatcher(rule: CollectionRule, notes: Notes, now = Date.now()
   return (a) => matchesFilters(a, f, now, palettes) && matchesQuery(a, q, notes, palettes);
 }
 
+/** Whether a smart collection searches by colour: only then do members change as colours are analysed. */
+export const rulesWantColors = (collections: Collection[]) =>
+  collections.some((c) => c.rule && (!!c.rule.filters.color || parseQuery(c.rule.query).colors.length > 0));
+
 /** Each smart collection's current members, by collection id. */
 export function smartMembers(collections: Collection[], assets: Asset[], notes: Notes, palettes?: Palettes | null): Map<number, Asset[]> {
   const now = Date.now();

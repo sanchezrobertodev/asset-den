@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import type { Asset } from "../types";
 import { toLab } from "./colors.ts";
-import { activeFilterCount, groupByFolder, matchesFilters, matchesQuery, noFilters, parseQuery, ruleMatcher, visibleAssets, type Scope } from "./filter.ts";
+import { activeFilterCount, groupByFolder, matchesFilters, matchesQuery, noFilters, parseQuery, ruleMatcher, rulesWantColors, visibleAssets, type Scope } from "./filter.ts";
 
 const now = Date.UTC(2026, 9, 19);
 const day = 86_400_000;
@@ -140,6 +140,10 @@ assert.deepEqual(all.filter(ruleMatcher(smart("#env").rule, {}, now)).map((a) =>
 assert.deepEqual(members(smart("color:red"), { palettes }), [1]);
 assert.deepEqual(members(smart("", { color: "blue" }), { palettes }), [2]);
 assert.deepEqual(all.filter(ruleMatcher(smart("color:blu").rule, {}, now, palettes)).map((a) => a.id), [2]);
+// Only colour rules make the members depend on the colour data.
+assert.equal(rulesWantColors([smart("rating:>=3"), { ...smart(""), rule: null }]), false);
+assert.equal(rulesWantColors([smart("color:red")]), true);
+assert.equal(rulesWantColors([smart("", { color: "blue" })]), true);
 // "Find similar" shows only its results, closest first, whatever the sort.
 assert.deepEqual(visibleAssets(all, scope({ similar: [3, 1] }), { key: "name", desc: false }).map((a) => a.id), [3, 1]);
 assert.deepEqual(visibleAssets(all, scope({ similar: [3, 1], kinds: ["image"] }), { key: "name", desc: false }).map((a) => a.id), [1]);
