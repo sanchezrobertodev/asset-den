@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
-import { matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
+import { matchesFilters, matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
 import { baseName, bytes, folderOf } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -53,7 +53,9 @@ export function Palette() {
     const hasQuery = q.trim().length > 0;
     const close = { palette: false };
     if (hasQuery) {
-      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes, s.palettes));
+      // The library keeps the Filters panel, so the counts and results do too.
+      const now = Date.now();
+      const matches = s.assets.filter((a) => matchesQuery(a, parsed, s.notes, s.palettes) && matchesFilters(a, s.filters, now, s.palettes));
       // With a collection open, the first result searches inside it.
       const col = s.view === "collections" ? (s.collections.find((c) => c.id === s.colSel) ?? null) : null;
       const inCol = col
@@ -174,7 +176,9 @@ export function Palette() {
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];
     if (acts.length) out.push({ title: "Actions", items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
     return out;
-  }, [q, s]);
+    // Only what it reads: the whole store changes on every scan tick, and this searches every asset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, s.assets, s.notes, s.palettes, s.filters, s.view, s.collections, s.colSel, s.dups, s.roots]);
 
   const flat = sections.flatMap((sec) => sec.items);
   const run = (item?: Item) => {

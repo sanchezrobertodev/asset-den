@@ -135,6 +135,10 @@ export function trapTab(e: { key: string; shiftKey: boolean; preventDefault: () 
   }
 }
 
+let openModals = 0;
+/** Whether a Modal is open. The app's shortcuts are off meanwhile, also for Modals the store doesn't know about. */
+export const modalOpen = () => openModals > 0;
+
 export function Modal({
   title,
   onClose,
@@ -165,7 +169,9 @@ export function Modal({
       trapTab(e, panel.current);
     };
     window.addEventListener("keydown", onKey, true);
+    openModals++;
     return () => {
+      openModals--;
       window.removeEventListener("keydown", onKey, true);
       prev?.focus();
     };

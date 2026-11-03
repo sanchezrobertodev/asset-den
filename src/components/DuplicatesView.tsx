@@ -197,7 +197,8 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
   }, [groups, scopeAssets]);
   const reclaim = useMemo(() => shown.reduce((n, g) => n + wasted(g), 0), [shown]);
   const [keepBy, setKeepBy] = useState<Record<string, number>>({});
-  const [confirming, setConfirming] = useState(false);
+  // What the Trash dialog was opened for: a check that finishes meanwhile can put another group on screen.
+  const [confirming, setConfirming] = useState<{ keep: Asset; remove: Asset[] } | null>(null);
   // The open group stays open through sorting and filtering. Filtered out, the first group opens instead; resolved, the
   // group that took its place in the list does.
   const lastAt = useRef(0);
@@ -216,7 +217,7 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
   const keepId = group ? (group.items.find((a) => a.id === keepBy[group.hash]) ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best))).id : null;
   const remove = group ? group.items.filter((a) => a.id !== keepId) : [];
   const kept = group?.items.find((a) => a.id === keepId);
-  const removeLabel = remove.length === 1 ? remove[0].name : `${remove.length} copies`;
+  const label = (copies: Asset[]) => (copies.length === 1 ? copies[0].name : `${copies.length} copies`);
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)]">
@@ -303,8 +304,8 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
               <Button size="lg" onClick={() => void ignoreDuplicate(group.hash)}>
                 Keep {group.items.length === 2 ? "both" : "all"}
               </Button>
-              <Button variant="invert" size="lg" onClick={() => setConfirming(true)}>
-                Move {removeLabel} to Trash
+              <Button variant="invert" size="lg" onClick={() => setConfirming({ keep: kept, remove })}>
+                Move {label(remove)} to Trash
               </Button>
             </div>
           </>
@@ -326,19 +327,19 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
         )}
       </div>
 
-      {confirming && kept && (
+      {confirming && (
         <Modal
-          title={`Move ${removeLabel} to Trash?`}
-          onClose={() => setConfirming(false)}
+          title={`Move ${label(confirming.remove)} to Trash?`}
+          onClose={() => setConfirming(null)}
           footer={
             <>
-              <Button onClick={() => setConfirming(false)}>Cancel</Button>
+              <Button onClick={() => setConfirming(null)}>Cancel</Button>
               <Button
                 variant="invert"
                 data-autofocus
                 onClick={() => {
-                  setConfirming(false);
-                  void trashDuplicates(kept.id, remove.map((a) => a.id));
+                  setConfirming(null);
+                  void trashDuplicates(confirming.keep.id, confirming.remove.map((a) => a.id));
                 }}
               >
                 Move to Trash
@@ -347,8 +348,9 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
           }
         >
           <p className="leading-relaxed">
-            {remove.map((a) => a.name).join(", ")} {remove.length === 1 ? "goes" : "go"} to your system's Trash (the Recycle Bin on Windows), where you can
-            restore {remove.length === 1 ? "it" : "them"}. Its tags, favorite and collections move to <span className="text-fg">{kept.name}</span>.
+            {confirming.remove.map((a) => a.name).join(", ")} {confirming.remove.length === 1 ? "goes" : "go"} to your system's Trash (the Recycle Bin on
+            Windows), where you can restore {confirming.remove.length === 1 ? "it" : "them"}. Its tags, favorite and collections move to{" "}
+            <span className="text-fg">{confirming.keep.name}</span>.
             Asset Den checks the files are still identical first.
           </p>
         </Modal>

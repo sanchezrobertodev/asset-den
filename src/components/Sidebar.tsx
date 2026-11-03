@@ -5,7 +5,7 @@ import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { smartMembers } from "../lib/filter";
+import { rulesWantColors, smartMembers } from "../lib/filter";
 import { treeFor, type FolderNode } from "../lib/folders";
 import { baseName, bytes, kindLabel } from "../lib/format";
 import type { Theme } from "../lib/prefs";
@@ -88,7 +88,9 @@ export function Sidebar() {
     }
     return { favorites, byKind, total };
   }, [s.assets]);
-  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, s.palettes), [s.collections, s.assets, s.notes, s.palettes]);
+  // Colours only matter to a colour rule; otherwise each batch of analysed images would recount every collection.
+  const palettes = rulesWantColors(s.collections) ? s.palettes : null;
+  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, palettes), [s.collections, s.assets, s.notes, palettes]);
 
   const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
     { view: "library", label: "Library", count: s.assets.length },

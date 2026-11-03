@@ -24,6 +24,11 @@ pub fn decodable(ext: &str) -> bool {
     DECODABLE.contains(&ext)
 }
 
+/// [`DECODABLE`] as an SQL list, for `ext IN (...)`.
+pub fn decodable_sql() -> String {
+    DECODABLE.iter().map(|e| format!("'{e}'")).collect::<Vec<_>>().join(",")
+}
+
 /// Folder names the user chose to skip (Settings > Library), lowercased. Process-wide so scans and watcher events
 /// see the current list without passing it through every path check.
 static EXTRA_IGNORED: RwLock<Vec<String>> = RwLock::new(Vec::new());

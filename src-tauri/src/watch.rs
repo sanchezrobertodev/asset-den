@@ -37,6 +37,18 @@ pub fn start(app: AppHandle, root_id: i64, root: PathBuf) -> Result<Watcher, Str
     let handler_root = root.clone();
     let mut debouncer = new_debouncer(Duration::from_millis(400), None, move |res: DebounceEventResult| {
         let Ok(events) = res else { return };
+        // The OS dropped events (inotify queue overflow, FSEvents merged ones): only a full scan catches up.
+        if events.iter().any(|e| e.need_rescan()) {
+            let path = handler_root.display().to_string();
+            crate::spawn_scan(
+                app.clone(),
+                crate::db::Root {
+                    id: root_id,
+                    path,
+                    missing: false,
+                },
+            );
+        }
         if events.iter().all(|e| matches!(e.kind, EventKind::Access(_))) {
             return;
         }

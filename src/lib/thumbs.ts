@@ -12,21 +12,25 @@ const cachedOr = (render: (a: Asset) => Promise<string | null> | null) => (a: As
     .catch(() => null);
 
 const thumbs = createScheduler(
-  cachedOr((a) => (a.kind === "model" ? renderModelThumb(a) : null)),
+  cachedOr(() => null),
   8,
 );
-// Videos get their own short queue: decoding a frame is heavy, and slow ones mustn't hold up image thumbnails.
+// Videos and models get their own short queues: decoding a frame or rendering a model is heavy, and slow ones mustn't
+// hold up image thumbnails. Models render one at a time, on one shared renderer.
 const videoThumbs = createScheduler(cachedOr(renderVideoThumb), 2);
+const modelThumbs = createScheduler(cachedOr(renderModelThumb), 1);
 
 /** Asks for a thumbnail; `onReady` gets its path (null when there's none). Returns a function that withdraws the request. */
 export function requestThumbnail(a: Asset, onReady: (path: string | null) => void): () => void {
-  return (a.kind === "video" ? videoThumbs : thumbs).request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
+  const queue = a.kind === "video" ? videoThumbs : a.kind === "model" ? modelThumbs : thumbs;
+  return queue.request(`${a.id}:${a.mtime}:${a.size}`, a, onReady);
 }
 
 /** After the thumbnail cache is cleared: cards that mount from now on ask the backend again, which rebuilds them. */
 export function forgetThumbnails() {
   thumbs.clear();
   videoThumbs.clear();
+  modelThumbs.clear();
 }
 
 /** Promise form, for one-off uses like the drag icon. */
@@ -36,37 +40,32 @@ export function thumbnailFor(a: Asset): Promise<string | null> {
   });
 }
 
-// One shared offscreen renderer for model thumbnails, used one model at a time.
+// One shared offscreen renderer for model thumbnails (modelThumbs runs one at a time).
 let renderer: WebGLRenderer | null = null;
-let queue: Promise<unknown> = Promise.resolve();
 
-function renderModelThumb(a: Asset): Promise<string | null> {
-  const job = queue.then(async () => {
-    // Loaded on the first model thumbnail so three.js stays out of the startup bundle.
-    const [THREE, { addLights, dispose, frame, loadModel }] = await Promise.all([import("three"), import("./models")]);
-    // A lost context (a GPU reset, or too many 3D views open) draws nothing: start over with a new renderer.
-    if (renderer?.getContext().isContextLost()) {
-      renderer.dispose();
-      renderer = null;
-    }
-    renderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setSize(256, 256, false);
-    const scene = new THREE.Scene();
-    addLights(scene);
-    const camera = new THREE.PerspectiveCamera(35, 1);
-    const { object } = await loadModel(a);
-    scene.add(object);
-    frame(camera, object);
-    renderer.render(scene, camera);
-    // Never save a blank frame as the thumbnail.
-    if (renderer.getContext().isContextLost()) throw new Error("WebGL context lost");
-    const blob = await new Promise<Blob | null>((r) => renderer!.domElement.toBlob(r, "image/png"));
-    dispose(object);
-    if (!blob) return null;
-    return api.saveThumbnail(a, new Uint8Array(await blob.arrayBuffer()));
-  });
-  queue = job.catch(() => {});
-  return job.catch(() => null);
+async function renderModelThumb(a: Asset): Promise<string | null> {
+  // Loaded on the first model thumbnail so three.js stays out of the startup bundle.
+  const [THREE, { addLights, dispose, frame, loadModel }] = await Promise.all([import("three"), import("./models")]);
+  // A lost context (a GPU reset, or too many 3D views open) draws nothing: start over with a new renderer.
+  if (renderer?.getContext().isContextLost()) {
+    renderer.dispose();
+    renderer = null;
+  }
+  renderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setSize(256, 256, false);
+  const scene = new THREE.Scene();
+  addLights(scene);
+  const camera = new THREE.PerspectiveCamera(35, 1);
+  const { object } = await loadModel(a);
+  scene.add(object);
+  frame(camera, object);
+  renderer.render(scene, camera);
+  // Never save a blank frame as the thumbnail.
+  if (renderer.getContext().isContextLost()) throw new Error("WebGL context lost");
+  const blob = await new Promise<Blob | null>((r) => renderer!.domElement.toBlob(r, "image/png"));
+  dispose(object);
+  if (!blob) return null;
+  return api.saveThumbnail(a, new Uint8Array(await blob.arrayBuffer()));
 }
 
 const VIDEO_TIMEOUT_MS = 15000;
@@ -106,28 +105,4 @@ function renderVideoThumb(a: Asset): Promise<string | null> {
       v.removeAttribute("src");
       v.load();
     });
-}
-
-// Keyed by family, which includes mtime, so an edited font (or a new one reusing an id) loads afresh.
-const fonts = new Map<string, Promise<string | null>>();
-
-/** Registers the font file as a FontFace and returns its family name, or null if it fails to load. */
-export function fontFamily(a: Asset, url: string): Promise<string | null> {
-  const family = `asset-font-${a.id}-${a.mtime}`;
-  let p = fonts.get(family);
-  if (!p) {
-    p = new FontFace(family, `url("${url}")`)
-      .load()
-      .then((f) => {
-        document.fonts.add(f);
-        return family;
-      })
-      .catch(() => {
-        // Not cached, so a later try (say, after its folder is relinked) loads it again.
-        fonts.delete(family);
-        return null;
-      });
-    fonts.set(family, p);
-  }
-  return p;
 }

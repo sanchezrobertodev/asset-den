@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { activeFilterCount, noFilters, smartMembers, type Group } from "../lib/filter";
+import { activeFilterCount, noFilters, rulesWantColors, smartMembers, type Group } from "../lib/filter";
 import { bytes } from "../lib/format";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -14,7 +14,9 @@ import { Button, focusAssets } from "./ui";
 export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]; groups: Group[] | null; scopeAssets: Asset[] }) {
   const s = useStore();
   const byId = useMemo(() => new Map(s.assets.map((a) => [a.id, a])), [s.assets]);
-  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, s.palettes), [s.collections, s.assets, s.notes, s.palettes]);
+  // Colours only matter to a colour rule; otherwise each batch of analysed images would recount every collection.
+  const palettes = rulesWantColors(s.collections) ? s.palettes : null;
+  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, palettes), [s.collections, s.assets, s.notes, palettes]);
   const searching = s.query.trim() !== "" || s.kinds.length > 0 || activeFilterCount(s.filters) > 0;
   const current = s.collections.find((c) => c.id === s.colSel) ?? null;
   const all = current ? (smart.get(current.id) ?? current.assetIds.map((id) => byId.get(id)).filter((a): a is Asset => !!a)) : [];

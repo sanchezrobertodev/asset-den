@@ -153,6 +153,9 @@ export function fileUrl(path: string): string {
   return norm.startsWith("/") ? base + "%2F" + segments.slice(1).join("/") : base + segments.join("/");
 }
 
+/** {@link fileUrl} for this version of an asset, so the webview loads it again after the file changes. */
+export const assetUrl = (a: Asset) => `${fileUrl(a.path)}?v=${a.mtime}-${a.size}`;
+
 export function errorText(e: unknown): string {
   if (typeof e === "string") return e;
   if (e instanceof Error) return e.message;
