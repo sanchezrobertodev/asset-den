@@ -52,7 +52,7 @@ fn check_library(path: &Path) -> Result<(), String> {
         )
         .unwrap_or(0);
     if !ok || tables != 3 {
-        return Err("it isn't an Asset Den library, or it's damaged".into());
+        return Err("it isn't a Mimikit library, or it's damaged".into());
     }
     drop(conn);
     let conn = crate::db::open(path).map_err(|e| e.to_string())?;
@@ -66,7 +66,7 @@ fn check_library(path: &Path) -> Result<(), String> {
 /// Saves a copy of the library at `db` into `dir`, next to anything already there. Returns the new file.
 pub fn backup_to(db: &Path, dir: &Path) -> Result<PathBuf, String> {
     let conn = read_only(db)?;
-    let dest = crate::free_path(dir, &format!("Asset Den backup {}.db", stamp(&conn)?));
+    let dest = crate::free_path(dir, &format!("Mimikit backup {}.db", stamp(&conn)?));
     vacuum_into(&conn, &dest)?;
     Ok(dest)
 }
@@ -92,10 +92,10 @@ pub fn auto(db: &Path, dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Checks `src` is an Asset Den library and copies it to `pending`, to replace the library on the next launch.
+/// Checks `src` is a Mimikit library and copies it to `pending`, to replace the library on the next launch.
 /// `src` is only read.
 pub fn stage(src: &Path, pending: &Path) -> Result<(), String> {
-    let refused = || "That file isn't an Asset Den backup, or it's damaged.".to_string();
+    let refused = || "That file isn't a Mimikit backup, or it's damaged.".to_string();
     let conn = read_only(src).map_err(|_| refused())?;
     // Fails on a file that isn't SQLite at all, so it gets this message rather than a copy error.
     conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get::<_, i64>(0))

@@ -14,7 +14,7 @@ export interface Prefs {
   grouped: boolean;
   /** With a folder open, also show its subfolders' files. */
   subfolders: boolean;
-  /** Look for a new version of Asset Den shortly after launch. */
+  /** Look for a new version of Mimikit shortly after launch. */
   checkUpdates: boolean;
   /** Audio previews start again when they end. */
   audioLoop: boolean;

@@ -50,7 +50,7 @@ export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNo
         <div className="flex flex-col gap-1">
           <span className="font-medium text-fg">Couldn't preview this file</span>
           <span className="max-w-[440px] text-xs text-muted [overflow-wrap:anywhere]">
-            {this.state.message ?? "It may be damaged or use a format variant Asset Den can't read."}
+            {this.state.message ?? "It may be damaged or use a format variant Mimikit can't read."}
           </span>
         </div>
         <div className="flex gap-2">

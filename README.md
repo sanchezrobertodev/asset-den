@@ -1,13 +1,13 @@
-# Asset Den
+# Mimikit
 
 A desktop asset browser for game developers on Windows, macOS and Linux. Point it at your asset folders and it
 indexes every sprite, sound, model, font, video and data file so you can find, preview, tag and drag them into your
-engine.
+engine. Mimikit was called Asset Den until 0.4.0.
 
-![Asset Den browsing a sample library: folder tree, type chips, and image, video and 3D thumbnails](docs/screenshot-library.webp)
+![Mimikit browsing a sample library: folder tree, type chips, and image, video and 3D thumbnails](docs/screenshot-library.webp)
 
 **Your files are left alone.** Tags, favorites, ratings, notes and collections live in the app's own database, and removing a folder
-from the library only forgets it. The one exception is on the Duplicates page: when you choose to, Asset Den moves the
+from the library only forgets it. The one exception is on the Duplicates page: when you choose to, Mimikit moves the
 extra copies of a file to your system's Trash (restorable there), after asking and after checking that they are still
 byte-for-byte identical. "Copy to folder…" only ever creates new files.
 
@@ -37,7 +37,7 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   a collection that keeps itself up to date. An open collection has the same type chips, search, filters, sort and
   layouts as the library. Most changes show a toast with **Undo**.
 - **Backups**: **Settings → Backups** saves a copy of the library (folders, tags, ratings, notes, collections, sprite
-  grids) wherever you like, and restores one. Asset Den also keeps a backup a day, the last 5. Restoring saves the
+  grids) wherever you like, and restores one. Mimikit also keeps a backup a day, the last 5. Restoring saves the
   current library first, so you can switch back.
 - **Drag out**: drag one card or a selection into Unity, Godot, Unreal, Blender or a folder. It always copies.
 - **Find similar** and **search by colour**: the side panel finds images that look like the open one (resized,
@@ -73,14 +73,14 @@ Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side 
 ## Install
 
 Download the file for your OS from the
-[latest release](https://github.com/sanchezrobertodev/asset-den/releases/latest). From then on the app
+[latest release](https://github.com/sanchezrobertodev/mimikit/releases/latest). From then on the app
 updates itself (see [Updates](#updates)).
 
 | OS | File | Notes |
 |---|---|---|
-| Windows | `AssetDen_<version>_x64-setup.exe` | Installs per user, without admin rights. The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**. |
-| macOS | `AssetDen_<version>_universal.dmg` | Apple Silicon and Intel. Drag the app to Applications. It isn't signed with an Apple Developer ID or notarized, so Gatekeeper blocks the first launch: open **System Settings → Privacy & Security** and choose **Open Anyway** (or run `xattr -dr com.apple.quarantine "/Applications/Asset Den.app"`). Updates installed by the app don't ask again. |
-| Linux | `AssetDen_<version>_amd64.AppImage` or `AssetDen_<version>_amd64.deb` | The AppImage runs anywhere (`chmod +x` it first) and updates itself. The `.deb` installs system-wide and doesn't update itself: install the next `.deb` by hand. Install the GStreamer plugins for MP4/H.264 video previews. |
+| Windows | `Mimikit_<version>_x64-setup.exe` | Installs per user, without admin rights. The build isn't code-signed, so SmartScreen may warn: choose **More info → Run anyway**. |
+| macOS | `Mimikit_<version>_universal.dmg` | Apple Silicon and Intel. Drag the app to Applications. It isn't signed with an Apple Developer ID or notarized, so Gatekeeper blocks the first launch: open **System Settings → Privacy & Security** and choose **Open Anyway** (or run `xattr -dr com.apple.quarantine "/Applications/Mimikit.app"`). Updates installed by the app don't ask again. |
+| Linux | `Mimikit_<version>_amd64.AppImage` or `Mimikit_<version>_amd64.deb` | The AppImage runs anywhere (`chmod +x` it first) and updates itself. The `.deb` installs system-wide and doesn't update itself: install the next `.deb` by hand. Install the GStreamer plugins for MP4/H.264 video previews. |
 
 ### Build it yourself
 
@@ -96,7 +96,7 @@ The installers land in `src-tauri/target/release/bundle/` (`nsis/` or `msi/` on 
 
 ## Updates
 
-Installed copies check this repo's [releases](https://github.com/sanchezrobertodev/asset-den/releases) quietly on
+Installed copies check this repo's [releases](https://github.com/sanchezrobertodev/mimikit/releases) quietly on
 launch, and whenever you press **Check for updates** in the sidebar footer or the search palette. A new version shows
 its CHANGELOG notes, and **Install & restart** downloads it, verifies its signature and relaunches. Versions up to 0.3.6
 checked the old [asset-den-releases](https://github.com/sanchezrobertodev/asset-den-releases) repo instead; its last
@@ -152,6 +152,8 @@ Run `make check` before every push. It typechecks and bundles the frontend, then
 errors) and the Rust tests. These local checks replace CI on push: the only GitHub workflow is **Release**, started by
 hand to publish the macOS and Linux builds.
 
+The app icon's artwork lives in `icon/`. After changing it, `make icons` rebuilds `src-tauri/icons`.
+
 ## Where things live
 
 | What | Where |
@@ -174,11 +176,11 @@ hand to publish the macOS and Linux builds.
   scan only when **Keep new and changed images analysed** is on.
 - Syntax highlighting for text and code is not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
-  `src/index.css`, and the rationale in `design-system/asset-den/MASTER.md`.
+  `src/index.css`, and the rationale in `design-system/mimikit/MASTER.md`.
 
 ## Support
 
-Asset Den is free and open source. If it saves you time, you can support it on
+Mimikit is free and open source. If it saves you time, you can support it on
 [Ko-fi](https://ko-fi.com/sanchezrobertodev).
 
 ## License

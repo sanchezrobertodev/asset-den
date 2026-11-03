@@ -321,7 +321,7 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
           dups !== null && (
             <div className="m-auto flex flex-col items-center gap-2 text-muted">
               <span className="text-base font-medium text-fg">No duplicates left</span>
-              <span>Asset Den checks again whenever files change.</span>
+              <span>Mimikit checks again whenever files change.</span>
             </div>
           )
         )}
@@ -351,7 +351,7 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
             {confirming.remove.map((a) => a.name).join(", ")} {confirming.remove.length === 1 ? "goes" : "go"} to your system's Trash (the Recycle Bin on
             Windows), where you can restore {confirming.remove.length === 1 ? "it" : "them"}. Its tags, favorite and collections move to{" "}
             <span className="text-fg">{confirming.keep.name}</span>.
-            Asset Den checks the files are still identical first.
+            Mimikit checks the files are still identical first.
           </p>
         </Modal>
       )}

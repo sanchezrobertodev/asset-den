@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** Asset Den
+**Project:** Mimikit (called Asset Den until 0.4.0)
 **Generated:** 2026-10-18 21:02:10
 **Category:** Developer Tool / IDE
 **Design Dials:** Motion 3/10 (Subtle) | Density 8/10 (Dense / Dashboard)
@@ -234,7 +234,7 @@ Before delivering any UI code, verify:
 
 ---
 
-## Asset Den overrides (these win over everything above)
+## Mimikit overrides (these win over everything above)
 
 The live design is the **"Asset Den UI/UX redesign"** project in Claude Design (`Asset Den.dc.html`), applied on
 2026-10-19. Where it and the generated rules above disagree, the Claude Design project wins.

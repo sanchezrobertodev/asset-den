@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import { Button, Kbd } from "./ui";
+import logo from "../../src-tauri/icons/128x128.png";
+import logo2x from "../../src-tauri/icons/128x128@2x.png";
 
 function Tip({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
@@ -14,14 +16,14 @@ function Tip({ icon, title, children }: { icon: ReactNode; title: string; childr
   );
 }
 
-/** First run: what Asset Den does and the one step to start, instead of an empty grid. */
+/** First run: what Mimikit does and the one step to start, instead of an empty grid. */
 export function Welcome() {
   const importFolder = useStore((s) => s.importFolder);
   return (
     <div className="flex h-full items-center justify-center overflow-y-auto px-7 py-10">
       <div className="flex w-full max-w-[600px] flex-col items-center text-center">
-        <div aria-hidden className="size-11 rounded-xl bg-accent" />
-        <h2 className="mt-5 text-[22px] font-semibold tracking-[-.015em] text-fg">Welcome to Asset Den</h2>
+        <img src={logo} srcSet={`${logo} 1x, ${logo2x} 2x`} alt="" className="size-16" />
+        <h2 className="mt-5 text-[22px] font-semibold tracking-[-.015em] text-fg">Welcome to Mimikit</h2>
         <p className="mt-2 max-w-[460px] text-fg-2">
           Point it at a folder of game assets and it indexes every sprite, sound, model, font and video in it, then keeps
           watching for changes.
@@ -30,7 +32,7 @@ export function Welcome() {
           <FolderPlus aria-hidden className="size-4" />
           Import a folder
         </Button>
-        <p className="mt-3 text-xs text-muted">You can add more folders later. Asset Den only reads them: your files are never changed.</p>
+        <p className="mt-3 text-xs text-muted">You can add more folders later. Mimikit only reads them: your files are never changed.</p>
         <ul aria-label="Tips" className="mt-10 grid w-full grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5 text-left">
           <Tip icon={<Hand aria-hidden className="size-4" />} title="Drag into your engine">
             Drop any card into Unity, Godot or a folder to copy the file there.
