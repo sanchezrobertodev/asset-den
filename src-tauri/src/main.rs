@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    asset_den_lib::run()
+    mimikit_lib::run()
 }

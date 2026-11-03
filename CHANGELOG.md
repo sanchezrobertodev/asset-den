@@ -1,12 +1,18 @@
 # Changelog
 
-All notable changes to Asset Den are documented here. The format follows
+All notable changes to Mimikit (called Asset Den until 0.4.0) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
 ### Changed
 
+- Asset Den is now **Mimikit**, with a new icon: a treasure-chest mimic full of game assets. Your library, tags,
+  settings and backups carry over. On Windows, installing Mimikit removes the old Asset Den app (never its data) and
+  moves its Start menu and desktop shortcuts to Mimikit. A taskbar or Start pin doesn't carry over: pin Mimikit
+  again. On macOS an updated copy stays in Applications as Asset Den: rename it to Mimikit, or move it to the Trash
+  and drag Mimikit in from the dmg. A Linux `.deb` installs next to the old one: remove it with
+  `sudo apt remove asset-den`.
 - **Save as smart collection** shows only in Library with no folder open. A smart collection saves the search, type
   chips and filters, so saving from Favorites or a folder made one with different assets.
 - Thumbnails start loading a little before cards scroll into view, and 3D models no longer hold up image thumbnails.

@@ -95,7 +95,7 @@ export function UpdateNotice() {
     >
       <CircleArrowUp aria-hidden className="size-4 flex-none text-accent" />
       <span className="min-w-0 flex-1">
-        <span className="font-medium">Asset Den {update.version}</span> is available
+        <span className="font-medium">Mimikit {update.version}</span> is available
       </span>
       <span className="font-semibold text-accent">View</span>
     </button>
@@ -114,7 +114,7 @@ export function UpdateDialog() {
 
   return (
     <Modal
-      title={phase === "available" || phase === "installing" ? `Asset Den ${update?.version}` : "Updates"}
+      title={phase === "available" || phase === "installing" ? `Mimikit ${update?.version}` : "Updates"}
       onClose={close}
       footer={
         phase === "available" ? (
@@ -160,7 +160,7 @@ export function UpdateDialog() {
       {(phase === "available" || phase === "installing") && update && (
         <div className="flex flex-col gap-3">
           <p className="text-muted">
-            You have {update.currentVersion}. Updates are signed, and Asset Den verifies the signature before installing.
+            You have {update.currentVersion}. Updates are signed, and Mimikit verifies the signature before installing.
           </p>
           {phase === "installing" ? (
             <div role="status" className="flex flex-col gap-2">
@@ -174,7 +174,7 @@ export function UpdateDialog() {
               >
                 <div className="h-full rounded-full bg-accent transition-[width] duration-200" style={{ width: `${pct ?? 0}%` }} />
               </div>
-              <span className="text-xs text-muted">{progressText(progress)}. Asset Den restarts when it's done.</span>
+              <span className="text-xs text-muted">{progressText(progress)}. Mimikit restarts when it's done.</span>
             </div>
           ) : update.notes ? (
             <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-line bg-card px-4 pt-3">

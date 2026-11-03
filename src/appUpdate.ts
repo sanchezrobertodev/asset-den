@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { api, errorText, type AppUpdate, type DownloadProgress } from "./api";
 import { loadPrefs } from "./lib/prefs";
 
-/** Asset Den's own updates (the Tauri updater), separate from the library store. */
+/** Mimikit's own updates (the Tauri updater), separate from the library store. */
 export type AppUpdatePhase = "idle" | "checking" | "upToDate" | "available" | "installing" | "error";
 
 interface AppUpdateState {

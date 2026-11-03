@@ -13,6 +13,8 @@ import { useStore } from "../store";
 import { KINDS, type ViewName } from "../types";
 import { api } from "../api";
 import { Button, IconButton, Label, Modal } from "./ui";
+import logo24 from "../../icon/24.png";
+import logo48 from "../../icon/48.png";
 
 /** Collection colors from the design, by position. */
 const COLL_HUES = [75, 25, 250, 152, 300];
@@ -109,16 +111,9 @@ export function Sidebar() {
   return (
     <aside aria-label="Library" className="flex min-h-0 flex-col border-r border-line px-2.5">
       <div className="flex h-[60px] flex-none items-center gap-2.5 px-2">
-        <svg aria-hidden viewBox="0 0 1024 1024" className="size-[22px] flex-none">
-          {/* Same mark as app-icon.svg, the source of src-tauri/icons. */}
-          <rect width="1024" height="1024" rx="228" fill="#1b1915" />
-          <rect x="176" y="268" width="392" height="528" rx="72" fill="#6aa7f2" transform="rotate(-15 372 532)" />
-          <rect x="456" y="268" width="392" height="528" rx="72" fill="#f2b84b" transform="rotate(15 652 532)" />
-          <rect x="316" y="228" width="392" height="560" rx="72" fill="#5ad68e" stroke="#1b1915" strokeWidth="36" paintOrder="stroke" />
-          <circle cx="604" cy="360" r="52" fill="#1b1915" />
-          <path d="M376 700 L484 548 L556 632 L604 580 L652 700 Z" fill="#1b1915" stroke="#1b1915" strokeWidth="28" strokeLinejoin="round" />
-        </svg>
-        <span className="text-[15px] font-semibold tracking-[-.01em]">Asset Den</span>
+        {/* The hand-drawn 24 px frame of the app icon, and the 48 px one on HiDPI screens. */}
+        <img src={logo24} srcSet={`${logo24} 1x, ${logo48} 2x`} alt="" className="size-6 flex-none" />
+        <span className="text-[15px] font-semibold tracking-[-.01em]">Mimikit</span>
       </div>
       <nav className="flex flex-col gap-0.5">
         {nav.map((n) => (
@@ -190,7 +185,7 @@ export function Sidebar() {
       </div>
       {/* App controls live in their own bar so they never squeeze the library name. */}
       <div className="-mx-2.5 flex h-11 flex-none items-center gap-0.5 border-t border-line-soft px-3">
-        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? `Asset Den ${version}` : undefined}>
+        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? `Mimikit ${version}` : undefined}>
           {version ? `v${version}` : ""}
         </span>
         {updatesSupported && (
@@ -338,7 +333,7 @@ function FolderTree() {
           }
         >
           <p className="leading-relaxed">
-            Asset Den checked {relink.checked.toLocaleString()} of this folder's files and found {relink.found.toLocaleString()} in{" "}
+            Mimikit checked {relink.checked.toLocaleString()} of this folder's files and found {relink.found.toLocaleString()} in{" "}
             <span className="text-fg">{relink.path}</span>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and
             collections. Your files aren't touched.
           </p>

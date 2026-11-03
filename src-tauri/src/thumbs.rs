@@ -45,7 +45,7 @@ pub fn decode(path: &Path, ext: &str) -> Result<DynamicImage, String> {
         }
         image::open(path).map_err(|e| e.to_string())
     })
-    .unwrap_or_else(|_| Err("Asset Den couldn't read this image.".into()))
+    .unwrap_or_else(|_| Err("Mimikit couldn't read this image.".into()))
 }
 
 /// Writes a PNG of at most `max` px on its long side to `out`, unless it's already cached.

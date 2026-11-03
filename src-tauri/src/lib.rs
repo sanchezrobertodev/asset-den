@@ -187,7 +187,7 @@ fn not_own_folder(path: &str, own: [&Path; 2]) -> Result<(), String> {
     for own in own {
         if overlaps(path, &own.to_string_lossy()) {
             return Err(format!(
-                "{path} overlaps the folder where Asset Den keeps its own data ({}). Choose the folder your assets are in instead.",
+                "{path} overlaps the folder where Mimikit keeps its own data ({}). Choose the folder your assets are in instead.",
                 own.display()
             ));
         }
@@ -743,7 +743,7 @@ async fn export_frames(
 ) -> Result<ExportResult, String> {
     let a = asset(&state, id)?;
     if !kind::decodable(&a.ext) {
-        return Err(format!("Asset Den can't cut frames from .{} files.", a.ext));
+        return Err(format!("Mimikit can't cut frames from .{} files.", a.ext));
     }
     let dest = PathBuf::from(dest);
     if !dest.is_dir() {
@@ -792,7 +792,7 @@ fn reveal(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), Str
 fn open_default(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let a = asset(&state, id)?;
     if a.kind == "other" {
-        return Err("Asset Den only opens known asset types. Use Show in folder instead.".into());
+        return Err("Mimikit only opens known asset types. Use Show in folder instead.".into());
     }
     app.opener().open_path(a.path, None::<&str>).map_err(err)
 }
@@ -918,8 +918,8 @@ fn restore_result(state: State<'_, AppState>) -> Result<bool, String> {
 #[tauri::command]
 fn open_link(app: AppHandle, link: String) -> Result<(), String> {
     let url = match link.as_str() {
-        "releases" => "https://github.com/sanchezrobertodev/asset-den/releases",
-        "source" => "https://github.com/sanchezrobertodev/asset-den",
+        "releases" => "https://github.com/sanchezrobertodev/mimikit/releases",
+        "source" => "https://github.com/sanchezrobertodev/mimikit",
         "ko-fi" => "https://ko-fi.com/sanchezrobertodev",
         _ => return Err(format!("Unknown link {link}.")),
     };

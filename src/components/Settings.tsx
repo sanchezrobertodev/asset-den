@@ -127,13 +127,13 @@ export function SettingsDialog() {
         </Section>
       )}
       <Section title="About">
-        <Row label={version ? `Asset Den ${version}` : "Asset Den"} hint="Open source, MIT License">
+        <Row label={version ? `Mimikit ${version}` : "Mimikit"} hint="Open source, MIT License">
           <div className="flex gap-2">
             <Link to="releases">Releases</Link>
             <Link to="source">Source code</Link>
           </div>
         </Row>
-        <Row label="Support Asset Den" hint="It's free. Tips keep it going.">
+        <Row label="Support Mimikit" hint="It's free. Tips keep it going.">
           <Link to="ko-fi">Ko-fi</Link>
         </Row>
       </Section>
@@ -278,7 +278,7 @@ function ImageAnalysis() {
       </Row>
       <Row
         label="Keep new and changed images analysed"
-        hint="Analyses images as they're added or changed while Asset Den is open. Turns on by itself after the first full analysis."
+        hint="Analyses images as they're added or changed while Mimikit is open. Turns on by itself after the first full analysis."
       >
         <Switch label="Keep new and changed images analysed" on={a.keep} onChange={(on) => void api.setKeepAnalysed(on).catch(useStore.getState().setError)} />
       </Row>
@@ -336,7 +336,7 @@ function Backups() {
       {restoring ? (
         <Row
           label={`Restore ${baseName(restoring)}?`}
-          hint="It replaces your library: folders, tags, ratings, notes, collections and sprite grids. The current library is saved in the backups folder first. Asset Den restarts to finish."
+          hint="It replaces your library: folders, tags, ratings, notes, collections and sprite grids. The current library is saved in the backups folder first. Mimikit restarts to finish."
         >
           <div className="flex flex-none gap-2">
             <Button size="sm" disabled={busy} onClick={() => setRestoring(null)}>
@@ -359,7 +359,7 @@ function Backups() {
           </div>
         </Row>
       )}
-      <Row label="Automatic backups" hint="One a day when Asset Den opens. The last 5 are kept.">
+      <Row label="Automatic backups" hint="One a day when Mimikit opens. The last 5 are kept.">
         <Button size="sm" onClick={() => void api.backupsFolder().then(api.revealPath).catch(setError)}>
           Show folder
         </Button>
@@ -396,7 +396,7 @@ function ThumbnailCache() {
       label="Thumbnail cache"
       hint={
         <>
-          <span className="font-mono">{size === null ? "…" : bytes(size)}</span> of thumbnails and previews Asset Den made. Your
+          <span className="font-mono">{size === null ? "…" : bytes(size)}</span> of thumbnails and previews Mimikit made. Your
           asset files aren't touched.
         </>
       }

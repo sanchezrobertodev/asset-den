@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds, signs and publishes Asset Den, plus the update feed the in-app updater reads.
+// Builds, signs and publishes Mimikit, plus the update feed the in-app updater reads.
 //
 //   node scripts/release.mjs              build + sign the Windows installer, publish it to the repo's releases
 //   node scripts/release.mjs --dry-run    build + sign + write release/v<version>/, upload nothing
@@ -23,7 +23,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeFeed } from "./feed.mjs";
 
-const RELEASES_REPO = "sanchezrobertodev/asset-den";
+const RELEASES_REPO = "sanchezrobertodev/mimikit";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const argv = process.argv.slice(2);
 const args = new Set(argv);
@@ -71,13 +71,13 @@ if (args.has("--add-platforms")) {
     return hits[0];
   };
   const sig = (suffix) => readFileSync(one(suffix), "utf8").trim();
-  const mac = `AssetDen_${version}_universal.app.tar.gz`;
-  const appImage = `AssetDen_${version}_amd64.AppImage`;
+  const mac = `Mimikit_${version}_universal.app.tar.gz`;
+  const appImage = `Mimikit_${version}_amd64.AppImage`;
   const files = [
     stage(one(".app.tar.gz"), mac),
-    stage(one(".dmg"), `AssetDen_${version}_universal.dmg`),
+    stage(one(".dmg"), `Mimikit_${version}_universal.dmg`),
     stage(one(".AppImage"), appImage),
-    stage(one(".deb"), `AssetDen_${version}_amd64.deb`),
+    stage(one(".deb"), `Mimikit_${version}_amd64.deb`),
   ];
   const macPlatform = { signature: sig(".app.tar.gz.sig"), url: assetUrl(mac) };
   const platforms = {
@@ -99,7 +99,7 @@ if (args.has("--add-platforms")) {
 
 if (process.platform !== "win32") fail("make release builds the Windows installer, so run it on Windows.");
 if (!signed) fail(`No signing key. Expected ${keyDefault}, or set TAURI_SIGNING_PRIVATE_KEY.`);
-const installer = `AssetDen_${version}_x64-setup.exe`;
+const installer = `Mimikit_${version}_x64-setup.exe`;
 if (!dryRun) {
   run("gh", ["auth", "status"], { quiet: true });
   buildCommit(); // fail before the build, not after it
@@ -107,11 +107,11 @@ if (!dryRun) {
     fail(`${RELEASES_REPO} already has ${tag} with ${installer}. Bump the version (tauri.conf.json, package.json, Cargo.toml) and add a CHANGELOG section first.`);
 }
 
-console.log(`Building Asset Den ${version} (NSIS installer, signed)…`);
+console.log(`Building Mimikit ${version} (NSIS installer, signed)…`);
 run("npx", ["tauri", "build", "--bundles", "nsis"]);
 
 const bundle = join(root, "src-tauri", "target", "release", "bundle", "nsis");
-const built = join(bundle, `Asset Den_${version}_x64-setup.exe`);
+const built = join(bundle, `Mimikit_${version}_x64-setup.exe`);
 if (!existsSync(built) || !existsSync(`${built}.sig`)) fail(`Expected ${built} and its .sig after the build.`);
 const files = [stage(built, installer)];
 const platform = { signature: readFileSync(`${built}.sig`, "utf8").trim(), url: assetUrl(installer) };
@@ -154,7 +154,7 @@ function publish(files, platforms, { draft }) {
       "--repo", RELEASES_REPO,
       // Tags the commit these files were built from, not wherever the default branch is now.
       "--target", buildCommit(),
-      "--title", `Asset Den ${version}`,
+      "--title", `Mimikit ${version}`,
       "--notes-file", join(out, "notes.md"),
       draft ? "--draft" : "--latest",
       ...files,

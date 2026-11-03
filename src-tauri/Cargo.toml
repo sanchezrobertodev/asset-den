@@ -1,5 +1,5 @@
 [package]
-name = "asset-den"
+name = "mimikit"
 version = "0.3.9"
 description = "Browse, preview and tag the game assets in your folders"
 authors = ["Roberto Sanchez"]
@@ -8,7 +8,7 @@ edition = "2024"
 
 [lib]
 # The `_lib` suffix avoids a lib/bin name clash on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "asset_den_lib"
+name = "mimikit_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

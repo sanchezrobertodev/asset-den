@@ -3,7 +3,7 @@
 
 CARGO_MANIFEST := --manifest-path src-tauri/Cargo.toml
 
-.PHONY: check install typecheck ui ui-test test lint fmt fmt-check dev build release release-dry
+.PHONY: check install typecheck ui ui-test test lint fmt fmt-check dev icons build release release-dry
 
 ## check: run before every push. Frontend typecheck, bundle and tests, rustfmt, clippy, Rust tests
 check: ui ui-test fmt-check lint test
@@ -44,6 +44,10 @@ fmt-check:
 
 dev:
 	npm run tauri dev
+
+## icons: rebuild src-tauri/icons from icon/ (the chest, its macOS tile and the hand-drawn 16 px frame)
+icons:
+	node scripts/icons.mjs
 
 ## build: installers for the current OS, signed for updates when ~/.tauri/asset-den.key exists (see README)
 build:

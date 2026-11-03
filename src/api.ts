@@ -98,7 +98,7 @@ export const api = {
       defaultPath,
       multiple: false,
       directory: false,
-      filters: [{ name: "Asset Den backup", extensions: ["db"] }],
+      filters: [{ name: "Mimikit backup", extensions: ["db"] }],
     });
     return typeof picked === "string" ? picked : null;
   },
@@ -118,7 +118,7 @@ export const api = {
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */
   appUpdatesSupported: () => invoke<boolean>("app_updates_supported"),
-  /** Asks the release feed for a newer, signed version of Asset Den. null when up to date. */
+  /** Asks the release feed for a newer, signed version of Mimikit. null when up to date. */
   checkAppUpdate: async (): Promise<AppUpdate | null> => {
     const update = await check();
     void pendingUpdate?.close().catch(() => {});
