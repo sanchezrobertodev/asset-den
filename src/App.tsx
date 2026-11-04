@@ -47,9 +47,12 @@ function letter(e: KeyboardEvent) {
   return /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key;
 }
 
-/** 0–5 from the number row or keypad, also where the row types symbols without Shift (French AZERTY). */
+/**
+ * 0–5 from the number row or keypad, also where the row types symbols without Shift (French AZERTY). Only the number
+ * row falls back to the key's place: with Num Lock off the keypad sends End, Insert and so on, which aren't ratings.
+ */
 function digit(e: KeyboardEvent) {
-  return /^[0-5]$/.test(e.key) ? Number(e.key) : /^(Digit|Numpad)[0-5]$/.test(e.code) ? Number(e.code.slice(-1)) : null;
+  return /^[0-5]$/.test(e.key) ? Number(e.key) : /^Digit[0-5]$/.test(e.code) ? Number(e.code.slice(-1)) : null;
 }
 
 function Toast() {
