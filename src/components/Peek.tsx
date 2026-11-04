@@ -2,7 +2,10 @@ import clsx from "clsx";
 import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
 import { Component, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, errorText } from "../api";
-import { ago, audioDetails, baseName, bytes, folderOf } from "../lib/format";
+import { baseName, folderOf } from "../lib/format";
+import { ago, audioDetails, bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
+import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Button, focusAssets, IconButton, KindPill, Label } from "./ui";
@@ -48,19 +51,19 @@ export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNo
       <div role="alert" className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
         <TriangleAlert aria-hidden className="size-5 text-muted" />
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-fg">Couldn't preview this file</span>
+          <span className="font-medium text-fg">{t("peek.previewFailed.title")}</span>
           <span className="max-w-[440px] text-xs text-muted [overflow-wrap:anywhere]">
-            {this.state.message ?? "It may be damaged or use a format variant Mimikit can't read."}
+            {this.state.message ?? t("peek.previewFailed.body")}
           </span>
         </div>
         <div className="flex gap-2">
           {a.kind !== "other" && (
             <Button size="sm" onClick={() => void openAsset(a)}>
-              Open
+              {t("peek.open")}
             </Button>
           )}
           <Button size="sm" onClick={() => void revealAsset(a)}>
-            Show in folder
+            {t("peek.showInFolder")}
           </Button>
         </div>
       </div>
@@ -70,8 +73,8 @@ export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNo
 
 export function copyPath(a: Asset) {
   navigator.clipboard.writeText(a.path).then(
-    () => useStore.getState().showToast("Path copied"),
-    () => useStore.getState().setError("Couldn't copy to the clipboard."),
+    () => useStore.getState().showToast(t("peek.pathCopied")),
+    () => useStore.getState().setError(t("peek.copyFailed")),
   );
 }
 
@@ -103,19 +106,19 @@ export function DuplicateBanner({ a }: { a: Asset }) {
       onClick={() => go("duplicates", { dupSel: dup.hash })}
       className="flex items-center justify-between gap-2.5 rounded-[10px] bg-warn-bg px-3 py-2.5 text-left text-warn-fg"
     >
-      <span className="min-w-0">Identical to {dup.names.join(", ")}</span>
-      <span className="font-semibold whitespace-nowrap">Review →</span>
+      <span className="min-w-0">{t("peek.identicalTo", { names: dup.names.join(", ") })}</span>
+      <span className="font-semibold whitespace-nowrap">{t("peek.review")}</span>
     </button>
   );
 }
 
 export function MetaRows({ a }: { a: Asset }) {
   const rows = [
-    a.width && a.height ? ["Dimensions", `${a.width}×${a.height}`] : null,
-    audioDetails(a) ? ["Audio", audioDetails(a)] : null,
-    ["Size", bytes(a.size)],
-    ["Format", `.${a.ext}`],
-    ["Modified", ago(a.mtime)],
+    a.width && a.height ? [t("peek.meta.dimensions"), `${a.width}×${a.height}`] : null,
+    audioDetails(a) ? [t("peek.meta.audio"), audioDetails(a)] : null,
+    [t("peek.meta.size"), bytes(a.size)],
+    [t("peek.meta.format"), `.${a.ext}`],
+    [t("peek.meta.modified"), ago(a.mtime)],
   ].filter(Boolean) as [string, string][];
   return (
     <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-y-[9px]">
@@ -135,26 +138,26 @@ export function TagEditor({ items }: { items: Asset[] }) {
   const input = useRef<HTMLInputElement>(null);
   const ids = items.map((a) => a.id);
   // On a multi-selection, show the tags all of them share.
-  const shared = items.reduce<string[]>((acc, a, i) => (i === 0 ? a.tags : acc.filter((t) => a.tags.includes(t))), []);
+  const shared = items.reduce<string[]>((acc, a, i) => (i === 0 ? a.tags : acc.filter((tag) => a.tags.includes(tag))), []);
   const submit = () => {
-    const t = draft.trim().replace(/^#/, "").toLowerCase().replace(/\s+/g, "-");
+    const tag = draft.trim().replace(/^#/, "").toLowerCase().replace(/\s+/g, "-");
     setDraft("");
-    if (t) void addTag(ids, t);
+    if (tag) void addTag(ids, tag);
   };
   return (
     <div className="flex flex-col gap-2">
-      <Label>Tags</Label>
+      <Label>{t("peek.tags.label")}</Label>
       <div className="focus-ring-within flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
-        {shared.map((t) => (
-          <span key={t} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] text-xs">
-            #{t}
+        {shared.map((tag) => (
+          <span key={tag} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] text-xs">
+            #{tag}
             <button
               type="button"
-              aria-label={`Remove tag ${t}`}
+              aria-label={t("peek.tags.remove", { tag })}
               onClick={() => {
                 // The chip goes away with its button; keep focus in the tag field.
                 input.current?.focus();
-                void removeTag(ids, t);
+                void removeTag(ids, tag);
               }}
               className="flex size-4 items-center justify-center rounded text-muted hover:bg-line-x hover:text-fg"
             >
@@ -164,10 +167,10 @@ export function TagEditor({ items }: { items: Asset[] }) {
         ))}
         <input
           ref={input}
-          aria-label="Add tag"
+          aria-label={t("peek.tags.add")}
           value={draft}
           maxLength={64}
-          placeholder="Add tag, press Enter"
+          placeholder={t("peek.tags.placeholder")}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
@@ -196,16 +199,16 @@ export function Stars({ value, onChange, className }: { value: number; onChange:
     box.current?.querySelectorAll<HTMLElement>("[role=radio]")[Math.max(n, 1) - 1]?.focus();
   };
   return (
-    <div ref={box} role="radiogroup" aria-label="Rating" onKeyDown={onKeyDown} className={clsx("flex items-center", className)}>
+    <div ref={box} role="radiogroup" aria-label={t("peek.rating.label")} onKeyDown={onKeyDown} className={clsx("flex items-center", className)}>
       {[1, 2, 3, 4, 5].map((n) => {
-        const hint = value === n ? "Clear rating (0)" : `Rate ${n} ${n === 1 ? "star" : "stars"} (${n})`;
+        const hint = value === n ? t("peek.rating.clear", { key: shortcut("unrate").keys }) : t("peek.rating.rate", { count: n, key: String(n) });
         return (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={value === n}
-            aria-label={`${n} ${n === 1 ? "star" : "stars"}`}
+            aria-label={t("peek.rating.stars", { count: n })}
             title={hint}
             // One tab stop for the group: the current rating, or the first star.
             tabIndex={n === Math.max(value, 1) ? 0 : -1}
@@ -239,13 +242,13 @@ export function NoteEditor({ a }: { a: Asset }) {
   useEffect(() => flush, []);
   return (
     <div className="flex flex-col gap-2">
-      <Label>Note</Label>
+      <Label>{t("peek.note.label")}</Label>
       <textarea
-        aria-label="Note"
+        aria-label={t("peek.note.label")}
         value={draft}
         maxLength={5000}
         rows={3}
-        placeholder="Add a note"
+        placeholder={t("peek.note.placeholder")}
         onChange={(e) => {
           setDraft(e.target.value);
           pending.current = e.target.value;
@@ -270,7 +273,7 @@ export function CollectionChecks({ items }: { items: Asset[] }) {
   const ids = items.map((a) => a.id);
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>Collections</Label>
+      <Label>{t("peek.collections.label")}</Label>
       {collections.map((c) => {
         const on = ids.every((id) => c.members.has(id));
         return (
@@ -290,7 +293,7 @@ export function CollectionChecks({ items }: { items: Asset[] }) {
       })}
       {!collections.length && (
         <button type="button" onClick={() => void newCollection()} className="py-1 text-left text-muted hover:text-fg">
-          + New collection
+          {t("peek.collections.new")}
         </button>
       )}
     </div>
@@ -316,19 +319,19 @@ export function Peek({ list }: { list: Asset[] }) {
   const step = (d: number) => list.length && s.select(list[(Math.max(i, 0) + d + list.length) % list.length].id);
 
   return (
-    <aside aria-label="Details" className="flex min-h-0 min-w-0 flex-col border-l border-line bg-panel">
+    <aside aria-label={t("peek.details")} className="flex min-h-0 min-w-0 flex-col border-l border-line bg-panel">
       <div className="flex h-[60px] flex-none items-center gap-1.5 border-b border-line-soft px-3.5">
-        <IconButton label="Previous (←)" bordered onClick={() => step(-1)}>
+        <IconButton label={t("peek.previous", { key: "←" })} bordered onClick={() => step(-1)}>
           <ArrowLeft className="size-4" />
         </IconButton>
-        <IconButton label="Next (→)" bordered onClick={() => step(1)}>
+        <IconButton label={t("peek.next", { key: "→" })} bordered onClick={() => step(1)}>
           <ArrowRight className="size-4" />
         </IconButton>
-        <span className="ml-1 font-mono text-xs text-faint">{i >= 0 ? `${i + 1} of ${list.length.toLocaleString()}` : ""}</span>
+        <span className="ml-1 font-mono text-xs text-faint">{i >= 0 ? t("peek.position", { index: i + 1, total: list.length }) : ""}</span>
         <Button size="sm" className="ml-auto" onClick={() => s.setFull(true)}>
-          Full screen <span className="font-mono text-[11px] text-muted">↵</span>
+          {t("peek.fullScreen")} <span className="font-mono text-[11px] text-muted">↵</span>
         </Button>
-        <IconButton label="Close (Esc)" onClick={() => s.setPeek(false)}>
+        <IconButton label={t("peek.close", { key: shortcut("back").keys })} onClick={() => s.setPeek(false)}>
           <X className="size-4" />
         </IconButton>
       </div>
@@ -336,21 +339,21 @@ export function Peek({ list }: { list: Asset[] }) {
       {multi ? (
         <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-auto p-[18px]">
           <div className="flex flex-col gap-1">
-            <span className="text-lg font-semibold tracking-[-.01em]">{selectedAssets.length} selected</span>
-            <span className="font-mono text-xs text-muted">{bytes(selectedAssets.reduce((n, x) => n + x.size, 0))} · drag them out together</span>
+            <span className="text-lg font-semibold tracking-[-.01em]">{t("peek.selected", { count: selectedAssets.length })}</span>
+            <span className="font-mono text-xs text-muted">{t("peek.selectionSize", { size: bytes(selectedAssets.reduce((n, x) => n + x.size, 0)) })}</span>
           </div>
           <Button
             onClick={() => void s.setFavorite(selectedAssets.map((x) => x.id), !selectedAssets.every((x) => x.favorite))}
             className="self-start"
           >
             <span aria-hidden>{selectedAssets.every((x) => x.favorite) ? "★" : "☆"}</span>
-            {selectedAssets.every((x) => x.favorite) ? "Unfavorite all" : "Favorite all"}
+            {selectedAssets.every((x) => x.favorite) ? t("peek.unfavoriteAll") : t("peek.favoriteAll")}
           </Button>
           <div className="flex flex-col gap-2">
-            <Label>Rating</Label>
+            <Label>{t("peek.rating.label")}</Label>
             <span className="flex items-center gap-2.5">
               <Stars value={sharedRating} onChange={(n) => void s.setRating(selectedAssets.map((x) => x.id), n)} />
-              {mixedRating && <span className="text-xs text-muted">Mixed</span>}
+              {mixedRating && <span className="text-xs text-muted">{t("peek.rating.mixed")}</span>}
             </span>
           </div>
           <TagEditor items={selectedAssets} />
@@ -377,13 +380,13 @@ export function Peek({ list }: { list: Asset[] }) {
         <div className="flex flex-none gap-2 border-t border-line-soft px-3.5 py-3">
           {a.kind !== "other" && (
             <Button variant="invert" className="flex-1" onClick={() => void openAsset(a)}>
-              Open
+              {t("peek.open")}
             </Button>
           )}
           <Button className="flex-1" onClick={() => void revealAsset(a)}>
-            Show in folder
+            {t("peek.showInFolder")}
           </Button>
-          <Button onClick={() => copyPath(a)}>Copy path</Button>
+          <Button onClick={() => copyPath(a)}>{t("peek.copyPath")}</Button>
         </div>
       )}
     </aside>
@@ -413,7 +416,7 @@ function PeekBody({ a }: { a: Asset }) {
         <div className="flex flex-none items-center gap-1.5">
           <Stars value={a.rating} onChange={(n) => void setRating([a.id], n)} />
           <IconButton
-            label="Favorite (F)"
+            label={t("peek.favorite", { key: shortcut("favorite").keys })}
             aria-pressed={a.favorite}
             bordered
             className={clsx("size-[34px] rounded-[9px] text-base", a.favorite ? "text-star" : "text-muted")}
@@ -426,7 +429,7 @@ function PeekBody({ a }: { a: Asset }) {
       <DuplicateBanner a={a} />
       {a.kind === "image" && ANALYSABLE.includes(a.ext) && (
         <Button size="sm" className="self-start" onClick={() => void findSimilar(a.id)}>
-          Find similar
+          {t("peek.findSimilar")}
         </Button>
       )}
       <MetaRows a={a} />

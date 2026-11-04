@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { useMemo } from "react";
-import { baseName, bytes, folderOf, kindLabel } from "../lib/format";
+import { baseName, folderOf } from "../lib/format";
+import { bytes, kindLabel, num } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import { useStore } from "../store";
 import { KINDS, type Kind } from "../types";
 
@@ -16,7 +18,7 @@ export function InsightsView() {
       const b = list.reduce((n, a) => n + a.size, 0);
       return { k, count: list.length, b, r: total ? b / total : 0 };
     })
-      .filter((t) => t.count)
+      .filter((kind) => kind.count)
       .sort((x, y) => y.r - x.r);
     const largest = [...s.assets].sort((x, y) => y.size - x.size).slice(0, 6);
     const folders = new Map<string, { rootId: number; path: string; count: number; b: number }>();
@@ -42,13 +44,20 @@ export function InsightsView() {
   };
 
   const stats = [
-    { k: "Files", v: s.assets.length.toLocaleString() },
-    { k: "Total size", v: bytes(d.total) },
-    { k: "Untagged", v: d.untagged.toLocaleString(), link: "Show untagged →", run: () => (show(), s.setFilters({ untagged: true })) },
+    { id: "files", k: t("insightsView.stats.files"), v: num(s.assets.length) },
+    { id: "size", k: t("insightsView.stats.totalSize"), v: bytes(d.total) },
     {
-      k: "Duplicate groups",
+      id: "untagged",
+      k: t("insightsView.stats.untagged"),
+      v: num(d.untagged),
+      link: t("insightsView.stats.showUntagged"),
+      run: () => (show(), s.setFilters({ untagged: true })),
+    },
+    {
+      id: "duplicates",
+      k: t("insightsView.stats.duplicates"),
       v: String(dupCount),
-      link: dupCount ? "Review duplicates →" : "All clear",
+      link: dupCount ? t("insightsView.stats.reviewDuplicates") : t("insightsView.stats.allClear"),
       run: dupCount ? () => s.go("duplicates") : undefined,
     },
   ];
@@ -61,7 +70,7 @@ export function InsightsView() {
           const Card = st.run ? "button" : "div";
           return (
             <Card
-              key={st.k}
+              key={st.id}
               type={st.run ? "button" : undefined}
               onClick={st.run}
               className={clsx("flex flex-col gap-1.5 rounded-xl border border-line bg-card px-[18px] py-4 text-left", st.run && "hover:border-line-x")}
@@ -76,27 +85,27 @@ export function InsightsView() {
 
       <section className={`${card} gap-4`}>
         <div className="flex items-baseline justify-between">
-          <h2 className="text-[15px] font-semibold">Storage by type</h2>
-          <span className="font-mono text-xs text-muted">{bytes(d.total)} total</span>
+          <h2 className="text-[15px] font-semibold">{t("insightsView.storageByType")}</h2>
+          <span className="font-mono text-xs text-muted">{t("insightsView.total", { size: bytes(d.total) })}</span>
         </div>
-        <div className="flex h-4 gap-0.5 overflow-hidden rounded-[5px]" role="img" aria-label="Storage by type">
-          {d.kinds.map((t) => (
-            <div key={t.k} data-kind={t.k} className="k-bar" style={{ width: `${Math.max(0.6, t.r * 100)}%` }} />
+        <div className="flex h-4 gap-0.5 overflow-hidden rounded-[5px]" role="img" aria-label={t("insightsView.storageByType")}>
+          {d.kinds.map((kind) => (
+            <div key={kind.k} data-kind={kind.k} className="k-bar" style={{ width: `${Math.max(0.6, kind.r * 100)}%` }} />
           ))}
         </div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-6 gap-y-1">
-          {d.kinds.map((t) => (
+          {d.kinds.map((kind) => (
             <button
-              key={t.k}
+              key={kind.k}
               type="button"
-              onClick={() => show({ kinds: [t.k as Kind] })}
+              onClick={() => show({ kinds: [kind.k as Kind] })}
               className="-mx-2 flex items-center gap-2 rounded-[7px] px-2 py-1.5 text-left hover:bg-active"
             >
-              <span aria-hidden data-kind={t.k} className="k-bar size-[9px] rounded-[3px]" />
-              <span className="font-medium">{kindLabel[t.k as Kind]}</span>
-              <span className="text-faint">{t.count.toLocaleString()}</span>
-              <span className="ml-auto font-mono text-xs">{bytes(t.b)}</span>
-              <span className="w-11 text-right font-mono text-xs text-faint">{pct(t.r)}</span>
+              <span aria-hidden data-kind={kind.k} className="k-bar size-[9px] rounded-[3px]" />
+              <span className="font-medium">{kindLabel[kind.k as Kind]}</span>
+              <span className="text-faint">{num(kind.count)}</span>
+              <span className="ml-auto font-mono text-xs">{bytes(kind.b)}</span>
+              <span className="w-11 text-right font-mono text-xs text-faint">{pct(kind.r)}</span>
             </button>
           ))}
         </div>
@@ -104,7 +113,7 @@ export function InsightsView() {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] gap-3.5">
         <section className={`${card} gap-0.5`}>
-          <h2 className="mb-2 text-[15px] font-semibold">Largest files</h2>
+          <h2 className="mb-2 text-[15px] font-semibold">{t("insightsView.largest")}</h2>
           {d.largest.map((a) => (
             <button
               key={a.id}
@@ -129,7 +138,7 @@ export function InsightsView() {
           ))}
         </section>
         <section className={`${card} gap-0.5`}>
-          <h2 className="mb-2 text-[15px] font-semibold">Folders</h2>
+          <h2 className="mb-2 text-[15px] font-semibold">{t("insightsView.folders")}</h2>
           {d.topFolders.map((f) => (
             <button
               key={`${f.rootId}:${f.path}`}
@@ -138,7 +147,7 @@ export function InsightsView() {
               className="-mx-2 grid h-9 grid-cols-[minmax(0,1fr)_40px_minmax(60px,140px)_70px] items-center gap-3.5 rounded-[7px] px-2 text-left hover:bg-active"
             >
               <span className="truncate font-medium">{[multi ? rootName(f.rootId) : "", f.path || (multi ? "" : rootName(f.rootId))].filter(Boolean).join("/")}</span>
-              <span className="text-right text-faint">{f.count.toLocaleString()}</span>
+              <span className="text-right text-faint">{num(f.count)}</span>
               <span className="h-1.5 overflow-hidden rounded-[3px] bg-active">
                 <span className="block h-full bg-fg-2" style={{ width: `${Math.max(1, (f.b / (d.topFolders[0]?.b || 1)) * 100)}%` }} />
               </span>

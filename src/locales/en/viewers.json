@@ -1,0 +1,57 @@
+{
+  "image": {
+    "decoding": "Decoding…",
+    "animateTitle": "Play the image as a sprite sheet",
+    "animate": "Animate",
+    "cantDisplay": "The webview can't display this image.",
+    "zoom": "{{percent}}%",
+    "zoomShown": "shown at {{percent}}%",
+    "zoomHint": "scroll to zoom, drag to pan"
+  },
+  "export": {
+    "pickFolder": "Export the frames of {{name}} to…",
+    "failed_one": "Exported {{count}} frame. {{failed}} failed: {{errors}}",
+    "failed_other": "Exported {{count}} frames. {{failed}} failed: {{errors}}",
+    "allEmpty": "Every frame is empty, so nothing was exported.",
+    "done_one": "Exported {{count}} frame to {{folder}}",
+    "done_other": "Exported {{count}} frames to {{folder}}",
+    "showInFolder": "Show in folder",
+    "button": "Export frames…",
+    "skipEmpty": "Skip fully transparent frames",
+    "chooseFolder": "Choose folder…"
+  },
+  "sprite": {
+    "slicing": "Slicing…",
+    "frameLabel": "{{name}}, frame {{frame}} of {{total}}",
+    "previousFrame": "Previous frame",
+    "pause": "Pause",
+    "play": "Play",
+    "nextFrame": "Next frame",
+    "columns": "Columns",
+    "rows": "Rows",
+    "frame": "frame",
+    "frameWidth": "Frame width in pixels",
+    "frameHeight": "Frame height in pixels",
+    "fps": "fps",
+    "framesPerSecond": "Frames per second",
+    "loop": "Loop",
+    "pixelTitle": "Pixel-art scaling",
+    "pixel": "Pixel"
+  },
+  "font": {
+    "pangram": "The quick brown fox jumps over the lazy dog",
+    "loadFailed": "This font couldn't be loaded.",
+    "loading": "Loading font…",
+    "sample": "Sample text"
+  },
+  "text": {
+    "reading": "Reading…",
+    "truncated": "… showing the start of {{size}}",
+    "moreLines_one": "… {{count}} more line",
+    "moreLines_other": "… {{count}} more lines"
+  },
+  "loadingAudio": "Loading audio…",
+  "loadingModel": "Loading model…",
+  "videoUnsupported": "This video format can't be played here.",
+  "noPreview": "No preview for this file type"
+}

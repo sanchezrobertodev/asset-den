@@ -1,0 +1,17 @@
+{
+  "dragFailed": "Couldn't start the drag: {{error}}",
+  "favorite": "favorite",
+  "stars_one": "{{count}} star",
+  "stars_other": "{{count}} stars",
+  "assets": "Assets",
+  "groupInfo_one": "{{count}} file · {{size}}",
+  "groupInfo_other": "{{count}} files · {{size}}",
+  "columns": {
+    "name": "Name",
+    "type": "Type",
+    "dims": "Dims / length",
+    "size": "Size",
+    "folder": "Folder",
+    "modified": "Modified"
+  }
+}

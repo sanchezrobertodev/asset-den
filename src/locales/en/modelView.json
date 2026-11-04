@@ -1,0 +1,12 @@
+{
+  "loading": "Loading model…",
+  "triangles_one": "{{count}} tris",
+  "triangles_other": "{{count}} tris",
+  "vertices_one": "{{count}} verts",
+  "vertices_other": "{{count}} verts",
+  "clips_one": "{{count}} anim",
+  "clips_other": "{{count}} anim",
+  "wireframe": "Wireframe",
+  "animate": "Animate",
+  "resetView": "Reset view"
+}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { errorText } from "../api";
+import { t } from "../lib/i18n";
 import { addLights, dispose, frame, loadModel, stats } from "../lib/models";
 import { onThemeColors, reducedMotion, themeColor } from "../lib/prefs";
 import type { Asset } from "../types";
@@ -116,27 +117,27 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
       <div ref={box} className="h-full w-full" />
       {!info && (
         <div className="pointer-events-none absolute inset-0">
-          <Note busy>Loading model…</Note>
+          <Note busy>{t("modelView.loading")}</Note>
         </div>
       )}
       {info && (
         <div className="absolute bottom-2.5 left-2.5 flex flex-wrap items-center gap-1.5">
           <span className={chip}>
-            {info.triangles.toLocaleString()} tris · {info.vertices.toLocaleString()} verts
-            {info.clips > 0 && ` · ${info.clips} anim`}
+            {t("modelView.triangles", { count: info.triangles })} · {t("modelView.vertices", { count: info.vertices })}
+            {info.clips > 0 && ` · ${t("modelView.clips", { count: info.clips })}`}
           </span>
           {full && (
             <>
               <button type="button" aria-pressed={wireframe} onClick={() => setWireframe((w) => !w)} className={toggleChip(wireframe)}>
-                Wireframe
+                {t("modelView.wireframe")}
               </button>
               {info.clips > 0 && (
                 <button type="button" aria-pressed={playClip} onClick={() => setPlayClip((p) => !p)} className={toggleChip(playClip)}>
-                  Animate
+                  {t("modelView.animate")}
                 </button>
               )}
               <button type="button" onClick={() => reset.current()} className={clsx(chip, "font-sans")}>
-                Reset view
+                {t("modelView.resetView")}
               </button>
             </>
           )}

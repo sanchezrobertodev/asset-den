@@ -1,0 +1,22 @@
+{
+  "started": "Analysing images…",
+  "paused": "Image analysis paused.",
+  "resumed": "Image analysis resumed.",
+  "finished_one": "Image analysis finished. {{count}} image analysed.",
+  "finished_other": "Image analysis finished. {{count}} images analysed.",
+  "stopped_one": "Image analysis stopped. {{done}} of {{count}} image analysed.",
+  "stopped_other": "Image analysis stopped. {{done}} of {{count}} images analysed.",
+  "pausedTitle": "Analysis paused",
+  "runningTitle": "Analysing images",
+  "resume": "Resume image analysis",
+  "pause": "Pause image analysis",
+  "cancel": "Cancel image analysis",
+  "progress": "{{done}} of {{total}}",
+  "pending_one": "{{count}} image isn't analysed yet — results only cover {{covered}}.",
+  "pending_other": "{{count}} images aren't analysed yet — results only cover {{covered}}.",
+  "covered_one": "the {{count}} that is",
+  "covered_other": "the {{count}} that are",
+  "analysingNow": "Analysing now…",
+  "resumeAnalysis": "Resume analysis",
+  "analyseNow": "Analyse now"
+}

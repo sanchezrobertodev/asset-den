@@ -6,6 +6,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
+import { t, translateError } from "./lib/i18n";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
@@ -94,16 +95,16 @@ export const api = {
   restoreResult: () => invoke<boolean>("restore_result"),
   pickBackup: async (defaultPath: string) => {
     const picked = await open({
-      title: "Restore a library backup",
+      title: t("api.restoreTitle"),
       defaultPath,
       multiple: false,
       directory: false,
-      filters: [{ name: "Mimikit backup", extensions: ["db"] }],
+      filters: [{ name: t("api.backupFilter"), extensions: ["db"] }],
     });
     return typeof picked === "string" ? picked : null;
   },
   openLink: (link: "releases" | "source" | "ko-fi") => invoke<void>("open_link", { link }),
-  pickFolder: async (title = "Import an asset folder") => {
+  pickFolder: async (title = t("api.importTitle")) => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;
   },
@@ -128,7 +129,7 @@ export const api = {
   },
   /** Downloads, verifies and installs the pending update, then restarts. On Windows the installer closes the app itself. */
   installAppUpdate: async (onProgress: (p: DownloadProgress) => void) => {
-    if (!pendingUpdate) throw new Error("No update to install. Check for updates first.");
+    if (!pendingUpdate) throw new Error(t("api.noUpdate"));
     const progress: DownloadProgress = { downloaded: 0, total: null };
     await pendingUpdate.downloadAndInstall((e) => {
       if (e.event === "Started") progress.total = e.data.contentLength ?? null;
@@ -156,8 +157,9 @@ export function fileUrl(path: string): string {
 /** {@link fileUrl} for this version of an asset, so the webview loads it again after the file changes. */
 export const assetUrl = (a: Asset) => `${fileUrl(a.path)}?v=${a.mtime}-${a.size}`;
 
+/** An error as text for the user; backend messages in the UI language when locales/en/errors.json knows them. */
 export function errorText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return translateError(e);
+  if (e instanceof Error) return translateError(e.message);
   return JSON.stringify(e);
 }

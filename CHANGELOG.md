@@ -13,8 +13,21 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 - An accent colour for buttons, selection and focus rings: green (as before), teal, blue, violet, pink, red, orange
   or amber. Every theme and accent pair is checked for readable contrast.
 
+### Changed
+
+- All interface text now comes from translation files, ready for more languages. English reads as before, apart
+  from the fixes below.
+
 ### Fixed
 
+- Counts of one read correctly ("1 file", "1 image", "1 more line"), and large counts get thousands separators
+  everywhere.
+- Ctrl+K, Ctrl+A, F and the 0–5 rating keys work on non-Latin keyboard layouts, and the rating keys work from the
+  number row of a French AZERTY keyboard.
+- Search operators typed in full width by a Japanese or Chinese input method (`：`, `＃`, `＞`, `＜`, `＝`) work like
+  the usual ones.
+- The update download shows sizes in the same units as the rest of the app, and "Starting download…" no longer ends
+  in four dots.
 - On Windows the title bar follows the theme you pick, not just the system's light or dark setting.
 - An open waveform or 3D preview changes colour with the theme, instead of keeping the old theme's colours.
 - Kind dots and collection colours stay visible when a Windows contrast theme is on.

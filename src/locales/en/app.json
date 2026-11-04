@@ -1,0 +1,26 @@
+{
+  "undo": "Undo",
+  "dismiss": "Dismiss",
+  "scanning": "Scanning {{names}}…",
+  "scanFinished_one": "Scan finished. {{count}} file in the library.",
+  "scanFinished_other": "Scan finished. {{count}} files in the library.",
+  "skipToAssets": "Skip to the assets",
+  "empty": {
+    "scanningTitle": "Scanning…",
+    "scanningBody": "Assets appear here as soon as they're indexed.",
+    "noDirectFilesIn": "No files directly in {{name}}",
+    "noDirectFilesHere": "No files directly in this folder",
+    "inSubfolders": "Its assets are in subfolders.",
+    "includeSubfolders": "Include subfolders",
+    "noSimilarTitle": "Nothing looks like {{name}}",
+    "noSimilarBody_one": "No other analysed image is within {{count}} bit of it. Try a looser match above.",
+    "noSimilarBody_other": "No other analysed image is within {{count}} bits of it. Try a looser match above.",
+    "backToLibrary": "Back to the library",
+    "noFavoritesTitle": "No favorites yet",
+    "noFavoritesBody": "Press {{key}} on any asset to add it here.",
+    "noMatchesTitle": "No assets match these filters",
+    "noMatchesBody": "Try removing a type, folder or search filter.",
+    "clearFilters": "Clear search and filters"
+  },
+  "allShortcuts": "all shortcuts"
+}

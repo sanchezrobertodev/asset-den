@@ -3,6 +3,7 @@ import { Pause, Play, Repeat } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { errorText, fileUrl } from "../api";
+import { t } from "../lib/i18n";
 import { onThemeColors, reducedMotion, themeColor } from "../lib/prefs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -38,12 +39,12 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
       setTime({ now: 0, total: d });
       if (full && !reducedMotion()) void w.play().catch(() => {});
     });
-    w.on("timeupdate", (t) => setTime((x) => ({ ...x, now: t })));
+    w.on("timeupdate", (now) => setTime((x) => ({ ...x, now })));
     w.on("play", () => setPlaying(true));
     w.on("pause", () => setPlaying(false));
     // Read at the end rather than captured, so toggling Loop doesn't reload the waveform.
     w.on("finish", () => useStore.getState().audioLoop && void w.play(0).catch(() => {}));
-    w.on("error", (e) => live && fail(`Can't play this file here: ${errorText(e)}`));
+    w.on("error", (e) => live && fail(t("audioView.playFailed", { error: errorText(e) })));
     return () => {
       live = false;
       w.destroy();
@@ -61,7 +62,7 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
         <button
           type="button"
           onClick={() => void ws.current?.playPause()}
-          aria-label={playing ? "Pause" : "Play"}
+          aria-label={playing ? t("audioView.pause") : t("audioView.play")}
           className={clsx("flex items-center justify-center rounded-full bg-accent text-accent-fg", full ? "size-[46px]" : "size-[38px]")}
         >
           {playing ? <Pause aria-hidden className="size-4 fill-current" /> : <Play aria-hidden className="size-4 fill-current" />}
@@ -72,11 +73,11 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
         <button
           type="button"
           aria-pressed={loop}
-          title="Play again from the start when it ends"
+          title={t("audioView.loopTitle")}
           onClick={() => setLoop(!loop)}
           className={clsx(toggleChip(loop), "ml-auto flex items-center gap-1")}
         >
-          <Repeat aria-hidden className="size-3" /> Loop
+          <Repeat aria-hidden className="size-3" /> {t("audioView.loop")}
         </button>
       </div>
     </div>

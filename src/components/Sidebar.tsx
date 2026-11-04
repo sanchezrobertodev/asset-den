@@ -7,13 +7,16 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { rulesWantColors, smartMembers } from "../lib/filter";
 import { treeFor, type FolderNode } from "../lib/folders";
-import { baseName, bytes, kindLabel } from "../lib/format";
+import { baseName } from "../lib/format";
+import { bytes, kindLabel, num } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import type { Theme } from "../lib/prefs";
+import { shortcut } from "../lib/shortcuts";
 import { themeName } from "../lib/themes";
 import { useStore } from "../store";
 import { KINDS, type ViewName } from "../types";
 import { api } from "../api";
-import { Button, IconButton, Label, Modal } from "./ui";
+import { Button, IconButton, Label, Modal, T } from "./ui";
 import logo24 from "../../icon/24.png";
 import logo48 from "../../icon/48.png";
 
@@ -22,7 +25,7 @@ const COLL_HUES = [75, 25, 250, 152, 300];
 export const collColor = (i: number) => `oklch(var(--coll-l) var(--coll-c) ${COLL_HUES[i % COLL_HUES.length]})`;
 
 /** The sidebar button cycles System, Dark and Light; any other theme goes back to System. */
-const nextTheme = (t: Theme): Theme => (t === "system" ? "dark" : t === "dark" ? "light" : "system");
+const nextTheme = (theme: Theme): Theme => (theme === "system" ? "dark" : theme === "dark" ? "light" : "system");
 
 function NavItem({
   label,
@@ -51,7 +54,7 @@ function NavItem({
       {badge ? (
         <span className="rounded-[9px] bg-warn-bg px-[7px] py-px text-[11px] font-semibold text-warn-fg">{badge}</span>
       ) : count !== undefined ? (
-        <span className="font-mono text-[11px] text-faint">{count.toLocaleString()}</span>
+        <span className="font-mono text-[11px] text-faint">{num(count)}</span>
       ) : null}
     </button>
   );
@@ -97,11 +100,11 @@ export function Sidebar() {
   const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, palettes), [s.collections, s.assets, s.notes, palettes]);
 
   const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
-    { view: "library", label: "Library", count: s.assets.length },
-    { view: "favorites", label: "Favorites", count: favorites },
-    { view: "collections", label: "Collections", count: s.collections.length },
-    { view: "duplicates", label: "Duplicates", badge: s.dups?.length || undefined },
-    { view: "insights", label: "Insights" },
+    { view: "library", label: t("sidebar.library"), count: s.assets.length },
+    { view: "favorites", label: t("sidebar.favorites"), count: favorites },
+    { view: "collections", label: t("sidebar.collections"), count: s.collections.length },
+    { view: "duplicates", label: t("sidebar.duplicates"), badge: s.dups?.length || undefined },
+    { view: "insights", label: t("sidebar.insights") },
   ];
   const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : s.theme === "system" ? Monitor : Palette;
   const updatesSupported = useAppUpdate((u) => u.supported);
@@ -111,7 +114,7 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside aria-label="Library" className="flex min-h-0 flex-col border-r border-line px-2.5">
+    <aside aria-label={t("sidebar.library")} className="flex min-h-0 flex-col border-r border-line px-2.5">
       <div className="flex h-[60px] flex-none items-center gap-2.5 px-2">
         {/* The hand-drawn 24 px frame of the app icon, and the 48 px one on HiDPI screens. */}
         <img src={logo24} srcSet={`${logo24} 1x, ${logo48} 2x`} alt="" className="size-6 flex-none" />
@@ -132,8 +135,8 @@ export function Sidebar() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
-          <Label>Collections</Label>
-          <IconButton label="New collection" className="size-6" onClick={() => void s.newCollection()}>
+          <Label>{t("sidebar.collections")}</Label>
+          <IconButton label={t("sidebar.newCollection")} className="size-6" onClick={() => void s.newCollection()}>
             <Plus className="size-4" />
           </IconButton>
         </div>
@@ -142,28 +145,28 @@ export function Sidebar() {
             <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
               <span className="flex min-w-0 items-center gap-2">
                 {c.rule ? (
-                  <Sparkles role="img" aria-label="Smart collection" className="keep-color size-3 flex-none" style={{ color: collColor(i) }} />
+                  <Sparkles role="img" aria-label={t("sidebar.smartCollection")} className="keep-color size-3 flex-none" style={{ color: collColor(i) }} />
                 ) : (
                   <span aria-hidden className="keep-color size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
                 )}
                 <span className="truncate">{c.name}</span>
               </span>
-              <span className="font-mono text-[11px] text-faint">{(smart.get(c.id)?.length ?? c.assetIds.length).toLocaleString()}</span>
+              <span className="font-mono text-[11px] text-faint">{num(smart.get(c.id)?.length ?? c.assetIds.length)}</span>
             </Row>
           ))}
-          {!s.collections.length && <p className="px-3 py-1 text-xs text-faint">Group assets for a level or a pack.</p>}
+          {!s.collections.length && <p className="px-3 py-1 text-xs text-faint">{t("sidebar.noCollections")}</p>}
         </div>
 
         <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
-          <Label>Folders</Label>
-          <IconButton label="Import a folder" className="size-6" onClick={() => void s.importFolder()}>
+          <Label>{t("sidebar.folders")}</Label>
+          <IconButton label={t("sidebar.importFolder")} className="size-6" onClick={() => void s.importFolder()}>
             <Plus className="size-4" />
           </IconButton>
         </div>
         <FolderTree />
         {!s.roots.length && (
           <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
-            + Import a folder
+            {t("sidebar.importFolderLink")}
           </button>
         )}
       </div>
@@ -173,35 +176,35 @@ export function Sidebar() {
         <UpdateNotice />
         <div className="flex min-w-0 flex-col gap-0.5 text-xs">
           <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>
-            {s.roots.length === 1 ? baseName(s.roots[0].path) : `${s.roots.length} folders`}
+            {s.roots.length === 1 ? baseName(s.roots[0].path) : t("sidebar.folderCount", { count: s.roots.length })}
           </span>
           <span className="font-mono text-[11px] whitespace-nowrap text-faint">
-            {bytes(total)} · {s.assets.length.toLocaleString()} files
+            {t("sidebar.librarySize", { size: bytes(total), count: s.assets.length })}
           </span>
         </div>
-        <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label="Library size by type">
+        <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label={t("sidebar.sizeByType")}>
           {KINDS.filter((k) => byKind.get(k)).map((k) => (
-            <div key={k} data-kind={k} title={`${kindLabel[k]}: ${bytes(byKind.get(k)!)}`} className="k-bar" style={{ width: `${Math.max(0.6, (byKind.get(k)! / (total || 1)) * 100)}%` }} />
+            <div key={k} data-kind={k} title={t("sidebar.kindSize", { kind: kindLabel[k], size: bytes(byKind.get(k)!) })} className="k-bar" style={{ width: `${Math.max(0.6, (byKind.get(k)! / (total || 1)) * 100)}%` }} />
           ))}
         </div>
       </div>
       {/* App controls live in their own bar so they never squeeze the library name. */}
       <div className="-mx-2.5 flex h-11 flex-none items-center gap-0.5 border-t border-line-soft px-3">
-        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? `Mimikit ${version}` : undefined}>
-          {version ? `v${version}` : ""}
+        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? t("sidebar.version", { version }) : undefined}>
+          {version ? t("sidebar.versionShort", { version }) : ""}
         </span>
         {updatesSupported && (
-          <IconButton label="Check for updates" className="size-7" onClick={openUpdates}>
+          <IconButton label={t("sidebar.checkUpdates")} className="size-7" onClick={openUpdates}>
             <CircleArrowUp className="size-4" />
           </IconButton>
         )}
-        <IconButton label={`Theme: ${themeName(s.theme)} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme(s.theme))}>
+        <IconButton label={t("sidebar.theme", { name: themeName(s.theme) })} className="size-7" onClick={() => s.setTheme(nextTheme(s.theme))}>
           <ThemeIcon className="size-4" />
         </IconButton>
-        <IconButton label="Keyboard shortcuts (?)" className="size-7" onClick={() => s.setModal("shortcuts")}>
+        <IconButton label={t("sidebar.shortcuts", { keys: shortcut("help").keys })} className="size-7" onClick={() => s.setModal("shortcuts")}>
           <Keyboard className="size-4" />
         </IconButton>
-        <IconButton label="Settings" className="size-7" onClick={() => s.setModal("settings")}>
+        <IconButton label={t("sidebar.settings")} className="size-7" onClick={() => s.setModal("settings")}>
           <Settings className="size-4" />
         </IconButton>
       </div>
@@ -219,7 +222,7 @@ function FolderTree() {
     if (s.expanded.has(n.key)) n.children.forEach((c) => walk(c, depth + 1));
   };
   // Roots with nothing indexed yet still get a row (e.g. while their first scan runs).
-  s.roots.forEach((r) => walk(tree.find((t) => t.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: baseName(r.path), count: 0, bytes: 0, children: [] }, 0));
+  s.roots.forEach((r) => walk(tree.find((node) => node.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: baseName(r.path), count: 0, bytes: 0, children: [] }, 0));
   // A relink whose new folder lacks some of the files, waiting for the user to confirm.
   const [relink, setRelink] = useState<{ id: number; name: string; path: string; found: number; checked: number } | null>(null);
   // A library folder whose X was clicked, waiting for the user to confirm.
@@ -227,7 +230,7 @@ function FolderTree() {
   const removeCount = removing ? s.assets.filter((a) => a.rootId === removing.id).length : 0;
 
   const locate = async (id: number, name: string) => {
-    const path = await api.pickFolder(`Locate ${name}`);
+    const path = await api.pickFolder(t("sidebar.folder.locateTitle", { name }));
     if (!path) return;
     try {
       const m = await api.checkRelink(id, path);
@@ -245,13 +248,14 @@ function FolderTree() {
     const scanning = isRoot ? s.scanning[n.rootId] : undefined;
     const missing = isRoot && s.missing[n.rootId];
     const Icon = active ? FolderOpen : Folder;
+    const rootPath = isRoot ? (s.roots.find((r) => r.id === n.rootId)?.path ?? "") : "";
     return (
       <div key={n.key} role="listitem" className="group relative flex items-center">
         <span className="flex w-6 flex-none justify-center" style={{ marginLeft: depth * 14 }}>
           {n.children.length > 0 && (
             <button
               type="button"
-              aria-label={`Subfolders of ${n.name}`}
+              aria-label={t("sidebar.folder.subfolders", { name: n.name })}
               aria-expanded={open}
               onClick={() => s.toggleExpanded(n.key)}
               className="flex size-6 items-center justify-center rounded text-muted -outline-offset-2 hover:bg-active hover:text-fg"
@@ -262,12 +266,7 @@ function FolderTree() {
         </span>
         <button
           type="button"
-          title={
-            isRoot
-              ? s.roots.find((r) => r.id === n.rootId)?.path +
-                (missing ? "\nCan't reach this folder. Its assets keep their tags and collections: locate it if it moved, or rescan once it's back." : "")
-              : n.path
-          }
+          title={isRoot ? (missing ? t("sidebar.folder.unreachableTitle", { path: rootPath }) : rootPath) : n.path}
           onClick={() => s.go("library", { folder: { rootId: n.rootId, path: n.path } })}
           onDoubleClick={() => n.children.length && s.toggleExpanded(n.key)}
           aria-current={active ? "page" : undefined}
@@ -278,28 +277,28 @@ function FolderTree() {
           )}
         >
           {missing ? (
-            <FolderX role="img" aria-label="Can't reach this folder:" className="size-3.5 flex-none text-warn-fg" />
+            <FolderX role="img" aria-label={t("sidebar.folder.unreachable")} className="size-3.5 flex-none text-warn-fg" />
           ) : (
             <Icon aria-hidden className={clsx("size-3.5 flex-none", active ? "text-accent" : "text-muted")} />
           )}
           <span className="min-w-0 flex-1 truncate">{n.name}</span>
           <span className={clsx("flex items-center gap-1 font-mono text-[11px] text-faint", isRoot && "group-hover:invisible group-focus-within:invisible")}>
-            {scanning !== undefined && <LoaderCircle role="img" aria-label="Scanning" className="size-3 animate-spin" />}
-            {(scanning ?? n.count).toLocaleString()}
+            {scanning !== undefined && <LoaderCircle role="img" aria-label={t("sidebar.folder.scanning")} className="size-3 animate-spin" />}
+            {num(scanning ?? n.count)}
           </span>
         </button>
         {isRoot && (
           // Faded, not display:none, so a confirm dialog can hand focus back to its button after Cancel.
           <div className="absolute top-0 right-1 flex h-full items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
             {missing && (
-              <IconButton label={`Locate ${n.name} (if it moved)`} className="size-6 -outline-offset-2" onClick={() => void locate(n.rootId, n.name)}>
+              <IconButton label={t("sidebar.folder.locate", { name: n.name })} className="size-6 -outline-offset-2" onClick={() => void locate(n.rootId, n.name)}>
                 <FolderSearch className="size-3.5" />
               </IconButton>
             )}
-            <IconButton label={`Rescan ${n.name}`} className="size-6 -outline-offset-2" onClick={() => void s.rescan(n.rootId)}>
+            <IconButton label={t("sidebar.folder.rescan", { name: n.name })} className="size-6 -outline-offset-2" onClick={() => void s.rescan(n.rootId)}>
               <RefreshCw className="size-3.5" />
             </IconButton>
-            <IconButton label={`Remove ${n.name} from the library (files stay on disk)`} className="size-6 -outline-offset-2 hover:text-danger" onClick={() => setRemoving({ id: n.rootId, name: n.name })}>
+            <IconButton label={t("sidebar.folder.remove", { name: n.name })} className="size-6 -outline-offset-2 hover:text-danger" onClick={() => setRemoving({ id: n.rootId, name: n.name })}>
               <X className="size-3.5" />
             </IconButton>
           </div>
@@ -310,17 +309,17 @@ function FolderTree() {
 
   return (
     <>
-      <div role="list" aria-label="Folders" className="flex flex-col gap-px">
+      <div role="list" aria-label={t("sidebar.folders")} className="flex flex-col gap-px">
         {items}
       </div>
       {relink && (
         <Modal
-          title={relink.found ? `Only some of ${relink.name}'s files are there` : `None of ${relink.name}'s files are there`}
+          title={t(relink.found ? "sidebar.relink.someTitle" : "sidebar.relink.noneTitle", { name: relink.name })}
           onClose={() => setRelink(null)}
           footer={
             <>
               <Button data-autofocus onClick={() => setRelink(null)}>
-                Cancel
+                {t("sidebar.cancel")}
               </Button>
               <Button
                 variant="invert"
@@ -329,26 +328,24 @@ function FolderTree() {
                   void s.relinkRoot(relink.id, relink.path);
                 }}
               >
-                Relink anyway
+                {t("sidebar.relink.confirm")}
               </Button>
             </>
           }
         >
           <p className="leading-relaxed">
-            Mimikit checked {relink.checked.toLocaleString()} of this folder's files and found {relink.found.toLocaleString()} in{" "}
-            <span className="text-fg">{relink.path}</span>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and
-            collections. Your files aren't touched.
+            <T k="sidebar.relink.body" vars={{ count: relink.checked, found: relink.found, path: relink.path }} tags={[<span className="text-fg" />]} />
           </p>
         </Modal>
       )}
       {removing && (
         <Modal
-          title={`Remove ${removing.name} from the library?`}
+          title={t("sidebar.removeRoot.title", { name: removing.name })}
           onClose={() => setRemoving(null)}
           footer={
             <>
               <Button data-autofocus onClick={() => setRemoving(null)}>
-                Cancel
+                {t("sidebar.cancel")}
               </Button>
               <Button
                 variant="danger"
@@ -357,15 +354,12 @@ function FolderTree() {
                   void s.removeRoot(removing.id);
                 }}
               >
-                Remove
+                {t("sidebar.removeRoot.confirm")}
               </Button>
             </>
           }
         >
-          <p className="leading-relaxed">
-            This removes {removeCount ? `the ${removeCount.toLocaleString()} ${removeCount === 1 ? "asset" : "assets"} in this folder` : "its assets"} from the
-            library, with their tags, ratings, notes, collection memberships and sprite grids. Your files stay on disk.
-          </p>
+          <p className="leading-relaxed">{t("sidebar.removeRoot.body", { count: removeCount })}</p>
         </Modal>
       )}
     </>

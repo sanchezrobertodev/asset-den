@@ -3,18 +3,21 @@ import { useEffect, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import type { DownloadProgress } from "../api";
 import { openUpdates, useAppUpdate } from "../appUpdate";
-import { Button, Modal } from "./ui";
+import { bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
+import { Button, Modal, T } from "./ui";
 
 function percent(p: DownloadProgress | null): number | null {
   return p?.total ? Math.min(100, Math.round((p.downloaded / p.total) * 100)) : null;
 }
 
 function progressText(p: DownloadProgress | null): string {
-  if (!p) return "Starting download…";
-  const mb = (n: number) => (n / 1_000_000).toFixed(1);
+  if (!p) return t("appUpdate.starting");
   const pct = percent(p);
-  if (pct === 100) return "Installing…";
-  return p.total ? `Downloading ${mb(p.downloaded)} of ${mb(p.total)} MB (${pct}%)` : `Downloading ${mb(p.downloaded)} MB`;
+  if (pct === 100) return t("appUpdate.installing");
+  return p.total
+    ? t("appUpdate.downloadingOf", { done: bytes(p.downloaded), total: bytes(p.total), percent: pct ?? 0 })
+    : t("appUpdate.downloading", { done: bytes(p.downloaded) });
 }
 
 /** `code` and **bold**; links and other Markdown show as plain text. */
@@ -95,9 +98,9 @@ export function UpdateNotice() {
     >
       <CircleArrowUp aria-hidden className="size-4 flex-none text-accent" />
       <span className="min-w-0 flex-1">
-        <span className="font-medium">Mimikit {update.version}</span> is available
+        <T k="appUpdate.notice" vars={{ version: update.version }} tags={[<span className="font-medium" />]} />
       </span>
-      <span className="font-semibold text-accent">View</span>
+      <span className="font-semibold text-accent">{t("appUpdate.view")}</span>
     </button>
   );
 }
@@ -114,59 +117,55 @@ export function UpdateDialog() {
 
   return (
     <Modal
-      title={phase === "available" || phase === "installing" ? `Mimikit ${update?.version}` : "Updates"}
+      title={phase === "available" || phase === "installing" ? t("appUpdate.title", { version: update?.version ?? "" }) : t("appUpdate.updates")}
       onClose={close}
       footer={
         phase === "available" ? (
           <>
-            <Button onClick={close}>Later</Button>
+            <Button onClick={close}>{t("appUpdate.later")}</Button>
             <Button variant="accent" data-autofocus onClick={() => void install()}>
-              Install &amp; restart
+              {t("appUpdate.install")}
             </Button>
           </>
         ) : phase === "error" ? (
           <>
-            <Button onClick={close}>Close</Button>
+            <Button onClick={close}>{t("appUpdate.close")}</Button>
             <Button variant="invert" data-autofocus onClick={() => void (installFailed ? install() : check())}>
-              Try again
+              {t("appUpdate.retry")}
             </Button>
           </>
         ) : phase !== "installing" ? (
           <Button data-autofocus onClick={close}>
-            Close
+            {t("appUpdate.close")}
           </Button>
         ) : undefined
       }
     >
       {phase === "checking" && (
         <p role="status" className="flex items-center gap-2">
-          <LoaderCircle aria-hidden className="size-4 animate-spin" /> Checking for a new version…
+          <LoaderCircle aria-hidden className="size-4 animate-spin" /> {t("appUpdate.checking")}
         </p>
       )}
       {phase === "upToDate" && (
         <p role="status" className="flex items-center gap-2">
           <CircleCheck aria-hidden className="size-4 text-accent" />
-          You have the latest version{version ? ` (${version})` : ""}.
+          {version ? t("appUpdate.upToDateVersion", { version }) : t("appUpdate.upToDate")}
         </p>
       )}
       {phase === "error" && (
         <p role="alert" className="flex items-start gap-2 text-danger">
           <CircleAlert aria-hidden className="mt-0.5 size-4 flex-none" />
-          <span>
-            {installFailed ? "Couldn't install the update" : "Couldn't check for updates"}: {error}
-          </span>
+          <span>{t(installFailed ? "appUpdate.installFailed" : "appUpdate.checkFailed", { error: error ?? "" })}</span>
         </p>
       )}
       {(phase === "available" || phase === "installing") && update && (
         <div className="flex flex-col gap-3">
-          <p className="text-muted">
-            You have {update.currentVersion}. Updates are signed, and Mimikit verifies the signature before installing.
-          </p>
+          <p className="text-muted">{t("appUpdate.current", { version: update.currentVersion })}</p>
           {phase === "installing" ? (
             <div role="status" className="flex flex-col gap-2">
               <div
                 role="progressbar"
-                aria-label="Update download"
+                aria-label={t("appUpdate.progressLabel")}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={pct ?? undefined}
@@ -174,7 +173,9 @@ export function UpdateDialog() {
               >
                 <div className="h-full rounded-full bg-accent transition-[width] duration-200" style={{ width: `${pct ?? 0}%` }} />
               </div>
-              <span className="text-xs text-muted">{progressText(progress)}. Mimikit restarts when it's done.</span>
+              <span className="text-xs text-muted">
+                {progressText(progress)} {t("appUpdate.restartNote")}
+              </span>
             </div>
           ) : update.notes ? (
             <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-line bg-card px-4 pt-3">

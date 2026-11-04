@@ -1,5 +1,6 @@
 import { FolderPlus, Hand } from "lucide-react";
 import type { ReactNode } from "react";
+import { t } from "../lib/i18n";
 import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import { Button, Kbd } from "./ui";
@@ -23,25 +24,22 @@ export function Welcome() {
     <div className="flex h-full items-center justify-center overflow-y-auto px-7 py-10">
       <div className="flex w-full max-w-[600px] flex-col items-center text-center">
         <img src={logo} srcSet={`${logo} 1x, ${logo2x} 2x`} alt="" className="size-16" />
-        <h2 className="mt-5 text-[22px] font-semibold tracking-[-.015em] text-fg">Welcome to Mimikit</h2>
-        <p className="mt-2 max-w-[460px] text-fg-2">
-          Point it at a folder of game assets and it indexes every sprite, sound, model, font and video in it, then keeps
-          watching for changes.
-        </p>
+        <h2 className="mt-5 text-[22px] font-semibold tracking-[-.015em] text-fg">{t("welcome.title")}</h2>
+        <p className="mt-2 max-w-[460px] text-fg-2">{t("welcome.intro")}</p>
         <Button variant="accent" size="lg" className="mt-6" onClick={() => void importFolder()}>
           <FolderPlus aria-hidden className="size-4" />
-          Import a folder
+          {t("welcome.importFolder")}
         </Button>
-        <p className="mt-3 text-xs text-muted">You can add more folders later. Mimikit only reads them: your files are never changed.</p>
-        <ul aria-label="Tips" className="mt-10 grid w-full grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5 text-left">
-          <Tip icon={<Hand aria-hidden className="size-4" />} title="Drag into your engine">
-            Drop any card into Unity, Godot or a folder to copy the file there.
+        <p className="mt-3 text-xs text-muted">{t("welcome.readOnly")}</p>
+        <ul aria-label={t("welcome.tips")} className="mt-10 grid w-full grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5 text-left">
+          <Tip icon={<Hand aria-hidden className="size-4" />} title={t("welcome.drag.title")}>
+            {t("welcome.drag.body")}
           </Tip>
-          <Tip icon={<Kbd>{shortcut("peek").keys}</Kbd>} title="Preview in place">
-            Select an asset and press Space to look, Enter for full screen.
+          <Tip icon={<Kbd>{shortcut("peek").keys}</Kbd>} title={t("welcome.preview.title")}>
+            {t("welcome.preview.body", { peekKey: shortcut("peek").keys })}
           </Tip>
-          <Tip icon={<Kbd>{shortcut("search").keys}</Kbd>} title="Find anything">
-            Search names, #tags, type:audio or folders from anywhere.
+          <Tip icon={<Kbd>{shortcut("search").keys}</Kbd>} title={t("welcome.search.title")}>
+            {t("welcome.search.body", { tagExample: "#tags", typeExample: "type:audio" })}
           </Tip>
         </ul>
       </div>

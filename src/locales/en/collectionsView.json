@@ -1,0 +1,40 @@
+{
+  "smartCollection": "Smart collection",
+  "summary_one": "{{count}} asset · {{size}}",
+  "summary_other": "{{count}} assets · {{size}}",
+  "newCollectionButton": "+ New collection",
+  "nameLabel": "Collection name",
+  "remove_one": "Remove {{count}} asset",
+  "remove_other": "Remove {{count}} assets",
+  "openAsSearch": "Open as search",
+  "useSearchFirst": "Search or filter the library first",
+  "useSearch": "Use current search",
+  "delete": "Delete",
+  "copyToFolder": "Copy to folder…",
+  "noMatch": {
+    "title": "No assets in this collection match these filters",
+    "body": "Try removing a type, search or filter.",
+    "clear": "Clear search and filters"
+  },
+  "smartEmpty": {
+    "title": "Nothing matches this smart collection yet",
+    "body": "Its assets appear here as soon as files match its search."
+  },
+  "empty": {
+    "title": "This collection is empty",
+    "body": "Add assets from any side panel, or select assets in the library and tick this collection in the side panel."
+  },
+  "none": {
+    "title": "No collections yet",
+    "body": "Group the assets for a level, a character or a pack.",
+    "newCollection": "New collection"
+  },
+  "rule": {
+    "anything": "Every asset that matches <2>anything</2>",
+    "query": "Every asset that matches <0/>",
+    "filters_one": "Every asset that matches <1>{{count}} filter</1>",
+    "filters_other": "Every asset that matches <1>{{count}} filters</1>",
+    "queryAndFilters_one": "Every asset that matches <0/> <1>{{count}} filter</1>",
+    "queryAndFilters_other": "Every asset that matches <0/> <1>{{count}} filters</1>"
+  }
+}

@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { assetUrl, fileUrl } from "../api";
 import { holdFont } from "../lib/fonts";
+import { t } from "../lib/i18n";
 import { watchOnScreen } from "../lib/onScreen";
 import { requestThumbnail } from "../lib/thumbs";
 import type { Asset } from "../types";
@@ -87,10 +88,10 @@ export function Thumb({
         />
       ) : asset.kind === "font" ? (
         <span style={family ? { fontFamily: family } : undefined} className={clsx("leading-none text-fg", sizes[size].font)}>
-          Aa
+          {t("thumb.fontSample")}
         </span>
       ) : (
-        <span className={clsx("k-text font-mono tracking-[.04em] uppercase", sizes[size].ext)}>{asset.ext || "file"}</span>
+        <span className={clsx("k-text font-mono tracking-[.04em] uppercase", sizes[size].ext)}>{asset.ext || t("thumb.noExt")}</span>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import "./locales";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "@fontsource/geist/400.css";

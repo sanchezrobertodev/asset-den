@@ -3,7 +3,10 @@ import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { matchesFilters, matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
-import { baseName, bytes, folderOf } from "../lib/format";
+import { baseName, folderOf } from "../lib/format";
+import { bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
+import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { Thumb } from "./Thumb";
@@ -19,7 +22,11 @@ interface Item {
 }
 
 const TOKENS = ["type:image", "type:audio", "type:3d", "#", "in:", "size:>1mb", "dur:<2s", "rating:>=4", "note:", "color:red"];
-const tokenLabel: Record<string, string> = { "#": "#tag", "in:": "in:folder", "note:": "note:word" };
+const tokenLabel: Record<string, string> = {
+  "#": t("palette.tokens.tag", { token: "#" }),
+  "in:": t("palette.tokens.folder", { token: "in:" }),
+  "note:": t("palette.tokens.word", { token: "note:" }),
+};
 
 export function Palette() {
   const s = useStore();
@@ -69,7 +76,7 @@ export function Palette() {
           ? [
               {
                 key: "collection",
-                label: inCol.length ? `Show ${inCol.length.toLocaleString()} ${inCol.length === 1 ? "match" : "matches"} in ${col.name}` : `No matches in ${col.name}`,
+                label: t("palette.inCollection", { count: inCol.length, name: col.name }),
                 sub: q.trim(),
                 run: () => useStore.setState({ query: q.trim(), ...close }),
               },
@@ -79,7 +86,7 @@ export function Palette() {
           ? [
               {
                 key: "duplicates",
-                label: inDups ? `Show ${inDups.toLocaleString()} duplicate ${inDups === 1 ? "group" : "groups"}` : "No duplicate groups match",
+                label: t("palette.duplicates", { count: inDups }),
                 sub: q.trim(),
                 run: () => useStore.setState({ query: q.trim(), ...close }),
               },
@@ -87,11 +94,7 @@ export function Palette() {
           : []),
         {
           key: "all",
-          label: !matches.length
-            ? "No assets match"
-            : matches.length === 1
-              ? "Show the match in the library"
-              : `Show all ${matches.length.toLocaleString()} matches in the library`,
+          label: matches.length === 1 ? t("palette.showMatch") : t("palette.showAll", { count: matches.length }),
           sub: q.trim(),
           run: () => {
             s.go("library", { query: q.trim(), kinds: [], folder: null });
@@ -111,13 +114,13 @@ export function Palette() {
           },
         })),
       ];
-      out.push({ title: `Assets · ${matches.length.toLocaleString()}`, items });
+      out.push({ title: t("palette.assets", { count: matches.length }), items });
     }
     if (parsed.text.length) {
       const seen = new Map<string, { rootId: number; path: string; n: number }>();
       for (const a of s.assets) {
         const f = folderOf(a.relPath);
-        if (!f || !parsed.text.every((t) => f.toLowerCase().includes(t))) continue;
+        if (!f || !parsed.text.every((w) => f.toLowerCase().includes(w))) continue;
         const k = `${a.rootId}:${f}`;
         const e = seen.get(k) ?? { rootId: a.rootId, path: f, n: 0 };
         e.n++;
@@ -127,40 +130,40 @@ export function Palette() {
       const folders = [...seen.values()].slice(0, 6);
       if (folders.length)
         out.push({
-          title: "Folders",
+          title: t("palette.folders"),
           items: folders.map((f) => ({
             key: `f${f.rootId}:${f.path}`,
             label: `${rootName(f.rootId)}/${f.path}`,
-            right: `${f.n.toLocaleString()} files`,
+            right: t("palette.files", { count: f.n }),
             run: () => s.go("library", { folder: { rootId: f.rootId, path: f.path }, query: "", kinds: [] }),
           })),
         });
     }
     const actions: [string, () => void][] = [
-      ["Review duplicates", () => s.go("duplicates")],
-      ["Open Insights", () => s.go("insights")],
-      ["New collection", () => void s.newCollection()],
-      ["Show favorites", () => s.go("favorites", { kinds: [] })],
-      ["Import a folder", () => {
+      [t("palette.actions.duplicates"), () => s.go("duplicates")],
+      [t("palette.actions.insights"), () => s.go("insights")],
+      [t("palette.actions.newCollection"), () => void s.newCollection()],
+      [t("palette.actions.favorites"), () => s.go("favorites", { kinds: [] })],
+      [t("palette.actions.import"), () => {
         useStore.setState(close);
         void s.importFolder();
       }],
-      ["Switch to list view", () => {
+      [t("palette.actions.listView"), () => {
         s.setLayout("list");
         s.go("library");
       }],
-      ["Switch to grid view", () => {
+      [t("palette.actions.gridView"), () => {
         s.setLayout("grid");
         s.go("library");
       }],
-      ["Clear search and filters", () => {
+      [t("palette.actions.clearFilters"), () => {
         s.clearFilters();
         s.go("library");
       }],
-      ["Settings", () => s.setModal("settings")],
-      ["Keyboard shortcuts", () => s.setModal("shortcuts")],
+      [t("palette.actions.settings"), () => s.setModal("settings")],
+      [t("palette.actions.shortcuts"), () => s.setModal("shortcuts")],
     ];
-    if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, ["Check for updates", openUpdates]);
+    if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, [t("palette.actions.updates"), openUpdates]);
     const words = parsed.text;
     const onlyText =
       hasQuery &&
@@ -174,7 +177,7 @@ export function Palette() {
       parsed.minMs === null &&
       parsed.maxMs === null;
     const acts = !hasQuery ? actions : onlyText ? actions.filter(([l]) => words.every((w) => l.toLowerCase().includes(w))) : [];
-    if (acts.length) out.push({ title: "Actions", items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
+    if (acts.length) out.push({ title: t("palette.actions.title"), items: acts.map(([label, run]) => ({ key: `x${label}`, label, run })) });
     return out;
     // Only what it reads: the whole store changes on every scan tick, and this searches every asset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,7 +203,7 @@ export function Palette() {
         ref={dialog}
         role="dialog"
         aria-modal="true"
-        aria-label="Search"
+        aria-label={t("palette.dialog")}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDownCapture={(e) => trapTab(e, dialog.current)}
         className="flex h-max max-h-[76vh] w-[min(700px,90%)] flex-col overflow-hidden rounded-2xl border border-line-x bg-field shadow-[0_40px_100px_-20px_rgba(0,0,0,.7)]"
@@ -228,34 +231,34 @@ export function Palette() {
               e.stopPropagation();
             }}
             role="combobox"
-            aria-label="Search assets, folders and actions"
+            aria-label={t("palette.input")}
             aria-expanded="true"
             aria-controls="palette-results"
             aria-activedescendant={flat[pi] ? `pal-${pi}` : undefined}
-            placeholder="Search assets, folders, actions"
+            placeholder={t("palette.placeholder")}
             className="flex-1 border-0 bg-transparent text-base text-fg outline-none"
           />
-          <Kbd>Esc</Kbd>
+          <Kbd>{shortcut("close").keys}</Kbd>
         </div>
         <div role="group" aria-labelledby="palette-tokens" className="flex flex-wrap items-center gap-1.5 border-b border-line px-[18px] py-2.5 text-xs text-faint">
           <span id="palette-tokens" className="mr-1">
-            Filters
+            {t("palette.filters")}
           </span>
-          {TOKENS.map((t) => (
+          {TOKENS.map((token) => (
             <button
-              key={t}
+              key={token}
               type="button"
               onClick={() => {
-                setQ((cur) => (cur.trim() ? `${cur.trim()} ${t}` : t) + (t.endsWith(":") || t === "#" ? "" : " "));
+                setQ((cur) => (cur.trim() ? `${cur.trim()} ${token}` : token) + (token.endsWith(":") || token === "#" ? "" : " "));
                 input.current?.focus();
               }}
               className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:bg-line-strong"
             >
-              {tokenLabel[t] ?? t}
+              {tokenLabel[token] ?? token}
             </button>
           ))}
         </div>
-        <div ref={listRef} id="palette-results" role="listbox" aria-label="Results" className="overflow-auto p-2">
+        <div ref={listRef} id="palette-results" role="listbox" aria-label={t("palette.results")} className="overflow-auto p-2">
           {sections.map((sec, si) => (
             <div key={sec.title} role="group" aria-labelledby={`pal-sec-${si}`}>
               <div id={`pal-sec-${si}`} className="px-2.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">
@@ -286,12 +289,16 @@ export function Palette() {
               })}
             </div>
           ))}
-          {!sections.length && <div className="px-2.5 py-9 text-center text-muted">Nothing matches. Try type:image, #player, {"rating:>=4"}, in:audio or color:blue.</div>}
+          {!sections.length && (
+            <div className="px-2.5 py-9 text-center text-muted">
+              {t("palette.noResults", { type: "type:image", tag: "#player", rating: "rating:>=4", folder: "in:audio", color: "color:blue" })}
+            </div>
+          )}
         </div>
         <div className="flex gap-4 border-t border-line px-[18px] py-2.5 text-xs text-faint">
-          <span>↑↓ move</span>
-          <span>↵ select</span>
-          <span className="ml-auto">Esc close</span>
+          <span>{t("palette.keys.move", { keys: "↑↓" })}</span>
+          <span>{t("palette.keys.select", { keys: shortcut("run").keys })}</span>
+          <span className="ml-auto">{t("palette.keys.close", { keys: shortcut("close").keys })}</span>
         </div>
       </div>
     </div>

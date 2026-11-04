@@ -1,0 +1,17 @@
+{
+  "label": "Full screen: {{name}}",
+  "close": "Close full screen ({{key}})",
+  "position": "{{index}} of {{total}}",
+  "favorite": "Favorite ({{key}})",
+  "showInFolder": "Show in folder",
+  "open": "Open",
+  "previous": "Previous ({{key}})",
+  "next": "Next ({{key}})",
+  "tags": "Tags",
+  "noTags": "No tags",
+  "collections": "Collections",
+  "noCollections": "Not in a collection",
+  "note": "Note",
+  "noNote": "No note",
+  "filmstrip": "Filmstrip"
+}

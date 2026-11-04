@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "Files",
+    "totalSize": "Total size",
+    "untagged": "Untagged",
+    "showUntagged": "Show untagged →",
+    "duplicates": "Duplicate groups",
+    "reviewDuplicates": "Review duplicates →",
+    "allClear": "All clear"
+  },
+  "storageByType": "Storage by type",
+  "total": "{{size}} total",
+  "largest": "Largest files",
+  "folders": "Folders"
+}
