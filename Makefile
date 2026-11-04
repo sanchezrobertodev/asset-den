@@ -29,6 +29,8 @@ ui-test:
 	node --experimental-strip-types src/lib/latest.test.ts
 	node --experimental-strip-types src/lib/fonts.test.ts
 	node --experimental-strip-types src/lib/themes.test.ts
+	node --experimental-strip-types src/lib/i18n.test.ts
+	node --experimental-strip-types src/lib/locales.test.ts
 	node scripts/feed.test.mjs
 
 test:

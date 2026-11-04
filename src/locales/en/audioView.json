@@ -1,0 +1,7 @@
+{
+  "playFailed": "Can't play this file here: {{error}}",
+  "pause": "Pause",
+  "play": "Play",
+  "loopTitle": "Play again from the start when it ends",
+  "loop": "Loop"
+}

@@ -73,6 +73,9 @@ assert.deepEqual(q("rating:3"), [2]);
 assert.deepEqual(q("rating:>=3"), [1, 2]);
 assert.deepEqual(q("rating:>3"), [1]);
 assert.deepEqual(q("rating:<3"), [3]);
+assert.deepEqual(q("type：audio"), [3]); // full-width operators, as Japanese and Chinese input methods type them
+assert.deepEqual(q("＃pla size：＞1mb"), []);
+assert.deepEqual(q("size：＞1mb"), [2]);
 assert.deepEqual(q("rating:<=3 type:image"), [2]);
 assert.deepEqual(q("rating:0"), [3]); // unrated
 assert.deepEqual(q("rating:9"), [1, 2, 3]); // not a rating: ignored, like a bad size:

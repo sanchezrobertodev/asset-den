@@ -1,0 +1,20 @@
+{
+  "system": "System",
+  "light": "Light",
+  "dark": "Dark",
+  "black": "Black",
+  "midnight": "Midnight",
+  "sepia": "Sepia",
+  "hc-dark": "High contrast dark",
+  "hc-light": "High contrast light",
+  "accents": {
+    "green": "Green",
+    "teal": "Teal",
+    "blue": "Blue",
+    "violet": "Violet",
+    "pink": "Pink",
+    "red": "Red",
+    "orange": "Orange",
+    "amber": "Amber"
+  }
+}

@@ -17,7 +17,9 @@ import { Button, focusAssets, Kbd, modalOpen } from "./components/ui";
 import { Welcome } from "./components/Welcome";
 import { activeFilterCount, groupByFolder, parseQuery, rulesWantColors, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
+import { list } from "./lib/fmt";
 import { baseName, folderOf } from "./lib/format";
+import { t } from "./lib/i18n";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { shortcut } from "./lib/shortcuts";
 import { useStore } from "./store";
@@ -26,18 +28,31 @@ import type { Asset } from "./types";
 /** The library's hint bar, in order. */
 const HINTS = ["peek", "full", "move", "favorite", "rate", "unrate", "search"].map(shortcut);
 
-function typing(t: EventTarget | null) {
-  const el = t as HTMLElement | null;
+function typing(target: EventTarget | null) {
+  const el = target as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
 /** Space and Enter press a focused button, and arrows move inside menus and radio groups, instead of the app shortcuts. */
-function ownsKey(t: EventTarget | null, key: string) {
-  const el = t instanceof HTMLElement ? t : null;
+function ownsKey(target: EventTarget | null, key: string) {
+  const el = target instanceof HTMLElement ? target : null;
   if (!el || el === document.body || el.closest("[data-assets]")) return false;
   if (key === " " || key === "Enter")
     return el.matches("button, a[href], summary, [role=button], [role=checkbox], [role=switch], [role=radio], [role=option], [role^=menuitem]");
   return key.startsWith("Arrow") && !!el.closest("[role=radiogroup], [role=menu], [role=listbox], details");
+}
+
+/** The letter of a letter key: the typed one on Latin layouts (Dvorak too), the key's place on others (Cyrillic, Greek). */
+function letter(e: KeyboardEvent) {
+  return /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key;
+}
+
+/**
+ * 0–5 from the number row or keypad, also where the row types symbols without Shift (French AZERTY). Only the number
+ * row falls back to the key's place: with Num Lock off the keypad sends End, Insert and so on, which aren't ratings.
+ */
+function digit(e: KeyboardEvent) {
+  return /^[0-5]$/.test(e.key) ? Number(e.key) : /^Digit[0-5]$/.test(e.code) ? Number(e.code.slice(-1)) : null;
 }
 
 function Toast() {
@@ -63,12 +78,12 @@ function Toast() {
               }}
               className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
             >
-              {toast.action ?? "Undo"}
+              {toast.action ?? t("app.undo")}
             </button>
           )}
           {toast.error && (
             <button type="button" onClick={dismissToast} className="h-7 rounded-[7px] px-2 font-semibold opacity-70 hover:opacity-100">
-              Dismiss
+              {t("app.dismiss")}
             </button>
           )}
         </div>
@@ -80,14 +95,12 @@ function Toast() {
 /** Tells screen readers when a scan starts and ends, without reading every count update. */
 function ScanStatus() {
   const { scanning, roots } = useStore();
-  const names = Object.keys(scanning)
-    .map((id) => baseName(roots.find((r) => r.id === Number(id))?.path ?? ""))
-    .join(", ");
+  const names = list(Object.keys(scanning).map((id) => baseName(roots.find((r) => r.id === Number(id))?.path ?? "")));
   const [message, setMessage] = useState("");
   useEffect(
     () =>
       setMessage((prev) =>
-        names ? `Scanning ${names}…` : prev ? `Scan finished. ${useStore.getState().assets.length.toLocaleString()} files in the library.` : "",
+        names ? t("app.scanning", { names }) : prev ? t("app.scanFinished", { count: useStore.getState().assets.length }) : "",
       ),
     [names],
   );
@@ -166,7 +179,7 @@ export default function App() {
       const st = useStore.getState();
       // A dialog handles its own keys (Escape closes it).
       if (st.modal || modalOpen()) return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && letter(e) === "k") {
         e.preventDefault();
         st.setPalette(!st.palette);
         return;
@@ -215,15 +228,15 @@ export default function App() {
         e.preventDefault();
         const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
         st.select(order[((i < 0 ? 0 : i + d) + order.length) % order.length].id);
-      } else if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey) {
+      } else if (letter(e) === "f" && !e.ctrlKey && !e.metaKey) {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
         const want = new Set(ids);
         const items = st.assets.filter((a) => want.has(a.id));
         if (items.length) void st.setFavorite(ids, !items.every((a) => a.favorite));
-      } else if (/^[0-5]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      } else if (digit(e) !== null && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
-        if (ids.length) void st.setRating(ids, Number(e.key));
-      } else if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey)) {
+        if (ids.length) void st.setRating(ids, digit(e)!);
+      } else if (letter(e) === "a" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         st.setSelected(order.map((a) => a.id));
       }
@@ -247,7 +260,7 @@ export default function App() {
         onClick={focusAssets}
         className="absolute top-2 left-2 z-[90] -translate-y-[200%] rounded-[9px] bg-invert-bg px-3 py-2 font-semibold text-invert-fg focus:translate-y-0"
       >
-        Skip to the assets
+        {t("app.skipToAssets")}
       </button>
       <Sidebar />
       <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
@@ -265,26 +278,26 @@ export default function App() {
                 {visible.length ? (
                   <AssetBrowser assets={order} groups={groups} />
                 ) : scanning && !s.assets.length ? (
-                  <Empty title="Scanning…" body="Assets appear here as soon as they're indexed." />
+                  <Empty title={t("app.empty.scanningTitle")} body={t("app.empty.scanningBody")} />
                 ) : s.folder && !s.subfolders && !hasDirectFiles ? (
                   <Empty
-                    title={`No files directly in ${s.folder.path ? baseName(s.folder.path) : "this folder"}`}
-                    body="Its assets are in subfolders."
-                    action={<Button onClick={() => s.setSubfolders(true)}>Include subfolders</Button>}
+                    title={s.folder.path ? t("app.empty.noDirectFilesIn", { name: baseName(s.folder.path) }) : t("app.empty.noDirectFilesHere")}
+                    body={t("app.empty.inSubfolders")}
+                    action={<Button onClick={() => s.setSubfolders(true)}>{t("app.empty.includeSubfolders")}</Button>}
                   />
                 ) : s.similar && s.view === "library" ? (
                   <Empty
-                    title={`Nothing looks like ${s.similar.name}`}
-                    body={`No other analysed image is within ${s.similar.max} bits of it. Try a looser match above.`}
-                    action={<Button onClick={s.clearSimilar}>Back to the library</Button>}
+                    title={t("app.empty.noSimilarTitle", { name: s.similar.name })}
+                    body={t("app.empty.noSimilarBody", { count: s.similar.max })}
+                    action={<Button onClick={s.clearSimilar}>{t("app.empty.backToLibrary")}</Button>}
                   />
                 ) : s.view === "favorites" && !filtered ? (
-                  <Empty title="No favorites yet" body="Press F on any asset to add it here." />
+                  <Empty title={t("app.empty.noFavoritesTitle")} body={t("app.empty.noFavoritesBody", { key: shortcut("favorite").keys })} />
                 ) : (
                   <Empty
-                    title="No assets match these filters"
-                    body="Try removing a type, folder or search filter."
-                    action={<Button onClick={s.clearFilters}>Clear search and filters</Button>}
+                    title={t("app.empty.noMatchesTitle")}
+                    body={t("app.empty.noMatchesBody")}
+                    action={<Button onClick={s.clearFilters}>{t("app.empty.clearFilters")}</Button>}
                   />
                 )}
               </div>
@@ -301,7 +314,7 @@ export default function App() {
                 </span>
               ))}
               <span>
-                <Kbd>?</Kbd> all shortcuts
+                <Kbd>{shortcut("help").keys}</Kbd> {t("app.allShortcuts")}
               </span>
             </div>
           )}

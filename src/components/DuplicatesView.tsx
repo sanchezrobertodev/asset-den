@@ -3,13 +3,14 @@ import clsx from "clsx";
 import { Maximize2 } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { compare } from "../lib/filter";
-import { ago, bytes } from "../lib/format";
+import { ago, bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import { useStore } from "../store";
 import type { Asset, Collection } from "../types";
 import { ScopeChips } from "./Header";
 import { useLocation } from "./Peek";
 import { Thumb } from "./Thumb";
-import { Button, IconButton, Modal } from "./ui";
+import { Button, IconButton, Modal, T } from "./ui";
 
 interface Group {
   hash: string;
@@ -23,10 +24,10 @@ const wasted = (g: Group) => g.items[0].size * (g.items.length - 1);
 const newest = (g: Group) => Math.max(...g.items.map((a) => a.mtime));
 type DupSort = "space" | "copies" | "newest" | "name";
 const sorts: Record<DupSort, { label: string; by: (a: Group, b: Group) => number }> = {
-  space: { label: "Space freed", by: (a, b) => wasted(b) - wasted(a) },
-  copies: { label: "Most copies", by: (a, b) => b.items.length - a.items.length || wasted(b) - wasted(a) },
-  newest: { label: "Newest", by: (a, b) => newest(b) - newest(a) },
-  name: { label: "Name", by: (a, b) => compare.name(a.items[0], b.items[0]) },
+  space: { label: t("duplicatesView.sorts.space"), by: (a, b) => wasted(b) - wasted(a) },
+  copies: { label: t("duplicatesView.sorts.copies"), by: (a, b) => b.items.length - a.items.length || wasted(b) - wasted(a) },
+  newest: { label: t("duplicatesView.sorts.newest"), by: (a, b) => newest(b) - newest(a) },
+  name: { label: t("duplicatesView.sorts.name"), by: (a, b) => compare.name(a.items[0], b.items[0]) },
 };
 
 function openFull(a: Asset) {
@@ -48,7 +49,7 @@ function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; c
       >
         <Thumb asset={a} className="aspect-square h-[86%] max-w-[92%] rounded-md" />
         <IconButton
-          label={`Full screen: ${a.name}`}
+          label={t("duplicatesView.fullScreen", { name: a.name })}
           bordered
           className="absolute top-2 right-2 bg-card"
           onClick={(e) => {
@@ -65,7 +66,7 @@ function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; c
           type="button"
           role="radio"
           aria-checked={keep}
-          aria-label={`Keep ${a.name} in ${where}`}
+          aria-label={t("duplicatesView.keepLabel", { name: a.name, folder: where })}
           tabIndex={keep ? 0 : -1}
           onClick={(e) => {
             e.stopPropagation();
@@ -76,23 +77,23 @@ function CopyCard({ a, keep, collections, onKeep }: { a: Asset; keep: boolean; c
             keep ? "border-invert-bg bg-invert-bg text-invert-fg" : "border-line-strong text-fg",
           )}
         >
-          {keep ? "✓ Keeping" : "Keep this one"}
+          {keep ? t("duplicatesView.keeping") : t("duplicatesView.keepThis")}
         </button>
       </div>
       <dl className="grid grid-cols-[96px_minmax(0,1fr)] gap-y-2">
-        <dt className="text-muted">Folder</dt>
+        <dt className="text-muted">{t("duplicatesView.details.folder")}</dt>
         <dd className="font-mono text-xs [overflow-wrap:anywhere]">{where}</dd>
-        <dt className="text-muted">Size</dt>
+        <dt className="text-muted">{t("duplicatesView.details.size")}</dt>
         <dd>
           {bytes(a.size)}
           {a.width && a.height ? ` · ${a.width} × ${a.height}` : ""}
         </dd>
-        <dt className="text-muted">Modified</dt>
+        <dt className="text-muted">{t("duplicatesView.details.modified")}</dt>
         <dd>{ago(a.mtime)}</dd>
-        <dt className="text-muted">Tags</dt>
-        <dd>{a.tags.map((t) => `#${t}`).join(" ") || "None"}</dd>
-        <dt className="text-muted">Collections</dt>
-        <dd>{colls.join(", ") || "None"}</dd>
+        <dt className="text-muted">{t("duplicatesView.details.tags")}</dt>
+        <dd>{a.tags.map((tag) => `#${tag}`).join(" ") || t("duplicatesView.details.none")}</dd>
+        <dt className="text-muted">{t("duplicatesView.details.collections")}</dt>
+        <dd>{colls.join(", ") || t("duplicatesView.details.none")}</dd>
       </dl>
     </div>
   );
@@ -139,7 +140,7 @@ function GroupList({ groups, sel }: { groups: Group[]; sel: number }) {
     <div
       ref={scrollRef}
       role="listbox"
-      aria-label="Duplicate groups"
+      aria-label={t("duplicatesView.groupsLabel")}
       tabIndex={0}
       aria-activedescendant={shown ? `dup-${sel}` : undefined}
       onKeyDown={(e) => {
@@ -217,32 +218,33 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
   const keepId = group ? (group.items.find((a) => a.id === keepBy[group.hash]) ?? group.items.reduce((best, a) => (score(a) > score(best) ? a : best))).id : null;
   const remove = group ? group.items.filter((a) => a.id !== keepId) : [];
   const kept = group?.items.find((a) => a.id === keepId);
-  const label = (copies: Asset[]) => (copies.length === 1 ? copies[0].name : `${copies.length} copies`);
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)]">
       <div className="flex min-h-0 flex-col gap-3.5 border-r border-line-soft pt-5">
         <div className="flex flex-col gap-1.5 px-5">
           <span role="status" className="text-[15px] font-semibold">
-            {groups.length
-              ? `${shown.length === groups.length ? "" : `${shown.length.toLocaleString()} of `}${groups.length.toLocaleString()} duplicate ${groups.length === 1 ? "group" : "groups"}`
-              : "Duplicates"}
+            {!groups.length
+              ? t("duplicatesView.title")
+              : shown.length === groups.length
+                ? t("duplicatesView.groups", { count: groups.length })
+                : t("duplicatesView.shownGroups", { shown: shown.length, count: groups.length })}
           </span>
           <span className="leading-[1.45] text-muted">
             {dups === null
-              ? "Checking files with the same size…"
+              ? t("duplicatesView.checking")
               : shown.length
-                ? `Files with identical content. Removing the extra copies frees ${bytes(reclaim)}.`
+                ? t("duplicatesView.identicalFrees", { size: bytes(reclaim) })
                 : groups.length
-                  ? "Files with identical content."
-                  : "Nothing to review."}
+                  ? t("duplicatesView.identical")
+                  : t("duplicatesView.nothing")}
           </span>
         </div>
         {groups.length > 0 && (
           <>
             <ScopeChips counts={chips.counts} total={chips.total} className="px-5" />
             <label className="flex items-center gap-1.5 px-5 text-muted">
-              Sort
+              {t("duplicatesView.sort")}
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as DupSort)}
@@ -264,15 +266,17 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
         {group && kept ? (
           <>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xl font-semibold tracking-[-.01em]">Which one do you want to keep?</span>
+              <span className="text-xl font-semibold tracking-[-.01em]">{t("duplicatesView.whichKeep")}</span>
               <span className="text-muted">
-                {group.items.length === 2 ? "Both files are" : `All ${group.items.length} files are`} byte-for-byte identical ({bytes(group.items[0].size)}{" "}
-                each). Tags, favorites and collections from the removed {remove.length === 1 ? "copy move" : "copies move"} to the one you keep.
+                {group.items.length === 2
+                  ? t("duplicatesView.bothIdentical", { size: bytes(group.items[0].size) })
+                  : t("duplicatesView.allIdentical", { count: group.items.length, size: bytes(group.items[0].size) })}{" "}
+                {t("duplicatesView.movesTo", { count: remove.length })}
               </span>
             </div>
             <div
               role="radiogroup"
-              aria-label="Copy to keep"
+              aria-label={t("duplicatesView.copyToKeep")}
               onKeyDown={(e) => {
                 const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
                 if (!d) return;
@@ -295,33 +299,33 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-2.5 border-t border-line-soft pt-4">
-              <span className="text-muted">
-                Group {(sel + 1).toLocaleString()} of {shown.length.toLocaleString()}
-              </span>
+              <span className="text-muted">{t("duplicatesView.groupOf", { index: sel + 1, count: shown.length })}</span>
               <Button variant="ghost" size="lg" className="ml-auto" onClick={() => void ignoreDuplicate(group.hash)}>
-                Not duplicates
+                {t("duplicatesView.notDuplicates")}
               </Button>
               <Button size="lg" onClick={() => void ignoreDuplicate(group.hash)}>
-                Keep {group.items.length === 2 ? "both" : "all"}
+                {group.items.length === 2 ? t("duplicatesView.keepBoth") : t("duplicatesView.keepAll")}
               </Button>
               <Button variant="invert" size="lg" onClick={() => setConfirming({ keep: kept, remove })}>
-                Move {label(remove)} to Trash
+                {remove.length === 1
+                  ? t("duplicatesView.trash.move", { name: remove[0].name })
+                  : t("duplicatesView.trash.moveCopies", { count: remove.length })}
               </Button>
             </div>
           </>
         ) : groups.length > 0 ? (
           <div className="m-auto flex flex-col items-center gap-2 text-muted">
-            <span className="text-base font-medium text-fg">No duplicate groups match these filters</span>
-            <span>Try removing a type, search or filter.</span>
+            <span className="text-base font-medium text-fg">{t("duplicatesView.noMatchTitle")}</span>
+            <span>{t("duplicatesView.noMatchHint")}</span>
             <Button className="mt-2" onClick={clearFilters}>
-              Clear search and filters
+              {t("duplicatesView.clearFilters")}
             </Button>
           </div>
         ) : (
           dups !== null && (
             <div className="m-auto flex flex-col items-center gap-2 text-muted">
-              <span className="text-base font-medium text-fg">No duplicates left</span>
-              <span>Mimikit checks again whenever files change.</span>
+              <span className="text-base font-medium text-fg">{t("duplicatesView.emptyTitle")}</span>
+              <span>{t("duplicatesView.emptyHint")}</span>
             </div>
           )
         )}
@@ -329,11 +333,15 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
 
       {confirming && (
         <Modal
-          title={`Move ${label(confirming.remove)} to Trash?`}
+          title={
+            confirming.remove.length === 1
+              ? t("duplicatesView.trash.ask", { name: confirming.remove[0].name })
+              : t("duplicatesView.trash.askCopies", { count: confirming.remove.length })
+          }
           onClose={() => setConfirming(null)}
           footer={
             <>
-              <Button onClick={() => setConfirming(null)}>Cancel</Button>
+              <Button onClick={() => setConfirming(null)}>{t("duplicatesView.trash.cancel")}</Button>
               <Button
                 variant="invert"
                 data-autofocus
@@ -342,16 +350,17 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
                   void trashDuplicates(confirming.keep.id, confirming.remove.map((a) => a.id));
                 }}
               >
-                Move to Trash
+                {t("duplicatesView.trash.confirm")}
               </Button>
             </>
           }
         >
           <p className="leading-relaxed">
-            {confirming.remove.map((a) => a.name).join(", ")} {confirming.remove.length === 1 ? "goes" : "go"} to your system's Trash (the Recycle Bin on
-            Windows), where you can restore {confirming.remove.length === 1 ? "it" : "them"}. Its tags, favorite and collections move to{" "}
-            <span className="text-fg">{confirming.keep.name}</span>.
-            Mimikit checks the files are still identical first.
+            <T
+              k="duplicatesView.trash.body"
+              vars={{ count: confirming.remove.length, names: confirming.remove.map((a) => a.name).join(", "), keep: confirming.keep.name }}
+              tags={[<span className="text-fg" />]}
+            />
           </p>
         </Modal>
       )}

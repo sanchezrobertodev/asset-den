@@ -1,15 +1,18 @@
 // Every keyboard shortcut in one table. The shortcuts dialog (?), the library hint bar and the full-screen legend all
 // read it. The keys themselves are handled in App.tsx (onKey), Palette.tsx, AssetBrowser.tsx, Viewers.tsx and the star
-// rating in Peek.tsx: when adding a binding there, add its row here.
+// rating in Peek.tsx: when adding a binding there, add its row here and its label to locales/en/shortcuts.json.
+import { t, type TKey } from "./i18n";
 
 export const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
-const mod = isMac ? "⌘" : "Ctrl ";
+const mod = isMac ? "⌘" : `${t("shortcuts.keys.ctrl")} `;
 
-export const GROUPS = ["Navigate", "Preview", "Organize", "Search"] as const;
+export const GROUPS = ["navigate", "preview", "organize", "search"] as const;
+export type Group = (typeof GROUPS)[number];
+export const groupName = (g: Group) => t(`shortcuts.groups.${g}`);
 
 export interface Shortcut {
   id: string;
-  group: (typeof GROUPS)[number];
+  group: Group;
   /** As shown in one key cap. */
   keys: string;
   label: string;
@@ -17,32 +20,42 @@ export interface Shortcut {
   hint?: string;
 }
 
-export const SHORTCUTS: Shortcut[] = [
-  { id: "move", group: "Navigate", keys: "← →", label: "Previous or next asset (↑ ↓ too)", hint: "move" },
-  { id: "parent", group: "Navigate", keys: isMac ? "⌥↑" : "Alt ↑", label: "Up to the parent folder" },
-  { id: "back", group: "Navigate", keys: "Esc", label: "Leave a text field, close full screen, then the side panel, then clear the selection" },
-  { id: "skip", group: "Navigate", keys: "Tab", label: "From the top of the window: skip to the assets" },
-  { id: "help", group: "Navigate", keys: "?", label: "Show these shortcuts" },
+const ROWS: [id: string, group: Group, keys: string][] = [
+  ["move", "navigate", "← →"],
+  ["parent", "navigate", isMac ? "⌥↑" : `${t("shortcuts.keys.alt")} ↑`],
+  ["back", "navigate", t("shortcuts.keys.esc")],
+  ["skip", "navigate", t("shortcuts.keys.tab")],
+  ["help", "navigate", "?"],
 
-  { id: "peek", group: "Preview", keys: "Space", label: "Quick view in the side panel", hint: "quick view" },
-  { id: "full", group: "Preview", keys: "↵", label: "Full screen", hint: "full screen" },
-  { id: "full-back", group: "Preview", keys: "Esc", label: "Back to the side panel from full screen (Space too)", hint: "back to side panel" },
-  { id: "zoom", group: "Preview", keys: "Scroll", label: "Zoom an image in full screen (drag to pan, double-click to reset)" },
+  ["peek", "preview", t("shortcuts.keys.space")],
+  ["full", "preview", "↵"],
+  ["full-back", "preview", t("shortcuts.keys.esc")],
+  ["zoom", "preview", t("shortcuts.keys.scroll")],
 
-  { id: "favorite", group: "Organize", keys: "F", label: "Favorite or unfavorite the selection", hint: "favorite" },
-  { id: "rate", group: "Organize", keys: "1–5", label: "Rate the selection 1 to 5 stars", hint: "rate" },
-  { id: "unrate", group: "Organize", keys: "0", label: "Clear the selection's rating", hint: "clear rating" },
-  { id: "stars", group: "Organize", keys: "← →", label: "Change the rating while the stars have focus" },
-  { id: "tag", group: "Organize", keys: "↵", label: "Add the typed tag (Backspace in an empty tag field removes the last)" },
-  { id: "select-all", group: "Organize", keys: `${mod}A`, label: "Select every asset shown" },
-  { id: "toggle", group: "Organize", keys: isMac ? "⌘ click" : "Ctrl click", label: "Add to or remove from the selection" },
-  { id: "range", group: "Organize", keys: "Shift click", label: "Select a range" },
+  ["favorite", "organize", "F"],
+  ["rate", "organize", "1–5"],
+  ["unrate", "organize", "0"],
+  ["stars", "organize", "← →"],
+  ["tag", "organize", "↵"],
+  ["select-all", "organize", `${mod}A`],
+  ["toggle", "organize", isMac ? "⌘ click" : t("shortcuts.keys.ctrlClick")],
+  ["range", "organize", t("shortcuts.keys.shiftClick")],
 
-  { id: "search", group: "Search", keys: `${mod}K`, label: "Search assets, folders and actions", hint: "search" },
-  { id: "search-slash", group: "Search", keys: "/", label: "Search" },
-  { id: "results", group: "Search", keys: "↑ ↓", label: "Move through the results" },
-  { id: "run", group: "Search", keys: "↵", label: "Open the highlighted result" },
-  { id: "close", group: "Search", keys: "Esc", label: "Close search" },
+  ["search", "search", `${mod}K`],
+  ["search-slash", "search", "/"],
+  ["results", "search", "↑ ↓"],
+  ["run", "search", "↵"],
+  ["close", "search", t("shortcuts.keys.esc")],
 ];
+
+const HINTS = new Set(["move", "peek", "full", "full-back", "favorite", "rate", "unrate", "search"]);
+
+export const SHORTCUTS: Shortcut[] = ROWS.map(([id, group, keys]) => ({
+  id,
+  group,
+  keys,
+  label: t(`shortcuts.label.${id}` as TKey),
+  hint: HINTS.has(id) ? t(`shortcuts.hint.${id}` as TKey) : undefined,
+}));
 
 export const shortcut = (id: string) => SHORTCUTS.find((s) => s.id === id)!;

@@ -1,7 +1,8 @@
 import clsx from "clsx";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ComponentProps, type ReactNode } from "react";
-import { kindLabel } from "../lib/format";
+import { cloneElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import { kindLabel } from "../lib/fmt";
+import { t, tNodes, type TagNode, type TKey, type Vars } from "../lib/i18n";
 import type { Kind } from "../types";
 
 type Variant = "accent" | "invert" | "outline" | "ghost" | "danger";
@@ -71,6 +72,18 @@ export function KindPill({ kind, className }: { kind: Kind; className?: string }
 
 export function KindDot({ kind, className }: { kind: Kind; className?: string }) {
   return <span aria-hidden data-kind={kind} className={clsx("k-dot inline-block shrink-0 rounded-full", className ?? "size-[7px]")} />;
+}
+
+/**
+ * A translated sentence with markup inside: `<0>Space</0>` in the string wraps "Space" in tags[0], and `<0/>` puts
+ * tags[0] in as it is. Values in `vars` stay text.
+ */
+export function T({ k, vars, tags = [] }: { k: TKey; vars?: Vars; tags?: ReactElement[] }) {
+  const render = (nodes: TagNode[]): ReactNode[] =>
+    nodes.map((n, i) =>
+      typeof n === "string" ? n : tags[n.tag] ? cloneElement(tags[n.tag], { key: i }, ...(n.children ? render(n.children) : [])) : null,
+    );
+  return <>{render(tNodes(k, vars))}</>;
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
@@ -194,7 +207,7 @@ export function Modal({
           <h2 id={titleId} className="text-[15px] font-semibold">
             {title}
           </h2>
-          <IconButton label="Close" onClick={onClose} className="-mr-2">
+          <IconButton label={t("ui.close")} onClick={onClose} className="-mr-2">
             <X className="size-4" />
           </IconButton>
         </div>

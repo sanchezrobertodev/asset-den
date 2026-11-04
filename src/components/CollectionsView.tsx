@@ -2,13 +2,14 @@ import clsx from "clsx";
 import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { activeFilterCount, noFilters, rulesWantColors, smartMembers, type Group } from "../lib/filter";
-import { bytes } from "../lib/format";
+import { bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { AssetBrowser } from "./AssetBrowser";
 import { BrowseBar } from "./Header";
 import { Thumb } from "./Thumb";
-import { Button, focusAssets } from "./ui";
+import { Button, T, focusAssets } from "./ui";
 
 /** `items` is the open collection's members after the type chips, search and filters, in display order. */
 export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]; groups: Group[] | null; scopeAssets: Asset[] }) {
@@ -61,11 +62,11 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
               </div>
               <div className="flex flex-col gap-0.5 px-0.5">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  {c.rule && <Sparkles role="img" aria-label="Smart collection" className="size-3.5 flex-none text-muted" />}
+                  {c.rule && <Sparkles role="img" aria-label={t("collectionsView.smartCollection")} className="size-3.5 flex-none text-muted" />}
                   {c.name}
                 </span>
                 <span className="font-mono text-[11px] text-muted">
-                  {members.length} {members.length === 1 ? "asset" : "assets"} · {bytes(members.reduce((n, a) => n + a.size, 0))}
+                  {t("collectionsView.summary", { count: members.length, size: bytes(members.reduce((n, a) => n + a.size, 0)) })}
                 </span>
               </div>
             </button>
@@ -76,7 +77,7 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
           onClick={() => void s.newCollection()}
           className="h-[42px] rounded-xl border border-dashed border-line-x text-muted hover:border-line-x hover:text-fg"
         >
-          + New collection
+          {t("collectionsView.newCollectionButton")}
         </button>
       </div>
 
@@ -86,7 +87,7 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
           <div className="flex flex-wrap items-end gap-3.5">
             <div className="flex min-w-[200px] flex-1 flex-col gap-1">
               <input
-                aria-label="Collection name"
+                aria-label={t("collectionsView.nameLabel")}
                 value={name}
                 maxLength={80}
                 onChange={(e) => setName(e.target.value)}
@@ -102,7 +103,7 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
                 className="border-0 border-b border-dashed border-transparent bg-transparent p-0 text-[26px] font-semibold tracking-[-.02em] text-fg focus:border-line-x"
               />
               <span className="font-mono text-xs text-muted">
-                {all.length.toLocaleString()} {all.length === 1 ? "asset" : "assets"} · {bytes(all.reduce((n, a) => n + a.size, 0))}
+                {t("collectionsView.summary", { count: all.length, size: bytes(all.reduce((n, a) => n + a.size, 0)) })}
               </span>
             </div>
             {removable.length > 0 && (
@@ -112,7 +113,7 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
                   void s.setInCollection(current.id, removable, false);
                 }}
               >
-                Remove {removable.length === 1 ? "1 asset" : `${removable.length.toLocaleString()} assets`}
+                {t("collectionsView.remove", { count: removable.length })}
               </Button>
             )}
             {current.rule && (
@@ -123,20 +124,20 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
                     s.setFilters({ ...noFilters, ...current.rule!.filters });
                   }}
                 >
-                  Open as search
+                  {t("collectionsView.openAsSearch")}
                 </Button>
                 <Button
                   disabled={!searching}
-                  title={searching ? undefined : "Search or filter the library first"}
+                  title={searching ? undefined : t("collectionsView.useSearchFirst")}
                   onClick={() => void s.setCollectionRule(current.id)}
                 >
-                  Use current search
+                  {t("collectionsView.useSearch")}
                 </Button>
               </>
             )}
-            <Button onClick={() => void s.deleteCollection(current.id)}>Delete</Button>
+            <Button onClick={() => void s.deleteCollection(current.id)}>{t("collectionsView.delete")}</Button>
             <Button variant="accent" disabled={!all.length} onClick={() => void s.copyCollection(current.id)}>
-              Copy to folder…
+              {t("collectionsView.copyToFolder")}
             </Button>
           </div>
           {current.rule && <RuleSummary query={current.rule.query} filters={activeFilterCount({ ...noFilters, ...current.rule.filters })} />}
@@ -146,25 +147,22 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
             {items.length > 0 ? (
               <AssetBrowser assets={items} groups={groups} />
             ) : all.length > 0 ? (
-              <Hint title="No assets in this collection match these filters" body="Try removing a type, search or filter.">
-                <Button onClick={s.clearFilters}>Clear search and filters</Button>
+              <Hint title={t("collectionsView.noMatch.title")} body={t("collectionsView.noMatch.body")}>
+                <Button onClick={s.clearFilters}>{t("collectionsView.noMatch.clear")}</Button>
               </Hint>
             ) : current.rule ? (
-              <Hint title="Nothing matches this smart collection yet" body="Its assets appear here as soon as files match its search." />
+              <Hint title={t("collectionsView.smartEmpty.title")} body={t("collectionsView.smartEmpty.body")} />
             ) : (
-              <Hint
-                title="This collection is empty"
-                body="Add assets from any side panel, or select assets in the library and tick this collection in the side panel."
-              />
+              <Hint title={t("collectionsView.empty.title")} body={t("collectionsView.empty.body")} />
             )}
           </div>
         </div>
       ) : (
         <div className="m-auto flex flex-col items-center gap-2 text-muted">
-          <span className="text-[15px] font-medium text-fg">No collections yet</span>
-          <span>Group the assets for a level, a character or a pack.</span>
+          <span className="text-[15px] font-medium text-fg">{t("collectionsView.none.title")}</span>
+          <span>{t("collectionsView.none.body")}</span>
           <Button variant="accent" className="mt-2" onClick={() => void s.newCollection()}>
-            New collection
+            {t("collectionsView.none.newCollection")}
           </Button>
         </div>
       )}
@@ -184,17 +182,21 @@ function Hint({ title, body, children }: { title: string; body: string; children
 
 /** What a smart collection matches: its saved search and how many Filters-panel groups it uses. */
 function RuleSummary({ query, filters }: { query: string; filters: number }) {
+  const k = query
+    ? filters ? "collectionsView.rule.queryAndFilters" : "collectionsView.rule.query"
+    : filters ? "collectionsView.rule.filters" : "collectionsView.rule.anything";
   return (
     <div className="-mt-2 flex flex-wrap items-center gap-2 text-muted">
       <Sparkles aria-hidden className="size-3.5" />
-      <span>Every asset that matches</span>
-      {query && <span className="rounded-md bg-active px-2 py-0.5 font-mono text-xs text-fg-2">{query}</span>}
-      {filters > 0 && (
-        <span className="rounded-md bg-active px-2 py-0.5 text-xs text-fg-2">
-          {filters} {filters === 1 ? "filter" : "filters"}
-        </span>
-      )}
-      {!query && !filters && <span>anything</span>}
+      <T
+        k={k}
+        vars={{ count: filters }}
+        tags={[
+          <span className="rounded-md bg-active px-2 py-0.5 font-mono text-xs text-fg-2">{query}</span>,
+          <span className="rounded-md bg-active px-2 py-0.5 text-xs text-fg-2" />,
+          <span />,
+        ]}
+      />
     </div>
   );
 }

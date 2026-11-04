@@ -3,16 +3,24 @@ import { Check, ChevronDown, Folder, Grid3x3, Search, Sparkles, X } from "lucide
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
-import { baseName, kindLabel } from "../lib/format";
+import { baseName } from "../lib/format";
+import { kindLabel, num } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import type { SortKey } from "../lib/prefs";
-import { isMac } from "../lib/shortcuts";
+import { shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
 import { AnalysisNote } from "./Analysis";
 import { FilterButton } from "./FilterPanel";
-import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented } from "./ui";
+import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented, T } from "./ui";
 
-const titles = { library: "Library", favorites: "Favorites", collections: "Collections", duplicates: "Duplicates", insights: "Insights" };
+const titles = {
+  library: t("header.titles.library"),
+  favorites: t("header.titles.favorites"),
+  collections: t("header.titles.collections"),
+  duplicates: t("header.titles.duplicates"),
+  insights: t("header.titles.insights"),
+};
 
 export function Header() {
   const { view, query, folder, setPalette, importFolder } = useStore();
@@ -20,13 +28,11 @@ export function Header() {
     <div className="flex h-[60px] flex-none items-center gap-3.5 border-b border-line-soft px-7">
       {(view === "library" || view === "favorites") && folder ? (
         <div className="flex min-w-0 flex-none items-center gap-1.5">
-          {view === "favorites" && (
-            <>
-              <h1 className="text-[17px] font-semibold tracking-[-.01em]">Favorites</h1>
-              <span className="text-muted">in</span>
-            </>
+          {view === "favorites" ? (
+            <T k="header.favoritesIn" tags={[<h1 className="text-[17px] font-semibold tracking-[-.01em]" />, <span className="text-muted" />, <Breadcrumbs />]} />
+          ) : (
+            <Breadcrumbs />
           )}
-          <Breadcrumbs />
         </div>
       ) : (
         <h1 className="flex-none text-[17px] font-semibold tracking-[-.01em]">{titles[view]}</h1>
@@ -37,11 +43,13 @@ export function Header() {
         className="ml-auto flex h-9 max-w-[380px] min-w-0 flex-[1_1_auto] items-center gap-2.5 overflow-hidden rounded-[9px] border border-line-strong bg-field px-3 text-left whitespace-nowrap text-muted hover:border-line-x"
       >
         <Search aria-hidden className="size-3.5 flex-none" />
-        <span className={clsx("min-w-0 flex-1 truncate", query && "text-fg")}>{query || "Search assets, #tags, type:audio"}</span>
-        <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
+        <span className={clsx("min-w-0 flex-1 truncate", query && "text-fg")}>
+          {query || t("header.searchPlaceholder", { hash: "#", type: "type:audio" })}
+        </span>
+        <Kbd>{shortcut("search").keys}</Kbd>
       </button>
       <Button variant="accent" className="h-9 px-4" onClick={() => void importFolder()}>
-        Import
+        {t("header.import")}
       </Button>
     </div>
   );
@@ -63,17 +71,20 @@ function SimilarChip({ chip }: { chip: string }) {
           clearSimilar();
           focusAssets();
         }}
-        aria-label={`Stop showing images similar to ${name}`}
+        aria-label={t("header.similar.stop", { name })}
       >
-        Similar to {name}
+        {t("header.similar.label", { name })}
         <X aria-hidden className="size-3.5 opacity-55" />
       </button>
-      <label className="flex h-[30px] flex-none items-center gap-2 px-1 text-xs text-muted" title={left ? `${left.toLocaleString()} images not analysed yet` : undefined}>
-        Strict
+      <label
+        className="flex h-[30px] flex-none items-center gap-2 px-1 text-xs text-muted"
+        title={left ? t("header.similar.notAnalysed", { count: left }) : undefined}
+      >
+        {t("header.similar.strict")}
         <input
           type="range"
-          aria-label="How different similar images may be"
-          aria-valuetext={`Up to ${max} of 64 bits differ, ${ids.length} images`}
+          aria-label={t("header.similar.slider")}
+          aria-valuetext={t("header.similar.sliderValue", { max, count: ids.length })}
           min={1}
           max={24}
           value={max}
@@ -83,13 +94,19 @@ function SimilarChip({ chip }: { chip: string }) {
           }}
           className="w-24 accent-[var(--accent)]"
         />
-        Loose
+        {t("header.similar.loose")}
       </label>
     </>
   );
 }
 
-const sortLabels: Record<SortKey, string> = { name: "Name", kind: "Type", size: "Size", mtime: "Modified", folder: "Folder" };
+const sortLabels: Record<SortKey, string> = {
+  name: t("header.sort.name"),
+  kind: t("header.sort.kind"),
+  size: t("header.sort.size"),
+  mtime: t("header.sort.mtime"),
+  folder: t("header.sort.folder"),
+};
 
 const chip = (on: boolean) =>
   clsx(
@@ -106,14 +123,14 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
     <div className={clsx("flex flex-none flex-wrap items-center gap-1.5", className)}>
       <button type="button" aria-pressed={!s.kinds.length} className={chip(!s.kinds.length)} onClick={() => s.toggleKind("all")}>
         <span aria-hidden className="size-[7px] rounded-full bg-muted" />
-        All
-        <span className="font-mono text-[11px] opacity-80">{total.toLocaleString()}</span>
+        {t("header.all")}
+        <span className="font-mono text-[11px] opacity-80">{num(total)}</span>
       </button>
       {KINDS.filter((k) => counts.get(k)).map((k) => (
         <button key={k} type="button" aria-pressed={s.kinds.includes(k)} className={chip(s.kinds.includes(k))} onClick={() => s.toggleKind(k)}>
           <KindDot kind={k} />
           {kindLabel[k]}
-          <span className="font-mono text-[11px] opacity-80">{counts.get(k)!.toLocaleString()}</span>
+          <span className="font-mono text-[11px] opacity-80">{num(counts.get(k)!)}</span>
         </button>
       ))}
       {browse && s.folder && (
@@ -136,7 +153,7 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
           >
             {s.subfolders ? "✓" : ""}
           </span>
-          Include subfolders
+          {t("header.includeSubfolders")}
         </button>
       )}
       {s.query && (
@@ -147,9 +164,9 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
             s.setQuery("");
             focusAssets();
           }}
-          aria-label="Clear search"
+          aria-label={t("header.clearSearch")}
         >
-          “{s.query}”
+          {t("header.query", { query: s.query })}
           <X aria-hidden className="size-3.5 opacity-55" />
         </button>
       )}
@@ -173,7 +190,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
   const folder = s.view === "collections" ? null : s.folder;
   const node = useMemo(() => (folder ? (pathTo(treeFor(s.assets, s.roots), folder).at(-1) ?? null) : null), [s.assets, s.roots, folder]);
   const exact = node && node.path === folder!.path ? node : null;
-  const countText = `${count.toLocaleString()} ${count === 1 ? "asset" : "assets"}`;
+  const countText = t("header.assets", { count });
 
   // Screen readers hear the count when the search, chips or filters change, not on every batch a scan adds. During a
   // scan the count is still moving, so they wait for its "Scan finished" message instead.
@@ -192,7 +209,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
       {(s.similar || s.filters.color || parseQuery(s.query).colors.length > 0) && <AnalysisNote className="px-7 pt-2 text-xs" />}
       {exact && exact.children.length > 0 && (
         <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">
-          <span className="mr-1 text-muted">Subfolders</span>
+          <span className="mr-1 text-muted">{t("header.subfolders")}</span>
           {exact.children.slice(0, 12).map((c) => (
             <button
               key={c.key}
@@ -202,22 +219,19 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
             >
               <Folder aria-hidden className="size-3.5 text-muted" />
               {c.name}
-              <span className="font-mono text-[11px] opacity-80">{c.count.toLocaleString()}</span>
+              <span className="font-mono text-[11px] opacity-80">{num(c.count)}</span>
             </button>
           ))}
-          {exact.children.length > 12 && <span className="text-faint">+{exact.children.length - 12} more in the folder menu</span>}
+          {exact.children.length > 12 && <span className="text-faint">{t("header.moreSubfolders", { count: exact.children.length - 12 })}</span>}
         </div>
       )}
       <div className="flex flex-none flex-wrap items-center gap-2 px-7 pt-2.5 pb-3 whitespace-nowrap">
-        <span className="mr-auto text-muted">
-          {countText}
-          {s.grouped && folders > 1 && ` in ${folders.toLocaleString()} folders`}
-        </span>
+        <span className="mr-auto text-muted">{s.grouped && folders > 1 ? t("header.assetsInFolders", { assets: countText, count: folders }) : countText}</span>
         <span role="status" className="sr-only">
           {said}
         </span>
         <label className="flex items-center gap-1.5 text-muted">
-          Sort
+          {t("header.sort.label")}
           <select
             value={s.sort.key}
             onChange={(e) => s.setSort(e.target.value as SortKey)}
@@ -231,35 +245,35 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
           </select>
         </label>
         <IconButton
-          label={s.sort.desc ? "Descending (click for ascending)" : "Ascending (click for descending)"}
+          label={s.sort.desc ? t("header.sort.descending") : t("header.sort.ascending")}
           className="size-[30px] border border-line-strong"
           onClick={() => s.setSort(s.sort.key)}
         >
           <span aria-hidden className="font-mono text-xs">{s.sort.desc ? "↓" : "↑"}</span>
         </IconButton>
         <Segmented
-          label="Grouping"
+          label={t("header.grouping")}
           value={s.grouped ? "folder" : "none"}
           onChange={(v) => s.setGrouped(v === "folder")}
           options={[
-            { value: "folder", label: "By folder" },
-            { value: "none", label: "All together" },
+            { value: "folder", label: t("header.byFolder") },
+            { value: "none", label: t("header.allTogether") },
           ]}
         />
         <Segmented
-          label="Layout"
+          label={t("header.layout")}
           value={s.layout}
           onChange={s.setLayout}
           options={[
-            { value: "grid", label: "Grid" },
-            { value: "list", label: "List" },
+            { value: "grid", label: t("header.grid") },
+            { value: "list", label: t("header.list") },
           ]}
         />
         {s.layout === "grid" && (
           <input
             type="range"
-            aria-label="Thumbnail size"
-            title="Thumbnail size"
+            aria-label={t("header.thumbSize")}
+            title={t("header.thumbSize")}
             min={110}
             max={320}
             step={10}
@@ -269,7 +283,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
           />
         )}
         <IconButton
-          label={s.pixelated ? "Pixel-art scaling on" : "Pixel-art scaling off"}
+          label={s.pixelated ? t("header.pixelatedOn") : t("header.pixelatedOff")}
           aria-pressed={s.pixelated}
           className={clsx("size-[30px] border border-line-strong", s.pixelated && "bg-active text-fg")}
           onClick={() => s.setPixelated(!s.pixelated)}
@@ -304,7 +318,7 @@ function SaveSmart() {
         className="flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border border-dashed border-line-x px-3 text-[12.5px] font-medium whitespace-nowrap text-fg-2 hover:text-fg"
       >
         <Sparkles aria-hidden className="size-3.5" />
-        Save as smart collection
+        {t("header.saveSmart.button")}
       </button>
     );
   return (
@@ -322,12 +336,12 @@ function SaveSmart() {
     >
       <Sparkles aria-hidden className="size-3.5 flex-none text-muted" />
       <input
-        aria-label="Smart collection name"
+        aria-label={t("header.saveSmart.name")}
         autoFocus
         onFocus={(e) => e.currentTarget.select()}
         value={name}
         maxLength={80}
-        placeholder="Collection name"
+        placeholder={t("header.saveSmart.placeholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           e.stopPropagation();
@@ -336,9 +350,9 @@ function SaveSmart() {
         className="w-44 border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-muted"
       />
       <button type="submit" className="h-6 rounded-xl bg-accent px-2.5 text-xs font-semibold text-accent-fg">
-        Save
+        {t("header.saveSmart.save")}
       </button>
-      <IconButton label="Cancel" className="size-6" onClick={cancel}>
+      <IconButton label={t("header.saveSmart.cancel")} className="size-6" onClick={cancel}>
         <X className="size-3.5" />
       </IconButton>
     </form>
@@ -354,7 +368,7 @@ function Breadcrumbs() {
   useEffect(close, [s.folder, close]);
 
   return (
-    <nav aria-label="Folder path" className="flex min-w-0 flex-none items-center gap-0.5 text-[17px] tracking-[-.01em]">
+    <nav aria-label={t("header.folderPath")} className="flex min-w-0 flex-none items-center gap-0.5 text-[17px] tracking-[-.01em]">
       {chain.map((n, i) => {
         const last = i === chain.length - 1;
         return (
@@ -376,7 +390,7 @@ function Breadcrumbs() {
               {n.children.length > 0 && (
                 <button
                   type="button"
-                  aria-label={`Folders in ${n.name}`}
+                  aria-label={t("header.foldersIn", { name: n.name })}
                   aria-haspopup="menu"
                   aria-expanded={menu === n.key}
                   onClick={() => setMenu(menu === n.key ? null : n.key)}
@@ -391,7 +405,7 @@ function Breadcrumbs() {
         );
       })}
       <IconButton
-        label="Show the whole library"
+        label={t("header.wholeLibrary")}
         className="ml-1 size-7"
         onClick={() => {
           s.setFolder(null);
@@ -442,11 +456,11 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
     <div
       ref={box}
       role="menu"
-      aria-label={`Folders in ${node.name}`}
+      aria-label={t("header.foldersIn", { name: node.name })}
       onKeyDown={onKey}
       className="absolute top-full left-0 z-50 mt-1.5 flex w-[300px] flex-col overflow-hidden rounded-[14px] border border-line-x bg-field text-[13px] tracking-normal shadow-[0_30px_80px_-20px_rgba(0,0,0,.7)]"
     >
-      <div className="px-3.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">In {node.name}</div>
+      <div className="px-3.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">{t("header.inFolder", { name: node.name })}</div>
       <div className="flex max-h-[45vh] flex-col overflow-auto px-1.5 pb-1.5">
         {node.children.map((c) => (
           <button
@@ -459,14 +473,14 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
           >
             <Folder aria-hidden className={clsx("size-[15px] flex-none", c.key === current ? "text-accent" : "text-muted")} />
             <span className={clsx("min-w-0 flex-1 truncate", c.key === current && "font-semibold")}>{c.name}</span>
-            <span className="font-mono text-[11px] text-muted">{c.count.toLocaleString()}</span>
+            <span className="font-mono text-[11px] text-muted">{num(c.count)}</span>
             <span className="w-3.5 text-accent">{c.key === current && <Check aria-hidden className="size-3.5" />}</span>
           </button>
         ))}
       </div>
       {recent.length > 0 && (
         <>
-          <div className="border-t border-line px-3.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">Recent folders</div>
+          <div className="border-t border-line px-3.5 pt-2.5 pb-1.5 text-[11px] font-medium tracking-[.06em] text-faint uppercase">{t("header.recentFolders")}</div>
           <div className="flex flex-col px-1.5 pb-2">
             {recent.map((f) => (
               <button
@@ -483,9 +497,9 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
         </>
       )}
       <div className="flex gap-3.5 border-t border-line px-3.5 py-2 text-xs text-faint">
-        <span>↑↓ move</span>
-        <span>↵ open</span>
-        <span className="ml-auto">Alt ↑ parent</span>
+        <span>{t("header.keys.move", { keys: "↑↓" })}</span>
+        <span>{t("header.keys.open", { keys: "↵" })}</span>
+        <span className="ml-auto">{t("header.keys.parent", { keys: shortcut("parent").keys })}</span>
       </div>
     </div>
   );

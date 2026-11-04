@@ -1,0 +1,88 @@
+{
+  "title": "Settings",
+  "sections": {
+    "appearance": "Appearance",
+    "library": "Library",
+    "backups": "Backups",
+    "storage": "Storage",
+    "updates": "Updates",
+    "about": "About"
+  },
+  "appearance": {
+    "theme": "Theme",
+    "accent": "Accent colour",
+    "accentHint": "Buttons, selection and focus rings.",
+    "thumbSize": "Thumbnail size",
+    "thumbSizeHint": "Card size in the grid. The slider above the grid changes it too.",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "Pixel-art scaling",
+    "pixelatedHint": "Enlarge images with sharp pixels instead of smoothing them."
+  },
+  "updates": {
+    "checkOnLaunch": "Check for updates on launch",
+    "checkOnLaunchHint": "Looks quietly a few seconds after start. Nothing installs without asking."
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "Open source, MIT License",
+    "releases": "Releases",
+    "source": "Source code",
+    "support": "Support Mimikit",
+    "supportHint": "It's free. Tips keep it going."
+  },
+  "ignored": {
+    "title": "Ignored folders",
+    "hint": "Folders with these names are skipped in every library folder, like hidden folders, node_modules and .meta files already are.",
+    "remove": "Stop ignoring {{name}}",
+    "addAnother": "Add another, press Enter",
+    "placeholder": "Folder name, like Backup or _old, then Enter",
+    "invalid": "Enter one folder name, not a path.",
+    "saved": "Saved. Rescan to apply it to files already in the library.",
+    "pending": "Changes apply on the next rescan. Files stay on disk.",
+    "rescanning": "Rescanning…",
+    "rescan": "Rescan now"
+  },
+  "analysis": {
+    "underMinute": "under a minute",
+    "minutes_one": "about {{count}} minute",
+    "minutes_other": "about {{count}} minutes",
+    "hours_one": "about {{count}} hour",
+    "hours_other": "about {{count}} hours",
+    "title": "Image analysis",
+    "progress_one": "<0>{{done}}</0> of <0>{{count}}</0> image analysed for Find similar and search by colour.",
+    "progress_other": "<0>{{done}}</0> of <0>{{count}}</0> images analysed for Find similar and search by colour.",
+    "remaining_one": "The other image takes {{time}}, on spare CPU. Images you browse are analysed as you go.",
+    "remaining_other": "The other {{count}} take {{time}}, on spare CPU. Images you browse are analysed as you go.",
+    "asYouGo": "Images you browse are analysed as you go.",
+    "resume": "Resume",
+    "pause": "Pause",
+    "analyse": "Analyse images",
+    "keep": "Keep new and changed images analysed",
+    "keepHint": "Analyses images as they're added or changed while Mimikit is open. Turns on by itself after the first full analysis."
+  },
+  "cancel": "Cancel",
+  "backups": {
+    "pickTitle": "Save a library backup to…",
+    "saved": "Saved {{name}} in {{folder}}.",
+    "restoreTitle": "Restore {{name}}?",
+    "restoreHint": "It replaces your library: folders, tags, ratings, notes, collections and sprite grids. The current library is saved in the backups folder first. Mimikit restarts to finish.",
+    "restoring": "Restoring…",
+    "restoreRestart": "Restore and restart",
+    "library": "Library backup",
+    "libraryHint": "Folders, tags, ratings, notes, collections and sprite grids. Your asset files aren't included.",
+    "backingUp": "Backing up…",
+    "backUp": "Back up…",
+    "restore": "Restore…",
+    "auto": "Automatic backups",
+    "autoHint": "One a day when Mimikit opens. The last 5 are kept.",
+    "showFolder": "Show folder"
+  },
+  "cache": {
+    "clearedCache": "Cleared the thumbnail cache. Thumbnails are rebuilt as you browse.",
+    "cleared": "Cleared {{size}}. Thumbnails are rebuilt as you browse.",
+    "title": "Thumbnail cache",
+    "hint": "<0>{{size}}</0> of thumbnails and previews Mimikit made. Your asset files aren't touched.",
+    "clearing": "Clearing…",
+    "clear": "Clear thumbnail cache"
+  }
+}

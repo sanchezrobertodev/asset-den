@@ -4,6 +4,7 @@ import { toLab, type LabSwatch, type Swatch } from "./lib/colors";
 import { applyDeltas, deltasAfter, type AssetsDelta } from "./lib/delta";
 import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
+import { t, type TKey, type Vars } from "./lib/i18n";
 import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { AccentId } from "./lib/themes";
@@ -174,7 +175,10 @@ export const useStore = create<State>((set, get) => {
       recentFolders: [f, ...recentFolders.filter((x) => !same(x))].slice(0, 6),
     };
   };
-  const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? "asset";
+  const nameOf = (id: number) => get().assets.find((a) => a.id === id)?.name ?? t("store.unnamedAsset");
+  /** A message about `ids`: `one` names the asset, `many` counts them. */
+  const about = (ids: number[], one: TKey, many: TKey, vars?: Vars) =>
+    ids.length === 1 ? t(one, { ...vars, name: nameOf(ids[0]) }) : t(many, { ...vars, count: ids.length });
   /** The current search as a smart-collection rule. Type chips become type: words, unless the query names types itself. */
   const currentRule = (): CollectionRule => {
     const { query, kinds, filters } = get();
@@ -242,10 +246,10 @@ export const useStore = create<State>((set, get) => {
       return;
     }
     last = Date.now();
-    const t = performance.now();
+    const start = performance.now();
     if (!applyIncoming()) return;
     // Two frames later the update has rendered; wait at least 4x that long before the next one.
-    requestAnimationFrame(() => requestAnimationFrame(() => (gap = Math.max(1000, 4 * (performance.now() - t)))));
+    requestAnimationFrame(() => requestAnimationFrame(() => (gap = Math.max(1000, 4 * (performance.now() - start)))));
   };
 
   return {
@@ -306,7 +310,7 @@ export const useStore = create<State>((set, get) => {
       api.analysisStatus().then((analysis) => set({ analysis }), get().setError);
       api
         .restoreResult()
-        .then((r) => r && get().showToast("Restored the library from the backup. The one it replaced is in the backups folder."), get().setError);
+        .then((r) => r && get().showToast(t("store.restored")), get().setError);
       let pending: ReturnType<typeof setTimeout> | null = null;
       await api.onAssetsChanged(() => {
         // A scan or a burst of file events ended: catch up once, then refresh collections and re-check duplicates.
@@ -368,7 +372,7 @@ export const useStore = create<State>((set, get) => {
       if (!(await write(() => api.removeRoot(id)))) return;
       set((s) => ({ folder: s.folder?.rootId === id ? null : s.folder, recentFolders: s.recentFolders.filter((f) => f.rootId !== id) }));
       await get().reload();
-      if (root) get().showToast(`Removed ${root.path} from the library. Files are untouched.`);
+      if (root) get().showToast(t("store.rootRemoved", { path: root.path }));
     },
     rescan: async (id) => {
       set((s) => ({ scanning: { ...s.scanning, [id]: 0 } }));
@@ -389,7 +393,7 @@ export const useStore = create<State>((set, get) => {
       // thumbnails that failed while the folder was unreachable.
       forgetThumbnails();
       await get().reload();
-      get().showToast(`Now looking for this folder's assets in ${path}.`);
+      get().showToast(t("store.relinked", { path }));
     },
 
     setError: (e) => {
@@ -536,9 +540,9 @@ export const useStore = create<State>((set, get) => {
     setFavorite: async (ids, favorite) => {
       patchAssets(ids, (a) => ({ ...a, favorite }));
       if (!(await write(() => api.setFavorite(ids, favorite)))) return;
-      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
-      get().showToast(favorite ? `Added ${what} to Favorites` : `Removed ${what} from Favorites`, () =>
-        get().setFavorite(ids, !favorite),
+      get().showToast(
+        favorite ? about(ids, "store.favoriteAdded", "store.favoriteAddedCount") : about(ids, "store.favoriteRemoved", "store.favoriteRemovedCount"),
+        () => get().setFavorite(ids, !favorite),
       );
     },
     addTag: async (ids, raw) => {
@@ -550,7 +554,7 @@ export const useStore = create<State>((set, get) => {
       }
     },
     removeTag: async (ids, tag) => {
-      patchAssets(ids, (a) => ({ ...a, tags: a.tags.filter((t) => t !== tag) }));
+      patchAssets(ids, (a) => ({ ...a, tags: a.tags.filter((x) => x !== tag) }));
       await write(() => api.removeTag(ids, tag));
     },
     setRating: async (ids, rating) => {
@@ -565,8 +569,10 @@ export const useStore = create<State>((set, get) => {
       }
       patchAssets(ids, (a) => ({ ...a, rating }));
       if (!(await write(() => api.setRating(ids, rating)))) return;
-      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
-      get().showToast(rating ? `Rated ${what} ${"★".repeat(rating)}` : `Cleared the rating of ${what}`, async () => {
+      const message = rating
+        ? about(ids, "store.rated", "store.ratedCount", { stars: "★".repeat(rating) })
+        : about(ids, "store.ratingCleared", "store.ratingClearedCount");
+      get().showToast(message, async () => {
         for (const [r, group] of before) {
           patchAssets(group, (a) => ({ ...a, rating: r }));
           if (!(await write(() => api.setRating(group, r)))) return;
@@ -591,8 +597,8 @@ export const useStore = create<State>((set, get) => {
 
     newCollection: async () => {
       const names = new Set(get().collections.map((c) => c.name));
-      let name = "New collection";
-      for (let i = 2; names.has(name); i++) name = `New collection ${i}`;
+      let name = t("store.newCollection");
+      for (let i = 2; names.has(name); i++) name = t("store.newCollectionNumbered", { number: i });
       try {
         const id = await api.createCollection(name);
         set({ collections: await api.listCollections() });
@@ -618,7 +624,7 @@ export const useStore = create<State>((set, get) => {
       const old = c.rule;
       set((s) => ({ collections: s.collections.map((x) => (x.id === id ? { ...x, rule } : x)) }));
       if (!(await write(() => api.setCollectionRule(id, rule)))) return;
-      get().showToast(`Updated the search of ${c.name}`, () => get().setCollectionRule(id, old));
+      get().showToast(t("store.ruleUpdated", { name: c.name }), () => get().setCollectionRule(id, old));
     },
     renameCollection: async (id, name) => {
       try {
@@ -636,7 +642,7 @@ export const useStore = create<State>((set, get) => {
       set((s) => ({ collections: s.collections.filter((x) => x.id !== id) }));
       if (!(await write(() => api.deleteCollection(id)))) return;
       await get().reload();
-      get().showToast(`Deleted ${c.name}. Files are untouched.`, async () => {
+      get().showToast(t("store.collectionDeleted", { name: c.name }), async () => {
         const nid = await api.createCollection(c.name, c.rule);
         if (c.assetIds.length) await api.setInCollection(nid, c.assetIds, true);
         await get().reload();
@@ -644,7 +650,7 @@ export const useStore = create<State>((set, get) => {
       });
     },
     setInCollection: async (collection, ids, member) => {
-      const name = get().collections.find((c) => c.id === collection)?.name ?? "collection";
+      const name = get().collections.find((c) => c.id === collection)?.name ?? t("store.unnamedCollection");
       const rm = new Set(ids);
       set((s) => ({
         collections: s.collections.map((c) =>
@@ -654,9 +660,11 @@ export const useStore = create<State>((set, get) => {
         ),
       }));
       if (!(await write(() => api.setInCollection(collection, ids, member)))) return;
-      const what = ids.length === 1 ? nameOf(ids[0]) : `${ids.length} assets`;
-      get().showToast(member ? `Added ${what} to ${name}` : `Removed ${what} from ${name}`, () =>
-        get().setInCollection(collection, ids, !member),
+      get().showToast(
+        member
+          ? about(ids, "store.addedTo", "store.addedToCount", { collection: name })
+          : about(ids, "store.removedFrom", "store.removedFromCount", { collection: name }),
+        () => get().setInCollection(collection, ids, !member),
       );
     },
     copyCollection: async (id) => {
@@ -664,12 +672,15 @@ export const useStore = create<State>((set, get) => {
       if (!c) return;
       const ids = c.rule ? get().assets.filter(ruleMatcher(c.rule, get().notes, undefined, get().palettes)).map((a) => a.id) : c.assetIds;
       if (!ids.length) return;
-      const dest = await api.pickFolder(`Copy ${c.name} to…`);
+      const dest = await api.pickFolder(t("store.copyTo", { name: c.name }));
       if (!dest) return;
       try {
         const r = await api.copyCollection(ids, dest);
-        if (r.failed.length) get().setError(`Copied ${r.copied} files. ${r.failed.length} failed: ${r.failed.slice(0, 3).join("; ")}`);
-        else get().showToast(`Copied ${r.copied} ${r.copied === 1 ? "file" : "files"} to ${dest}`);
+        if (r.failed.length)
+          get().setError(
+            t("store.copyFailed", { copied: t("store.copiedPart", { count: r.copied }), count: r.failed.length, errors: r.failed.slice(0, 3).join("; ") }),
+          );
+        else get().showToast(t("store.copied", { count: r.copied, folder: dest }));
       } catch (e) {
         get().setError(e);
       }
@@ -689,18 +700,18 @@ export const useStore = create<State>((set, get) => {
         await get().findDuplicates();
         return;
       }
-      get().showToast("Marked as not duplicates", async () => {
+      get().showToast(t("store.notDuplicates"), async () => {
         await api.setDuplicateIgnored(hash, false);
         await get().findDuplicates();
       });
     },
     trashDuplicates: async (keep, remove) => {
-      const label = remove.length === 1 ? nameOf(remove[0]) : `${remove.length} copies`;
+      const message = about(remove, "store.trashed", "store.trashedCount");
       try {
         await api.trashDuplicates(keep, remove);
         await get().reload();
         await get().findDuplicates();
-        get().showToast(`Moved ${label} to the Trash. You can restore it from there.`);
+        get().showToast(message);
       } catch (e) {
         get().setError(e);
         await get().reload();

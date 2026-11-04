@@ -1,0 +1,50 @@
+{
+  "library": "Library",
+  "favorites": "Favorites",
+  "collections": "Collections",
+  "duplicates": "Duplicates",
+  "insights": "Insights",
+  "newCollection": "New collection",
+  "smartCollection": "Smart collection",
+  "noCollections": "Group assets for a level or a pack.",
+  "folders": "Folders",
+  "importFolder": "Import a folder",
+  "importFolderLink": "+ Import a folder",
+  "folderCount_one": "{{count}} folder",
+  "folderCount_other": "{{count}} folders",
+  "librarySize_one": "{{size}} · {{count}} file",
+  "librarySize_other": "{{size}} · {{count}} files",
+  "sizeByType": "Library size by type",
+  "kindSize": "{{kind}}: {{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "Check for updates",
+  "theme": "Theme: {{name}} (click to change)",
+  "shortcuts": "Keyboard shortcuts ({{keys}})",
+  "settings": "Settings",
+  "cancel": "Cancel",
+  "folder": {
+    "locateTitle": "Locate {{name}}",
+    "subfolders": "Subfolders of {{name}}",
+    "unreachableTitle": "{{path}}\nCan't reach this folder. Its assets keep their tags and collections: locate it if it moved, or rescan once it's back.",
+    "unreachable": "Can't reach this folder:",
+    "scanning": "Scanning",
+    "locate": "Locate {{name}} (if it moved)",
+    "rescan": "Rescan {{name}}",
+    "remove": "Remove {{name}} from the library (files stay on disk)"
+  },
+  "relink": {
+    "someTitle": "Only some of {{name}}'s files are there",
+    "noneTitle": "None of {{name}}'s files are there",
+    "confirm": "Relink anyway",
+    "body_one": "Mimikit checked {{count}} of this folder's files and found {{found}} in <0>{{path}}</0>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and collections. Your files aren't touched.",
+    "body_other": "Mimikit checked {{count}} of this folder's files and found {{found}} in <0>{{path}}</0>. If you relink, the rescan removes the assets it can't find there, with their tags, ratings, notes and collections. Your files aren't touched."
+  },
+  "removeRoot": {
+    "title": "Remove {{name}} from the library?",
+    "confirm": "Remove",
+    "body_zero": "This removes its assets from the library, with their tags, ratings, notes, collection memberships and sprite grids. Your files stay on disk.",
+    "body_one": "This removes the {{count}} asset in this folder from the library, with their tags, ratings, notes, collection memberships and sprite grids. Your files stay on disk.",
+    "body_other": "This removes the {{count}} assets in this folder from the library, with their tags, ratings, notes, collection memberships and sprite grids. Your files stay on disk."
+  }
+}

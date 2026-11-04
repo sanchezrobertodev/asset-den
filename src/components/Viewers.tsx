@@ -4,7 +4,8 @@ import { Download, Grid3x3, LoaderCircle, Pause, Play, Repeat, StepBack, StepFor
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 import { api, assetUrl, errorText, fileUrl } from "../api";
 import { holdFont } from "../lib/fonts";
-import { bytes } from "../lib/format";
+import { bytes } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import { reducedMotion } from "../lib/prefs";
 import { frameSize, gridFor, guessGrid } from "../lib/sprites";
 import { useStore } from "../store";
@@ -97,7 +98,7 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
   };
   const onMove = (e: PointerEvent) => drag.current && setPan({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y });
 
-  if (!src) return <Note busy>Decoding…</Note>;
+  if (!src) return <Note busy>{t("viewers.image.decoding")}</Note>;
   const toggle = (
     <button
       type="button"
@@ -112,10 +113,10 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
         refocus.current = true;
         setAnimate(!animating);
       }}
-      title="Play the image as a sprite sheet"
+      title={t("viewers.image.animateTitle")}
       className={clsx(toggleChip(animating), "disabled:opacity-50")}
     >
-      Animate
+      {t("viewers.image.animate")}
     </button>
   );
   if (animating && sheet !== undefined)
@@ -147,7 +148,7 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
           alt={asset.name}
           draggable={false}
           onLoad={measure}
-          onError={() => fail("The webview can't display this image.")}
+          onError={() => fail(t("viewers.image.cantDisplay"))}
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           className={clsx(
             "absolute inset-0 m-auto max-h-full max-w-full object-contain shadow-[0_8px_30px_rgba(0,0,0,.45)]",
@@ -158,8 +159,10 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
       </div>
       <div className="flex items-center gap-1.5" onDoubleClick={(e) => e.stopPropagation()}>
         <span className={chip}>
-          {[dims, fit !== null ? `${full ? "shown at " : ""}${Math.round(fit * zoom * 100)}%` : ""].filter(Boolean).join(" · ")}
-          {full && " · scroll to zoom, drag to pan"}
+          {[dims, fit !== null ? t(full ? "viewers.image.zoomShown" : "viewers.image.zoom", { percent: Math.round(fit * zoom * 100) }) : ""]
+            .filter(Boolean)
+            .join(" · ")}
+          {full && ` · ${t("viewers.image.zoomHint")}`}
         </span>
         {toggle}
       </div>
@@ -209,14 +212,13 @@ function ExportFrames({ asset, sheet }: { asset: Asset; sheet: SpriteSheet }) {
     // The menu (and the focused button in it) closes; keep focus on its summary.
     menu.current?.querySelector("summary")?.focus();
     const { showToast, setError } = useStore.getState();
-    const dest = await api.pickFolder(`Export the frames of ${asset.name} to…`);
+    const dest = await api.pickFolder(t("viewers.export.pickFolder", { name: asset.name }));
     if (!dest) return;
     try {
       const r = await api.exportFrames(asset.id, sheet.cols, sheet.rows, skipEmpty, dest);
-      const what = `${r.written} ${r.written === 1 ? "frame" : "frames"}`;
-      if (r.failed.length) setError(`Exported ${what}. ${r.failed.length} failed: ${r.failed.slice(0, 3).join("; ")}`);
-      else if (!r.first) showToast("Every frame is empty, so nothing was exported.");
-      else showToast(`Exported ${what} to ${dest}`, () => api.revealPath(r.first!).catch(setError), "Show in folder");
+      if (r.failed.length) setError(t("viewers.export.failed", { count: r.written, failed: r.failed.length, errors: r.failed.slice(0, 3).join("; ") }));
+      else if (!r.first) showToast(t("viewers.export.allEmpty"));
+      else showToast(t("viewers.export.done", { count: r.written, folder: dest }), () => api.revealPath(r.first!).catch(setError), t("viewers.export.showInFolder"));
     } catch (e) {
       setError(e);
     }
@@ -224,15 +226,15 @@ function ExportFrames({ asset, sheet }: { asset: Asset; sheet: SpriteSheet }) {
   return (
     <details ref={menu} onKeyDown={onKeyDown} className="relative">
       <summary className={clsx(toggleChip(false), "flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden")}>
-        <Download aria-hidden className="size-3" /> Export frames…
+        <Download aria-hidden className="size-3" /> {t("viewers.export.button")}
       </summary>
       <div className="absolute right-0 bottom-full z-30 mb-1.5 flex w-56 flex-col gap-2.5 rounded-xl border border-line-strong bg-field p-3 text-xs text-fg shadow-2xl">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={skipEmpty} onChange={(e) => setSkipEmpty(e.target.checked)} />
-          Skip fully transparent frames
+          {t("viewers.export.skipEmpty")}
         </label>
         <button type="button" onClick={() => void run()} className="h-7 rounded-md bg-accent px-2.5 font-semibold text-accent-fg">
-          Choose folder…
+          {t("viewers.export.chooseFolder")}
         </button>
       </div>
     </details>
@@ -269,7 +271,7 @@ function SpriteView({
     setImg(null);
     const i = new Image();
     i.onload = () => setImg(i);
-    i.onerror = () => fail("The webview can't display this image.");
+    i.onerror = () => fail(t("viewers.image.cantDisplay"));
     i.src = src;
     return () => {
       i.onload = i.onerror = null;
@@ -299,8 +301,8 @@ function SpriteView({
 
   useEffect(() => {
     if (!playing || count < 2) return;
-    const t = setInterval(() => setFrame((f) => (loop ? (f % count) + 1 : Math.min((f % count) + 1, count - 1))), 1000 / fps);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setFrame((f) => (loop ? (f % count) + 1 : Math.min((f % count) + 1, count - 1))), 1000 / fps);
+    return () => clearInterval(timer);
   }, [playing, loop, count, fps]);
   useEffect(() => {
     if (!loop && at === count - 1) setPlaying(false);
@@ -315,7 +317,7 @@ function SpriteView({
     ctx.drawImage(img, (at % sheet.cols) * size.w, Math.floor(at / sheet.cols) * size.h, size.w, size.h, 0, 0, size.w, size.h);
   }, [img, sheet, at, size.w, size.h]);
 
-  if (!img || !sheet) return <Note busy>Slicing…</Note>;
+  if (!img || !sheet) return <Note busy>{t("viewers.sprite.slicing")}</Note>;
   const stepBy = (d: number) => {
     setPlaying(false);
     setFrame((f) => ((f % count) + d + count) % count);
@@ -332,46 +334,46 @@ function SpriteView({
         <canvas
           ref={canvas}
           role="img"
-          aria-label={`${asset.name}, frame ${at + 1} of ${count}`}
+          aria-label={t("viewers.sprite.frameLabel", { name: asset.name, frame: at + 1, total: count })}
           className={clsx("absolute inset-0 h-full w-full object-contain", pixelated && "pixelated")}
         />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-muted" onDoubleClick={(e) => e.stopPropagation()}>
         {toggle}
-        <button type="button" aria-label="Previous frame" title="Previous frame" onClick={() => stepBy(-1)} className={square}>
+        <button type="button" aria-label={t("viewers.sprite.previousFrame")} title={t("viewers.sprite.previousFrame")} onClick={() => stepBy(-1)} className={square}>
           <StepBack aria-hidden className="size-3.5" />
         </button>
         <button
           type="button"
-          aria-label={playing ? "Pause" : "Play"}
-          title={playing ? "Pause" : "Play"}
+          aria-label={playing ? t("viewers.sprite.pause") : t("viewers.sprite.play")}
+          title={playing ? t("viewers.sprite.pause") : t("viewers.sprite.play")}
           onClick={play}
           className="flex size-[26px] items-center justify-center rounded-full bg-accent text-accent-fg"
         >
           {playing ? <Pause aria-hidden className="size-3 fill-current" /> : <Play aria-hidden className="size-3 fill-current" />}
         </button>
-        <button type="button" aria-label="Next frame" title="Next frame" onClick={() => stepBy(1)} className={square}>
+        <button type="button" aria-label={t("viewers.sprite.nextFrame")} title={t("viewers.sprite.nextFrame")} onClick={() => stepBy(1)} className={square}>
           <StepForward aria-hidden className="size-3.5" />
         </button>
         <span className={clsx(chip, "tabular-nums")}>
           {at + 1} / {count}
         </span>
-        <NumField label="Columns" value={sheet.cols} min={1} max={MAX_CELLS} onChange={(cols) => update({ cols })} />
+        <NumField label={t("viewers.sprite.columns")} value={sheet.cols} min={1} max={MAX_CELLS} onChange={(cols) => update({ cols })} />
         <span aria-hidden>×</span>
-        <NumField label="Rows" value={sheet.rows} min={1} max={MAX_CELLS} onChange={(rows) => update({ rows })} />
+        <NumField label={t("viewers.sprite.rows")} value={sheet.rows} min={1} max={MAX_CELLS} onChange={(rows) => update({ rows })} />
         {full && (
           <>
-            <span className="ml-2">frame</span>
-            <NumField label="Frame width in pixels" value={size.w} min={1} max={w} onChange={(fw) => update(gridFor(w, h, fw, size.h))} />
+            <span className="ml-2">{t("viewers.sprite.frame")}</span>
+            <NumField label={t("viewers.sprite.frameWidth")} value={size.w} min={1} max={w} onChange={(fw) => update(gridFor(w, h, fw, size.h))} />
             <span aria-hidden>×</span>
-            <NumField label="Frame height in pixels" value={size.h} min={1} max={h} onChange={(fh) => update(gridFor(w, h, size.w, fh))} />
-            <span className="ml-2">fps</span>
-            <NumField label="Frames per second" value={fps} min={1} max={60} onChange={(v) => update({ fps: v })} />
+            <NumField label={t("viewers.sprite.frameHeight")} value={size.h} min={1} max={h} onChange={(fh) => update(gridFor(w, h, size.w, fh))} />
+            <span className="ml-2">{t("viewers.sprite.fps")}</span>
+            <NumField label={t("viewers.sprite.framesPerSecond")} value={fps} min={1} max={60} onChange={(v) => update({ fps: v })} />
             <button type="button" aria-pressed={loop} onClick={() => setLoop(!loop)} className={clsx(pill(loop), "ml-2")}>
-              <Repeat aria-hidden className="size-3" /> Loop
+              <Repeat aria-hidden className="size-3" /> {t("viewers.sprite.loop")}
             </button>
-            <button type="button" aria-pressed={pixelated} title="Pixel-art scaling" onClick={() => setPixelated(!pixelated)} className={pill(pixelated)}>
-              <Grid3x3 aria-hidden className="size-3" /> Pixel
+            <button type="button" aria-pressed={pixelated} title={t("viewers.sprite.pixelTitle")} onClick={() => setPixelated(!pixelated)} className={pill(pixelated)}>
+              <Grid3x3 aria-hidden className="size-3" /> {t("viewers.sprite.pixel")}
             </button>
             <ExportFrames asset={asset} sheet={sheet} />
           </>
@@ -381,7 +383,7 @@ function SpriteView({
   );
 }
 
-const PANGRAM = "The quick brown fox jumps over the lazy dog";
+const PANGRAM = t("viewers.font.pangram");
 
 function FontView({ asset, full }: { asset: Asset; full: boolean }) {
   const [family, setFamily] = useState<string | undefined>(undefined);
@@ -389,15 +391,15 @@ function FontView({ asset, full }: { asset: Asset; full: boolean }) {
   const fail = usePreviewFailure();
   useEffect(() => {
     setFamily(undefined);
-    return holdFont(asset, fileUrl(asset.path), (f) => (f ? setFamily(f) : fail("This font couldn't be loaded.")));
+    return holdFont(asset, fileUrl(asset.path), (f) => (f ? setFamily(f) : fail(t("viewers.font.loadFailed"))));
   }, [asset, fail]);
-  if (family === undefined) return <Note busy>Loading font…</Note>;
+  if (family === undefined) return <Note busy>{t("viewers.font.loading")}</Note>;
   return (
     <div className={clsx("flex w-full flex-col", full ? "max-w-[820px] gap-4" : "gap-2")} style={{ fontFamily: family }}>
       <span className={clsx("leading-none", full ? "text-[140px]" : "text-[64px]")}>Aa</span>
       {full ? (
         <input
-          aria-label="Sample text"
+          aria-label={t("viewers.font.sample")}
           value={sample}
           onChange={(e) => setSample(e.target.value)}
           onKeyDown={(e) => e.stopPropagation()}
@@ -420,23 +422,23 @@ function TextView({ asset, full }: { asset: Asset; full: boolean }) {
     let live = true;
     api
       .readText(asset.id)
-      .then((t) => {
+      .then((res) => {
         if (!live) return;
-        if (asset.ext === "json" && !t.truncated) {
+        if (asset.ext === "json" && !res.truncated) {
           try {
-            t = { ...t, text: JSON.stringify(JSON.parse(t.text), null, 2) };
+            res = { ...res, text: JSON.stringify(JSON.parse(res.text), null, 2) };
           } catch {
             /* not valid JSON: show as-is */
           }
         }
-        setText(t);
+        setText(res);
       })
       .catch((e) => live && fail(errorText(e)));
     return () => {
       live = false;
     };
   }, [asset.id, asset.ext, asset.mtime, fail]);
-  if (!text) return <Note busy>Reading…</Note>;
+  if (!text) return <Note busy>{t("viewers.text.reading")}</Note>;
   const lines = text.text.split("\n");
   const shown = full ? lines.slice(0, 5000) : lines.slice(0, 9);
   const pad = String(shown.length).length;
@@ -447,16 +449,18 @@ function TextView({ asset, full }: { asset: Asset; full: boolean }) {
         full ? "max-h-full max-w-[760px] px-6 py-5 text-sm leading-[1.8]" : "px-3.5 py-3 text-xs leading-[1.7]",
       )}
     >
-      {shown.map((t, i) => (
+      {shown.map((line, i) => (
         <div key={i} className="flex gap-3.5 whitespace-pre">
           <span className="shrink-0 text-right text-faint" style={{ width: `${pad}ch` }}>
             {i + 1}
           </span>
-          <span>{t}</span>
+          <span>{line}</span>
         </div>
       ))}
       {(text.truncated || shown.length < lines.length) && (
-        <div className="pt-1 text-faint">… {full ? `showing the start of ${bytes(asset.size)}` : `${lines.length - shown.length} more lines`}</div>
+        <div className="pt-1 text-faint">
+          {full ? t("viewers.text.truncated", { size: bytes(asset.size) }) : t("viewers.text.moreLines", { count: lines.length - shown.length })}
+        </div>
       )}
     </div>
   );
@@ -475,7 +479,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
       return <ImageView key={asset.id} asset={asset} pixelated={pixelated} full={full} />;
     case "audio":
       return (
-        <Suspense fallback={<Note busy>Loading audio…</Note>}>
+        <Suspense fallback={<Note busy>{t("viewers.loadingAudio")}</Note>}>
           <AudioView asset={asset} full={full} />
         </Suspense>
       );
@@ -484,7 +488,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
         <Suspense
           fallback={
             <div className={clsx("stripes w-full rounded-xl", full ? "h-full" : "h-[200px]")}>
-              <Note busy>Loading model…</Note>
+              <Note busy>{t("viewers.loadingModel")}</Note>
             </div>
           }
         >
@@ -500,10 +504,10 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
           src={assetUrl(asset)}
           controls
           autoPlay={full && !reducedMotion()}
-          onError={() => fail("This video format can't be played here.")}
+          onError={() => fail(t("viewers.videoUnsupported"))}
           className={clsx("w-full rounded-xl bg-black object-contain", full ? "h-full" : "max-h-[200px]")}
         >
-          This video format can't be played here.
+          {t("viewers.videoUnsupported")}
         </video>
       );
     case "text":
@@ -512,7 +516,7 @@ export function Viewer({ asset, pixelated, full = false }: { asset: Asset; pixel
       return (
         <Note>
           <span className={clsx("font-mono text-fg", full ? "text-[28px]" : "text-xl")}>.{asset.ext}</span>
-          No preview for this file type
+          {t("viewers.noPreview")}
         </Note>
       );
   }

@@ -3,7 +3,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { api, errorText, fileUrl } from "../api";
 import type { Group } from "../lib/filter";
-import { ago, bytes, duration, folderOf } from "../lib/format";
+import { folderOf } from "../lib/format";
+import { ago, bytes, duration } from "../lib/fmt";
+import { t } from "../lib/i18n";
 import { reducedMotion } from "../lib/prefs";
 import { thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
@@ -33,7 +35,7 @@ async function dragOut(e: DragEvent, asset: Asset, all: Asset[]) {
       icon,
     );
   } catch (err) {
-    useStore.getState().setError(`Couldn't start the drag: ${errorText(err)}`);
+    useStore.getState().setError(t("assetBrowser.dragFailed", { error: errorText(err) }));
   }
 }
 
@@ -80,8 +82,8 @@ function assetLabel(a: Asset) {
     a.width && a.height ? `${a.width}×${a.height}` : null,
     a.durationMs !== null ? duration(a.durationMs) : null,
     bytes(a.size),
-    a.favorite ? "favorite" : null,
-    a.rating ? `${a.rating} ${a.rating === 1 ? "star" : "stars"}` : null,
+    a.favorite ? t("assetBrowser.favorite") : null,
+    a.rating ? t("assetBrowser.stars", { count: a.rating }) : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -96,7 +98,7 @@ function listboxProps(lines: Line[], rendered: number[], activeId: number | null
   return {
     role: "listbox",
     "aria-multiselectable": true,
-    "aria-label": "Assets",
+    "aria-label": t("assetBrowser.assets"),
     "data-assets": "",
     tabIndex: 0,
     "aria-activedescendant": shown ? `asset-${activeId}` : undefined,
@@ -135,9 +137,7 @@ function GroupHead({ group }: { group: Group }) {
   return (
     <div className="flex h-[30px] items-baseline gap-2.5 pt-1">
       <span className="text-sm font-semibold">{group.label}</span>
-      <span className="font-mono text-[11px] text-faint">
-        {group.items.length.toLocaleString()} {group.items.length === 1 ? "file" : "files"} · {bytes(group.bytes)}
-      </span>
+      <span className="font-mono text-[11px] text-faint">{t("assetBrowser.groupInfo", { count: group.items.length, size: bytes(group.bytes) })}</span>
     </div>
   );
 }
@@ -289,12 +289,12 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
         style={{ gridTemplateColumns: COLS }}
       >
         <span />
-        <span>Name</span>
-        <span>Type</span>
-        <span>Dims / length</span>
-        <span>Size</span>
-        <span>Folder</span>
-        <span>Modified</span>
+        <span>{t("assetBrowser.columns.name")}</span>
+        <span>{t("assetBrowser.columns.type")}</span>
+        <span>{t("assetBrowser.columns.dims")}</span>
+        <span>{t("assetBrowser.columns.size")}</span>
+        <span>{t("assetBrowser.columns.folder")}</span>
+        <span>{t("assetBrowser.columns.modified")}</span>
       </div>
       <div ref={scrollRef} {...lb} className={clsx("min-h-0 flex-1 overflow-y-auto", lb.className)}>
         <div style={{ height: v.getTotalSize(), position: "relative" }}>
@@ -327,9 +327,9 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                 <Thumb asset={a} size="row" pixelated={pixelated} className="size-8 rounded-[7px]" />
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-medium">{a.name}</span>
-                  {a.tags.slice(0, 3).map((t) => (
-                    <span key={t} className="rounded-[5px] bg-active px-[7px] py-px text-[11px] whitespace-nowrap text-fg-2">
-                      #{t}
+                  {a.tags.slice(0, 3).map((tag) => (
+                    <span key={tag} className="rounded-[5px] bg-active px-[7px] py-px text-[11px] whitespace-nowrap text-fg-2">
+                      #{tag}
                     </span>
                   ))}
                   {a.favorite && <span className="text-star">★</span>}

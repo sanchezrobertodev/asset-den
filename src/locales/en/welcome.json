@@ -1,0 +1,19 @@
+{
+  "title": "Welcome to Mimikit",
+  "intro": "Point it at a folder of game assets and it indexes every sprite, sound, model, font and video in it, then keeps watching for changes.",
+  "importFolder": "Import a folder",
+  "readOnly": "You can add more folders later. Mimikit only reads them: your files are never changed.",
+  "tips": "Tips",
+  "drag": {
+    "title": "Drag into your engine",
+    "body": "Drop any card into Unity, Godot or a folder to copy the file there."
+  },
+  "preview": {
+    "title": "Preview in place",
+    "body": "Select an asset and press {{peekKey}} to look, Enter for full screen."
+  },
+  "search": {
+    "title": "Find anything",
+    "body": "Search names, {{tagExample}}, {{typeExample}} or folders from anywhere."
+  }
+}

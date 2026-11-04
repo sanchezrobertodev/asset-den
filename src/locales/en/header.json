@@ -1,0 +1,70 @@
+{
+  "titles": {
+    "library": "Library",
+    "favorites": "Favorites",
+    "collections": "Collections",
+    "duplicates": "Duplicates",
+    "insights": "Insights"
+  },
+  "favoritesIn": "<0>Favorites</0> <1>in</1> <2/>",
+  "searchPlaceholder": "Search assets, {{hash}}tags, {{type}}",
+  "import": "Import",
+  "similar": {
+    "stop": "Stop showing images similar to {{name}}",
+    "label": "Similar to {{name}}",
+    "notAnalysed_one": "{{count}} image not analysed yet",
+    "notAnalysed_other": "{{count}} images not analysed yet",
+    "strict": "Strict",
+    "loose": "Loose",
+    "slider": "How different similar images may be",
+    "sliderValue_one": "Up to {{max}} of 64 bits differ, {{count}} image",
+    "sliderValue_other": "Up to {{max}} of 64 bits differ, {{count}} images"
+  },
+  "sort": {
+    "label": "Sort",
+    "name": "Name",
+    "kind": "Type",
+    "size": "Size",
+    "mtime": "Modified",
+    "folder": "Folder",
+    "descending": "Descending (click for ascending)",
+    "ascending": "Ascending (click for descending)"
+  },
+  "all": "All",
+  "includeSubfolders": "Include subfolders",
+  "clearSearch": "Clear search",
+  "query": "“{{query}}”",
+  "assets_one": "{{count}} asset",
+  "assets_other": "{{count}} assets",
+  "assetsInFolders_one": "{{assets}} in {{count}} folder",
+  "assetsInFolders_other": "{{assets}} in {{count}} folders",
+  "subfolders": "Subfolders",
+  "moreSubfolders_one": "+{{count}} more in the folder menu",
+  "moreSubfolders_other": "+{{count}} more in the folder menu",
+  "grouping": "Grouping",
+  "byFolder": "By folder",
+  "allTogether": "All together",
+  "layout": "Layout",
+  "grid": "Grid",
+  "list": "List",
+  "thumbSize": "Thumbnail size",
+  "pixelatedOn": "Pixel-art scaling on",
+  "pixelatedOff": "Pixel-art scaling off",
+  "saveSmart": {
+    "button": "Save as smart collection",
+    "name": "Smart collection name",
+    "placeholder": "Collection name",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "folderPath": "Folder path",
+  "foldersIn": "Folders in {{name}}",
+  "wholeLibrary": "Show the whole library",
+  "inFolder": "In {{name}}",
+  "recentFolders": "Recent folders",
+  "keys": {
+    "move": "{{keys}} move",
+    "open": "{{keys}} open",
+    "parent": "{{keys}} parent"
+  }
+}

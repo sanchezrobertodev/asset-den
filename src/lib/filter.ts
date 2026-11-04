@@ -1,6 +1,6 @@
 import type { Asset, Collection, CollectionRule, FolderFilter, Kind, Notes, Root, ViewName } from "../types";
 import { hasColor, parseColor, type LabSwatch } from "./colors.ts";
-import { baseName, folderOf, kindLabel } from "./format.ts";
+import { baseName, folderOf } from "./format.ts";
 import type { SortKey } from "./prefs";
 
 /** Extra filters from the Filters panel. null / empty means "any". */
@@ -105,16 +105,21 @@ export interface Query {
   text: string[];
 }
 
+/** `type:` takes a kind or the start of its English name, whatever the UI language, so saved searches keep matching. */
+const KIND_NAMES: Record<Kind, string> = { image: "images", audio: "audio", model: "3d models", font: "fonts", video: "video", text: "text & data", other: "other" };
+/** Full-width forms of the search operators, as Japanese and Chinese input methods type them. */
+const FULL_WIDTH = /[：＃＞＜＝]/g;
+
 const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
 const TIME_UNITS: Record<string, number> = { ms: 1, s: 1000, m: 60_000 };
 
 export function parseQuery(q: string): Query {
   const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minMs: null, maxMs: null, minRating: 0, maxRating: 5, notes: [], colors: [], text: [] };
-  for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
+  for (const t of q.replace(FULL_WIDTH, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).toLowerCase().split(/\s+/).filter(Boolean)) {
     if (t.startsWith("type:")) {
       const s = t.slice(5);
       if (!s) continue;
-      const hits = (Object.keys(kindLabel) as Kind[]).filter((k) => k.startsWith(s) || kindLabel[k].toLowerCase().startsWith(s));
+      const hits = (Object.keys(KIND_NAMES) as Kind[]).filter((k) => k.startsWith(s) || KIND_NAMES[k].startsWith(s));
       out.types = [...(out.types ?? []), ...hits];
     } else if (t.startsWith("in:")) {
       if (t.length > 3) out.folder = t.slice(3);

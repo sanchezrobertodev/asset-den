@@ -1,4 +1,5 @@
 // Search by colour: named colours, and matching against the dominant colours the backend extracts per image.
+import { t, type TKey } from "./i18n.ts";
 
 /** r, g, b (0–255) and the share of the image's opaque pixels in percent, as the backend sends them. */
 export type Swatch = [number, number, number, number];
@@ -23,6 +24,9 @@ const NAMED: [string, string[]][] = [
 
 /** The swatches of the Filters panel, by name. `color:<name>` takes these names, or the start of one. */
 export const NAMED_COLORS: Record<string, string> = Object.fromEntries(NAMED.map(([n, shades]) => [n, `#${shades[0]}`]));
+
+/** A named colour as shown; `color:` and saved filters keep the English id. */
+export const colorName = (id: string) => t(`colors.${id}` as TKey);
 
 /** How far (OKLab ΔE) an image colour may be from a hex colour searched for. */
 const MAX_DELTA = 0.12;

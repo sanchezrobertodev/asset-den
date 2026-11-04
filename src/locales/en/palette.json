@@ -1,0 +1,47 @@
+{
+  "tokens": {
+    "tag": "{{token}}tag",
+    "folder": "{{token}}folder",
+    "word": "{{token}}word"
+  },
+  "inCollection_zero": "No matches in {{name}}",
+  "inCollection_one": "Show {{count}} match in {{name}}",
+  "inCollection_other": "Show {{count}} matches in {{name}}",
+  "duplicates_zero": "No duplicate groups match",
+  "duplicates_one": "Show {{count}} duplicate group",
+  "duplicates_other": "Show {{count}} duplicate groups",
+  "showMatch": "Show the match in the library",
+  "showAll_zero": "No assets match",
+  "showAll_one": "Show all {{count}} match in the library",
+  "showAll_other": "Show all {{count}} matches in the library",
+  "assets_one": "Assets · {{count}}",
+  "assets_other": "Assets · {{count}}",
+  "folders": "Folders",
+  "files_one": "{{count}} file",
+  "files_other": "{{count}} files",
+  "actions": {
+    "title": "Actions",
+    "duplicates": "Review duplicates",
+    "insights": "Open Insights",
+    "newCollection": "New collection",
+    "favorites": "Show favorites",
+    "import": "Import a folder",
+    "listView": "Switch to list view",
+    "gridView": "Switch to grid view",
+    "clearFilters": "Clear search and filters",
+    "settings": "Settings",
+    "updates": "Check for updates",
+    "shortcuts": "Keyboard shortcuts"
+  },
+  "dialog": "Search",
+  "input": "Search assets, folders and actions",
+  "placeholder": "Search assets, folders, actions",
+  "filters": "Filters",
+  "results": "Results",
+  "noResults": "Nothing matches. Try {{type}}, {{tag}}, {{rating}}, {{folder}} or {{color}}.",
+  "keys": {
+    "move": "{{keys}} move",
+    "select": "{{keys}} select",
+    "close": "{{keys}} close"
+  }
+}
