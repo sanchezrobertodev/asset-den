@@ -1,11 +1,15 @@
 // Per-viewer UI preferences. Storage can be unavailable, so every access is guarded.
 
-export type Theme = "system" | "light" | "dark";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ACCENTS, THEMES, accentById, themeById, type AccentId, type Scheme, type ThemeId } from "./themes";
+
+export type Theme = "system" | ThemeId;
 export type SortKey = "name" | "kind" | "size" | "mtime" | "folder";
 export type Layout = "grid" | "list";
 
 export interface Prefs {
   theme: Theme;
+  accent: AccentId;
   sort: { key: SortKey; desc: boolean };
   layout: Layout;
   thumbSize: number;
@@ -22,6 +26,7 @@ export interface Prefs {
 
 const defaults: Prefs = {
   theme: "system",
+  accent: "green",
   sort: { key: "name", desc: false },
   layout: "grid",
   thumbSize: 160,
@@ -37,7 +42,12 @@ const KEY = "assetden.prefs.v2";
 export function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>) } : defaults;
+    if (!raw) return defaults;
+    const p: Prefs = { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>) };
+    // A theme or accent from a newer or older version falls back rather than leaving the page without colours.
+    if (p.theme !== "system" && !THEMES.some((t) => t.id === p.theme)) p.theme = defaults.theme;
+    if (!ACCENTS.some((a) => a.id === p.accent)) p.accent = defaults.accent;
+    return p;
   } catch {
     return defaults;
   }
@@ -53,10 +63,43 @@ export function savePrefs(p: Prefs) {
 
 const media = typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
-export function applyTheme(theme: Theme) {
-  const dark = theme === "dark" || (theme === "system" && !!media?.matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
+/** The theme on screen: System follows the OS light/dark setting. */
+export const resolveTheme = (theme: Theme): ThemeId => (theme !== "system" ? theme : media?.matches ? "dark" : "light");
+
+let windowTheme: Scheme | null | undefined;
+
+export function applyTheme(theme: Theme, accent: AccentId) {
+  const t = themeById(resolveTheme(theme));
+  const a = accentById(accent);
+  const root = document.documentElement;
+  root.dataset.theme = t.id;
+  root.dataset.scheme = t.scheme;
+  root.style.setProperty("--accent-h", String(a.h));
+  root.style.setProperty("--accent-c-light", String(a.light));
+  root.style.setProperty("--accent-c-dark", String(a.dark));
+  // The native title bar follows the theme. System passes null: WebView2 copies the window theme into
+  // prefers-color-scheme, so a fixed one would stop System from following the OS.
+  const win = theme === "system" ? null : t.scheme;
+  if (win === windowTheme) return;
+  windowTheme = win;
+  try {
+    void getCurrentWindow()
+      .setTheme(win)
+      .catch(() => {});
+  } catch {
+    /* not running in Tauri (plain browser) */
+  }
 }
+
+/** Calls `cb` whenever the theme or accent on screen changes, including when the OS switches light/dark. */
+export function onThemeColors(cb: () => void) {
+  const o = new MutationObserver(cb);
+  o.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-scheme", "style"] });
+  return () => o.disconnect();
+}
+
+/** A colour token's current value, for canvases that can't use CSS (waveforms, the 3D grid). */
+export const themeColor = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 /** The OS "reduce motion" setting: then nothing animates or starts playing by itself. */
 export const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

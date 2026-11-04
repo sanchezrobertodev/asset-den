@@ -10,6 +10,7 @@
     "dialog:allow-open",
     "drag:default",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:window:allow-set-theme"
   ]
 }

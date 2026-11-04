@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderSearch, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
+import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderSearch, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Palette, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
@@ -9,6 +9,7 @@ import { rulesWantColors, smartMembers } from "../lib/filter";
 import { treeFor, type FolderNode } from "../lib/folders";
 import { baseName, bytes, kindLabel } from "../lib/format";
 import type { Theme } from "../lib/prefs";
+import { themeName } from "../lib/themes";
 import { useStore } from "../store";
 import { KINDS, type ViewName } from "../types";
 import { api } from "../api";
@@ -18,9 +19,10 @@ import logo48 from "../../icon/48.png";
 
 /** Collection colors from the design, by position. */
 const COLL_HUES = [75, 25, 250, 152, 300];
-export const collColor = (i: number) => `oklch(0.72 0.12 ${COLL_HUES[i % COLL_HUES.length]})`;
+export const collColor = (i: number) => `oklch(var(--coll-l) var(--coll-c) ${COLL_HUES[i % COLL_HUES.length]})`;
 
-const nextTheme: Record<Theme, Theme> = { system: "dark", dark: "light", light: "system" };
+/** The sidebar button cycles System, Dark and Light; any other theme goes back to System. */
+const nextTheme = (t: Theme): Theme => (t === "system" ? "dark" : t === "dark" ? "light" : "system");
 
 function NavItem({
   label,
@@ -101,7 +103,7 @@ export function Sidebar() {
     { view: "duplicates", label: "Duplicates", badge: s.dups?.length || undefined },
     { view: "insights", label: "Insights" },
   ];
-  const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : Monitor;
+  const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : s.theme === "system" ? Monitor : Palette;
   const updatesSupported = useAppUpdate((u) => u.supported);
   const [version, setVersion] = useState<string | null>(null);
   useEffect(() => {
@@ -140,9 +142,9 @@ export function Sidebar() {
             <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
               <span className="flex min-w-0 items-center gap-2">
                 {c.rule ? (
-                  <Sparkles role="img" aria-label="Smart collection" className="size-3 flex-none" style={{ color: collColor(i) }} />
+                  <Sparkles role="img" aria-label="Smart collection" className="keep-color size-3 flex-none" style={{ color: collColor(i) }} />
                 ) : (
-                  <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
+                  <span aria-hidden className="keep-color size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
                 )}
                 <span className="truncate">{c.name}</span>
               </span>
@@ -193,7 +195,7 @@ export function Sidebar() {
             <CircleArrowUp className="size-4" />
           </IconButton>
         )}
-        <IconButton label={`Theme: ${s.theme} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme[s.theme])}>
+        <IconButton label={`Theme: ${themeName(s.theme)} (click to change)`} className="size-7" onClick={() => s.setTheme(nextTheme(s.theme))}>
           <ThemeIcon className="size-4" />
         </IconButton>
         <IconButton label="Keyboard shortcuts (?)" className="size-7" onClick={() => s.setModal("shortcuts")}>

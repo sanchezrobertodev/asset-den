@@ -114,7 +114,7 @@ export default function App() {
   useEffect(() => {
     void useStore.getState().init();
     void useAppUpdate.getState().init();
-    const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme));
+    const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme, useStore.getState().accent));
     return off;
   }, []);
 

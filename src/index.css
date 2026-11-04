@@ -3,8 +3,20 @@
 /*
  * Tokens from the Claude Design "Asset Den" redesign: warm near-black, one green accent, Geist + Geist Mono.
  * Light is the same palette inverted warm. Components use these via Tailwind (bg-card, text-muted, …), never raw hex.
+ *
+ * Each theme is a scheme (light or dark, the base tokens) plus its own overrides. applyTheme() in src/lib/prefs.ts
+ * sets data-scheme and data-theme on <html>; a preview card can set them on itself. Tokens read by three.js
+ * (--line, --line-x) stay hex. src/lib/themes.test.ts checks contrast for every theme and accent.
  */
+
+/* The accent before applyTheme() runs: green. applyTheme() sets these inline from ACCENTS. */
 :root {
+  --accent-h: 152;
+  --accent-c-light: 0.11;
+  --accent-c-dark: 0.17;
+}
+
+[data-scheme="light"] {
   color-scheme: light;
   --bg: #f7f5f0;
   --panel: #f0ede6;
@@ -21,28 +33,37 @@
   --fg-2: #3d3a33;
   --muted: #625d52;
   --faint: #67625a;
-  --accent: oklch(0.48 0.15 152);
+  --accent-l: 0.48;
+  --accent-c: var(--accent-c-light);
   --accent-fg: #ffffff;
+  --sel-l: 0.94;
+  --sel-c: 0.026;
   --invert-bg: #1a1916;
   --invert-fg: #f7f5f0;
   --star: #a87508;
   --warn-bg: oklch(0.94 0.05 75);
   --warn-fg: oklch(0.42 0.1 75);
   --danger: #b4321f;
-  --sel-row: oklch(0.94 0.04 152);
   --scrim: rgb(30 28 24 / 0.35);
   --checker-a: #e9e6df;
   --checker-b: #f4f2ed;
   --stripe-a: #ebe8e0;
   --stripe-b: #f2efe9;
-  /* Asset-kind colors: lightness and chroma per theme, hue per kind (see [data-kind] below). */
+  /* Asset-kind colors: lightness and chroma per theme, hue per kind (see [data-kind] below); --ko-* is "other". */
   --k-dot: 0.58 0.15;
   --k-pill-bg: 0.93 0.045;
   --k-pill-fg: 0.42 0.12;
   --k-bar: 0.62 0.15;
+  --ko-dot: 0.65 0;
+  --ko-pill-bg: 0.88 0;
+  --ko-pill-fg: 0.4 0;
+  --ko-bar: 0.6 0;
+  /* Collection colors: lightness and chroma, hue per collection (collColor in Sidebar.tsx). */
+  --coll-l: 0.72;
+  --coll-c: 0.12;
 }
 
-:root[data-theme="dark"] {
+[data-scheme="dark"] {
   color-scheme: dark;
   --bg: #131210;
   --panel: #171613;
@@ -59,15 +80,17 @@
   --fg-2: #c9c5bb;
   --muted: #9a968d;
   --faint: #918d83;
-  --accent: oklch(0.8 0.17 152);
-  --accent-fg: #0c1a11;
+  --accent-l: 0.8;
+  --accent-c: var(--accent-c-dark);
+  --accent-fg: oklch(0.2 0.03 var(--accent-h));
+  --sel-l: 0.255;
+  --sel-c: 0.017;
   --invert-bg: #efede8;
   --invert-fg: #131210;
   --star: #f2c94c;
   --warn-bg: oklch(0.3 0.06 75 / 0.55);
   --warn-fg: oklch(0.88 0.1 75);
   --danger: #f08a7a;
-  --sel-row: #1f2620;
   --scrim: rgb(8 7 6 / 0.6);
   --checker-a: #1f1e1a;
   --checker-b: #191815;
@@ -77,6 +100,190 @@
   --k-pill-bg: 0.31 0.05;
   --k-pill-fg: 0.87 0.1;
   --k-bar: 0.66 0.15;
+  --ko-dot: 0.68 0.01;
+  --ko-pill-bg: 0.27 0.005;
+  --ko-pill-fg: 0.82 0.01;
+  --ko-bar: 0.6 0.01;
+  --coll-l: 0.72;
+  --coll-c: 0.12;
+}
+
+/* Black: pure black for OLED screens. */
+[data-theme="black"] {
+  --bg: #000000;
+  --panel: #050505;
+  --sunken: #000000;
+  --card: #0e0e0e;
+  --field: #111111;
+  --hover: #171717;
+  --active: #1e1e1e;
+  --line-soft: #161616;
+  --line: #1f1f1f;
+  --line-strong: #262626;
+  --line-x: #3d3d3d;
+  --fg: #f2f2f2;
+  --fg-2: #c8c8c8;
+  --muted: #9c9c9c;
+  --faint: #929292;
+  --sel-l: 0.22;
+  --sel-c: 0.03;
+  --invert-bg: #f2f2f2;
+  --invert-fg: #000000;
+  --scrim: rgb(0 0 0 / 0.7);
+  --checker-a: #161616;
+  --checker-b: #0c0c0c;
+  --stripe-a: #141414;
+  --stripe-b: #0b0b0b;
+}
+
+/* Midnight: cool blue-slate. */
+[data-theme="midnight"] {
+  --bg: #10151d;
+  --panel: #131924;
+  --sunken: #0b0f15;
+  --card: #171e2a;
+  --field: #19212e;
+  --hover: #1d2534;
+  --active: #232c3d;
+  --line-soft: #1d2534;
+  --line: #252f41;
+  --line-strong: #2b3648;
+  --line-x: #414d63;
+  --fg: #e9eef6;
+  --fg-2: #c2cbda;
+  --muted: #929eb3;
+  --faint: #8c98ad;
+  --sel-l: 0.27;
+  --sel-c: 0.03;
+  --invert-bg: #e9eef6;
+  --invert-fg: #10151d;
+  --scrim: rgb(6 9 14 / 0.6);
+  --checker-a: #1b2230;
+  --checker-b: #151b27;
+  --stripe-a: #1c2331;
+  --stripe-b: #171d29;
+}
+
+/* Sepia: warm paper. */
+[data-theme="sepia"] {
+  --bg: #f3ead6;
+  --panel: #ece2c9;
+  --sunken: #e5d9bd;
+  --card: #fbf6ea;
+  --field: #fbf6ea;
+  --hover: #e7dbc0;
+  --active: #ddd0b0;
+  --line-soft: #e2d5b8;
+  --line: #d6c7a6;
+  --line-strong: #c9b893;
+  --line-x: #ab9873;
+  --fg: #2a2115;
+  --fg-2: #483b29;
+  --muted: #5f503a;
+  --faint: #63543d;
+  --accent-l: 0.46;
+  --sel-l: 0.91;
+  --sel-c: 0.04;
+  --invert-bg: #2a2115;
+  --invert-fg: #f3ead6;
+  --star: #946300;
+  --danger: #a3301b;
+  --scrim: rgb(42 33 21 / 0.35);
+  --checker-a: #e6dcc4;
+  --checker-b: #f1e9d6;
+  --stripe-a: #e8ddc4;
+  --stripe-b: #f0e7d2;
+}
+
+/* High contrast: strong text, borders and accents for low vision. */
+[data-theme="hc-dark"] {
+  --bg: #000000;
+  --panel: #000000;
+  --sunken: #000000;
+  --card: #0a0a0a;
+  --field: #000000;
+  --hover: #1f1f1f;
+  --active: #2e2e2e;
+  --line-soft: #5c5c5c;
+  --line: #8a8a8a;
+  --line-strong: #a8a8a8;
+  --line-x: #d4d4d4;
+  --fg: #ffffff;
+  --fg-2: #f2f2f2;
+  --muted: #d9d9d9;
+  --faint: #d0d0d0;
+  --accent-fg: #000000;
+  --sel-l: 0.32;
+  --sel-c: 0.05;
+  --invert-bg: #ffffff;
+  --invert-fg: #000000;
+  --star: #ffd23f;
+  --warn-bg: oklch(0.3 0.08 75);
+  --warn-fg: oklch(0.93 0.1 75);
+  --danger: #ff9e8f;
+  --scrim: rgb(0 0 0 / 0.75);
+  --checker-a: #1c1c1c;
+  --checker-b: #0d0d0d;
+  --stripe-a: #181818;
+  --stripe-b: #0d0d0d;
+  --k-dot: 0.82 0.12;
+  --k-pill-bg: 0.25 0.05;
+  --k-pill-fg: 0.93 0.07;
+  --k-bar: 0.78 0.13;
+  --ko-dot: 0.82 0;
+  --ko-pill-bg: 0.25 0;
+  --ko-pill-fg: 0.93 0;
+  --ko-bar: 0.78 0;
+  --coll-l: 0.82;
+  --coll-c: 0.11;
+}
+
+[data-theme="hc-light"] {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --sunken: #f0f0f0;
+  --card: #ffffff;
+  --field: #ffffff;
+  --hover: #e6e6e6;
+  --active: #d1d1d1;
+  --line-soft: #8c8c8c;
+  --line: #6b6b6b;
+  --line-strong: #4d4d4d;
+  --line-x: #262626;
+  --fg: #000000;
+  --fg-2: #111111;
+  --muted: #2b2b2b;
+  --faint: #333333;
+  --accent-l: 0.44;
+  --sel-l: 0.9;
+  --sel-c: 0.05;
+  --invert-bg: #000000;
+  --invert-fg: #ffffff;
+  --star: #7a5200;
+  --warn-bg: oklch(0.95 0.05 75);
+  --warn-fg: oklch(0.34 0.09 75);
+  --danger: #9e1c0a;
+  --scrim: rgb(0 0 0 / 0.45);
+  --checker-a: #dedede;
+  --checker-b: #f5f5f5;
+  --stripe-a: #e3e3e3;
+  --stripe-b: #f5f5f5;
+  --k-dot: 0.5 0.13;
+  --k-pill-bg: 0.93 0.04;
+  --k-pill-fg: 0.32 0.1;
+  --k-bar: 0.5 0.13;
+  --ko-dot: 0.5 0;
+  --ko-pill-bg: 0.92 0;
+  --ko-pill-fg: 0.3 0;
+  --ko-bar: 0.5 0;
+  --coll-l: 0.5;
+  --coll-c: 0.12;
+}
+
+/* The accent and selected rows follow the chosen accent hue; re-declared wherever a scheme is set. */
+[data-scheme] {
+  --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
+  --sel-row: oklch(var(--sel-l) var(--sel-c) var(--accent-h));
 }
 
 @theme inline {
@@ -116,12 +323,23 @@
 [data-kind="font"] { --h: 300; }
 [data-kind="video"] { --h: 25; }
 [data-kind="text"] { --h: 200; }
-[data-kind="other"] { --h: 0; --k-dot: 0.65 0; --k-pill-bg: 0.88 0; --k-pill-fg: 0.4 0; --k-bar: 0.6 0; }
-:root[data-theme="dark"] [data-kind="other"] { --k-dot: 0.68 0.01; --k-pill-bg: 0.27 0.005; --k-pill-fg: 0.82 0.01; --k-bar: 0.6 0.01; }
+[data-kind="other"] { --h: 0; --k-dot: var(--ko-dot); --k-pill-bg: var(--ko-pill-bg); --k-pill-fg: var(--ko-pill-fg); --k-bar: var(--ko-bar); }
 .k-dot { background: oklch(var(--k-dot) var(--h)); }
 .k-text { color: oklch(var(--k-dot) var(--h)); }
 .k-bar { background: oklch(var(--k-bar) var(--h)); }
 .k-pill { background: oklch(var(--k-pill-bg) var(--h)); color: oklch(var(--k-pill-fg) var(--h)); }
+
+/* An accent swatch in Settings: its own hue and chroma (set inline), at the current theme's lightness. */
+[data-scheme="light"] .accent-swatch { --accent-c: var(--accent-c-light); }
+[data-scheme="dark"] .accent-swatch { --accent-c: var(--accent-c-dark); }
+.accent-swatch { background: oklch(var(--accent-l) var(--accent-c) var(--accent-h)); }
+
+/* Colors that carry meaning (kinds, collections, swatches) stay visible under Windows contrast themes. */
+.k-dot,
+.k-bar,
+.keep-color {
+  forced-color-adjust: none;
+}
 
 html,
 body,

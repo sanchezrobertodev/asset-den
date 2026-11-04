@@ -1,14 +1,16 @@
 import clsx from "clsx";
 import { getVersion } from "@tauri-apps/api/app";
-import { ExternalLink, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Check, ExternalLink, X } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { api } from "../api";
 import { useAppUpdate } from "../appUpdate";
 import { baseName, bytes } from "../lib/format";
+import type { Theme } from "../lib/prefs";
+import { ACCENTS, THEMES, themeById, themeName, type ThemeId } from "../lib/themes";
 import { forgetThumbnails } from "../lib/thumbs";
 import { useStore } from "../store";
 import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
-import { Button, Label, Modal, Segmented } from "./ui";
+import { Button, Label, Modal } from "./ui";
 
 const close = () => useStore.getState().setModal(null);
 
@@ -66,6 +68,113 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
   );
 }
 
+/** Arrow keys move the choice in a radio group, as native radios do; only the chosen item is in the Tab order. */
+function radioKeys<T>(items: T[], value: T, onChange: (v: T) => void) {
+  return (e: KeyboardEvent<HTMLElement>) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    onChange(items[(items.indexOf(value) + step + items.length) % items.length]);
+    const group = e.currentTarget;
+    requestAnimationFrame(() => group.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+  };
+}
+
+/** A small picture of a theme: sidebar, two lines of text and an accent button, in that theme's own colours. */
+function ThemePreview({ id }: { id: ThemeId }) {
+  const t = themeById(id);
+  return (
+    <span data-theme={t.id} data-scheme={t.scheme} className="flex h-full min-w-0 flex-1 bg-bg">
+      <span className="w-1/4 border-r border-line bg-panel" />
+      <span className="flex flex-1 flex-col justify-center gap-1 px-2">
+        <span className="h-1.5 w-3/4 rounded-full bg-fg" />
+        <span className="h-1.5 w-1/2 rounded-full bg-muted" />
+        <span className="mt-0.5 h-2 w-6 rounded-sm bg-accent" />
+      </span>
+    </span>
+  );
+}
+
+const THEME_CHOICES: Theme[] = ["system", ...THEMES.map((t) => t.id)];
+
+function ThemePicker() {
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  return (
+    <div role="radiogroup" aria-label="Theme" onKeyDown={radioKeys(THEME_CHOICES, theme, setTheme)} className="grid grid-cols-4 gap-2.5">
+      {THEME_CHOICES.map((id) => {
+        const on = id === theme;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            tabIndex={on ? 0 : -1}
+            onClick={() => setTheme(id)}
+            className={clsx(
+              "flex min-w-0 flex-col gap-1.5 rounded-[10px] p-1.5 text-left text-xs transition-colors duration-150",
+              on ? "text-fg outline-2 outline-offset-2 outline-accent" : "text-muted hover:bg-hover hover:text-fg",
+            )}
+          >
+            <span className="keep-color flex h-12 overflow-hidden rounded-md border border-line-strong">
+              {id === "system" ? (
+                <>
+                  <ThemePreview id="light" />
+                  <ThemePreview id="dark" />
+                </>
+              ) : (
+                <ThemePreview id={id} />
+              )}
+            </span>
+            <span className="truncate px-0.5">{themeName(id)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AccentPicker() {
+  const accent = useStore((s) => s.accent);
+  const setAccent = useStore((s) => s.setAccent);
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Accent colour"
+      onKeyDown={radioKeys(
+        ACCENTS.map((a) => a.id),
+        accent,
+        setAccent,
+      )}
+      className="flex flex-none gap-2"
+    >
+      {ACCENTS.map((a) => {
+        const on = a.id === accent;
+        return (
+          <button
+            key={a.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            aria-label={a.name}
+            title={a.name}
+            tabIndex={on ? 0 : -1}
+            onClick={() => setAccent(a.id)}
+            style={{ "--accent-h": a.h, "--accent-c-light": a.light, "--accent-c-dark": a.dark } as CSSProperties}
+            className={clsx(
+              "accent-swatch keep-color flex size-6 items-center justify-center rounded-full text-accent-fg",
+              on && "outline-2 outline-offset-2 outline-fg",
+            )}
+          >
+            {on && <Check aria-hidden className="size-3.5" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** App settings: appearance, ignored folders, the thumbnail cache, updates and version info. */
 export function SettingsDialog() {
   const s = useStore();
@@ -78,17 +187,12 @@ export function SettingsDialog() {
   return (
     <Modal title="Settings" onClose={close} wide>
       <Section title="Appearance">
-        <Row label="Theme">
-          <Segmented
-            label="Theme"
-            value={s.theme}
-            onChange={s.setTheme}
-            options={[
-              { value: "system", label: "System" },
-              { value: "dark", label: "Dark" },
-              { value: "light", label: "Light" },
-            ]}
-          />
+        <div className="flex flex-col gap-2.5 py-2">
+          <span className="text-fg">Theme</span>
+          <ThemePicker />
+        </div>
+        <Row label="Accent colour" hint="Buttons, selection and focus rings.">
+          <AccentPicker />
         </Row>
         <Row label="Thumbnail size" hint="Card size in the grid. The slider above the grid changes it too.">
           <div className="flex flex-none items-center gap-2.5">

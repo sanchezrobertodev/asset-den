@@ -6,6 +6,7 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { latestRequest } from "./lib/latest";
 import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
+import type { AccentId } from "./lib/themes";
 import { forgetThumbnails } from "./lib/thumbs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
 
@@ -85,6 +86,7 @@ interface State extends Prefs {
   toggleExpanded: (key: string) => void;
   setThumbSize: (n: number) => void;
   setTheme: (t: Theme) => void;
+  setAccent: (a: AccentId) => void;
   setPixelated: (p: boolean) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
@@ -144,8 +146,8 @@ const noSimilar = () => {
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
-    savePrefs({ theme, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
+    const { theme, accent, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
+    savePrefs({ theme, accent, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -437,8 +439,13 @@ export const useStore = create<State>((set, get) => {
       persist();
     },
     setTheme: (theme) => {
-      applyTheme(theme);
+      applyTheme(theme, get().accent);
       set({ theme });
+      persist();
+    },
+    setAccent: (accent) => {
+      applyTheme(get().theme, accent);
+      set({ accent });
       persist();
     },
     setPixelated: (pixelated) => {

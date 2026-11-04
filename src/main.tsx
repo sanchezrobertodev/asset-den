@@ -9,7 +9,8 @@ import "./index.css";
 import App from "./App";
 import { applyTheme, loadPrefs } from "./lib/prefs";
 
-applyTheme(loadPrefs().theme);
+const prefs = loadPrefs();
+applyTheme(prefs.theme, prefs.accent);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
