@@ -1,0 +1,91 @@
+{
+  "title": "Configuración",
+  "sections": {
+    "appearance": "Apariencia",
+    "library": "Biblioteca",
+    "backups": "Copias de seguridad",
+    "storage": "Almacenamiento",
+    "updates": "Actualizaciones",
+    "about": "Acerca de"
+  },
+  "appearance": {
+    "language": "Idioma",
+    "languageHint": "La ventana se recarga para cambiarlo.",
+    "languageSystem": "Del sistema ({{name}})",
+    "theme": "Tema",
+    "accent": "Color de acento",
+    "accentHint": "Botones, selección y contornos de foco.",
+    "thumbSize": "Tamaño de las miniaturas",
+    "thumbSizeHint": "Tamaño de las tarjetas en la cuadrícula. El control deslizante sobre la cuadrícula también lo cambia.",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "Escalado de pixel art",
+    "pixelatedHint": "Amplía las imágenes con píxeles nítidos en lugar de suavizarlas."
+  },
+  "updates": {
+    "checkOnLaunch": "Buscar actualizaciones al iniciar",
+    "checkOnLaunchHint": "Busca sin molestar unos segundos después de abrir. No se instala nada sin preguntarte."
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "Código abierto, licencia MIT",
+    "releases": "Versiones",
+    "source": "Código fuente",
+    "support": "Apoyar a Mimikit",
+    "supportHint": "Es gratis. Las propinas lo mantienen en marcha."
+  },
+  "ignored": {
+    "title": "Carpetas ignoradas",
+    "hint": "Las carpetas con estos nombres se omiten en todas las carpetas de la biblioteca, como ya pasa con las carpetas ocultas, node_modules y los archivos .meta.",
+    "remove": "Dejar de ignorar {{name}}",
+    "addAnother": "Agrega otra y presiona Enter",
+    "placeholder": "Nombre de carpeta, como Backup o _old, y luego Enter",
+    "invalid": "Escribe un solo nombre de carpeta, no una ruta.",
+    "saved": "Guardado. Vuelve a escanear para aplicarlo a los archivos que ya están en la biblioteca.",
+    "pending": "Los cambios se aplican en el próximo escaneo. Los archivos se quedan en el disco.",
+    "rescanning": "Volviendo a escanear…",
+    "rescan": "Volver a escanear"
+  },
+  "analysis": {
+    "underMinute": "menos de un minuto",
+    "minutes_one": "alrededor de un minuto",
+    "minutes_other": "unos {{count}} minutos",
+    "hours_one": "alrededor de una hora",
+    "hours_other": "unas {{count}} horas",
+    "title": "Análisis de imágenes",
+    "progress_one": "<0>{{done}}</0> de <0>{{count}}</0> imagen analizada para Buscar similares y la búsqueda por color.",
+    "progress_other": "<0>{{done}}</0> de <0>{{count}}</0> imágenes analizadas para Buscar similares y la búsqueda por color.",
+    "remaining_one": "La otra imagen tarda {{time}}, usando la CPU libre. Las imágenes que vas viendo se analizan sobre la marcha.",
+    "remaining_other": "Las otras {{count}} tardan {{time}}, usando la CPU libre. Las imágenes que vas viendo se analizan sobre la marcha.",
+    "asYouGo": "Las imágenes que vas viendo se analizan sobre la marcha.",
+    "resume": "Reanudar",
+    "pause": "Pausar",
+    "analyse": "Analizar imágenes",
+    "keep": "Analizar las imágenes nuevas y modificadas",
+    "keepHint": "Analiza las imágenes a medida que se agregan o cambian mientras Mimikit está abierto. Se activa automáticamente tras el primer análisis completo."
+  },
+  "cancel": "Cancelar",
+  "backups": {
+    "pickTitle": "Guardar una copia de seguridad de la biblioteca en…",
+    "saved": "Se guardó {{name}} en {{folder}}.",
+    "restoreTitle": "¿Restaurar {{name}}?",
+    "restoreHint": "Reemplaza tu biblioteca: carpetas, etiquetas, calificaciones, notas, colecciones y cuadrículas de sprites. Antes, la biblioteca actual se guarda en la carpeta de copias de seguridad. Mimikit se reinicia para terminar.",
+    "restoring": "Restaurando…",
+    "restoreRestart": "Restaurar y reiniciar",
+    "library": "Copia de seguridad de la biblioteca",
+    "libraryHint": "Carpetas, etiquetas, calificaciones, notas, colecciones y cuadrículas de sprites. No incluye tus archivos de recursos.",
+    "backingUp": "Creando copia…",
+    "backUp": "Crear copia…",
+    "restore": "Restaurar…",
+    "auto": "Copias de seguridad automáticas",
+    "autoHint": "Una al día, al abrir Mimikit. Se guardan las últimas 5.",
+    "showFolder": "Mostrar carpeta"
+  },
+  "cache": {
+    "clearedCache": "Se borró la caché de miniaturas. Las miniaturas se regeneran a medida que navegas.",
+    "cleared": "Se borró la caché ({{size}}). Las miniaturas se regeneran a medida que navegas.",
+    "title": "Caché de miniaturas",
+    "hint": "<0>{{size}}</0> en miniaturas y vistas previas que creó Mimikit. Tus archivos de recursos no se tocan.",
+    "clearing": "Borrando…",
+    "clear": "Borrar caché de miniaturas"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "tokens": {
+    "tag": "{{token}}etiqueta",
+    "folder": "{{token}}carpeta",
+    "word": "{{token}}palabra"
+  },
+  "inCollection_zero": "No hay coincidencias en {{name}}",
+  "inCollection_one": "Mostrar {{count}} coincidencia en {{name}}",
+  "inCollection_other": "Mostrar {{count}} coincidencias en {{name}}",
+  "duplicates_zero": "Ningún grupo de duplicados coincide",
+  "duplicates_one": "Mostrar {{count}} grupo de duplicados",
+  "duplicates_other": "Mostrar {{count}} grupos de duplicados",
+  "showMatch": "Mostrar la coincidencia en la biblioteca",
+  "showAll_zero": "Ningún recurso coincide",
+  "showAll_one": "Mostrar {{count}} coincidencia en la biblioteca",
+  "showAll_other": "Mostrar las {{count}} coincidencias en la biblioteca",
+  "assets_one": "Recursos · {{count}}",
+  "assets_other": "Recursos · {{count}}",
+  "folders": "Carpetas",
+  "files_one": "{{count}} archivo",
+  "files_other": "{{count}} archivos",
+  "actions": {
+    "title": "Acciones",
+    "duplicates": "Revisar duplicados",
+    "insights": "Abrir Estadísticas",
+    "newCollection": "Nueva colección",
+    "favorites": "Mostrar favoritos",
+    "import": "Importar una carpeta",
+    "listView": "Cambiar a vista de lista",
+    "gridView": "Cambiar a vista de cuadrícula",
+    "clearFilters": "Borrar búsqueda y filtros",
+    "settings": "Configuración",
+    "updates": "Buscar actualizaciones",
+    "shortcuts": "Atajos de teclado"
+  },
+  "dialog": "Buscar",
+  "input": "Buscar recursos, carpetas y acciones",
+  "placeholder": "Buscar recursos, carpetas, acciones",
+  "filters": "Filtros",
+  "results": "Resultados",
+  "noResults": "No hay coincidencias. Intenta con {{type}}, {{tag}}, {{rating}}, {{folder}} o {{color}}.",
+  "keys": {
+    "move": "{{keys}} mover",
+    "select": "{{keys}} seleccionar",
+    "close": "{{keys}} cerrar"
+  }
+}

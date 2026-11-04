@@ -1,0 +1,17 @@
+{
+  "dragFailed": "No se pudo iniciar el arrastre: {{error}}",
+  "favorite": "favorito",
+  "stars_one": "{{count}} estrella",
+  "stars_other": "{{count}} estrellas",
+  "assets": "Recursos",
+  "groupInfo_one": "{{count}} archivo · {{size}}",
+  "groupInfo_other": "{{count}} archivos · {{size}}",
+  "columns": {
+    "name": "Nombre",
+    "type": "Tipo",
+    "dims": "Dim. / duración",
+    "size": "Tamaño",
+    "folder": "Carpeta",
+    "modified": "Modificado"
+  }
+}

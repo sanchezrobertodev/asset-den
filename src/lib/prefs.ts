@@ -10,6 +10,8 @@ export type Layout = "grid" | "list";
 export interface Prefs {
   theme: Theme;
   accent: AccentId;
+  /** "system" (the OS languages) or a folder in src/locales. */
+  language: string;
   sort: { key: SortKey; desc: boolean };
   layout: Layout;
   thumbSize: number;
@@ -27,6 +29,7 @@ export interface Prefs {
 const defaults: Prefs = {
   theme: "system",
   accent: "green",
+  language: "system",
   sort: { key: "name", desc: false },
   layout: "grid",
   thumbSize: 160,

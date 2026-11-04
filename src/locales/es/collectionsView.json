@@ -1,0 +1,40 @@
+{
+  "smartCollection": "Colección inteligente",
+  "summary_one": "{{count}} recurso · {{size}}",
+  "summary_other": "{{count}} recursos · {{size}}",
+  "newCollectionButton": "+ Nueva colección",
+  "nameLabel": "Nombre de la colección",
+  "remove_one": "Quitar {{count}} recurso",
+  "remove_other": "Quitar {{count}} recursos",
+  "openAsSearch": "Abrir como búsqueda",
+  "useSearchFirst": "Primero busca o filtra la biblioteca",
+  "useSearch": "Usar la búsqueda actual",
+  "delete": "Eliminar",
+  "copyToFolder": "Copiar a una carpeta…",
+  "noMatch": {
+    "title": "Ningún recurso de esta colección coincide con estos filtros",
+    "body": "Intenta quitar un tipo, una búsqueda o un filtro.",
+    "clear": "Borrar búsqueda y filtros"
+  },
+  "smartEmpty": {
+    "title": "Todavía nada coincide con esta colección inteligente",
+    "body": "Sus recursos aparecen aquí en cuanto haya archivos que coincidan con su búsqueda."
+  },
+  "empty": {
+    "title": "Esta colección está vacía",
+    "body": "Agrega recursos desde cualquier panel lateral, o selecciona recursos en la biblioteca y marca esta colección en el panel lateral."
+  },
+  "none": {
+    "title": "Todavía no hay colecciones",
+    "body": "Agrupa los recursos de un nivel, un personaje o un paquete.",
+    "newCollection": "Nueva colección"
+  },
+  "rule": {
+    "anything": "Todos los recursos, <2>sin condiciones</2>",
+    "query": "Todos los recursos que coincidan con <0/>",
+    "filters_one": "Todos los recursos que coincidan con <1>{{count}} filtro</1>",
+    "filters_other": "Todos los recursos que coincidan con <1>{{count}} filtros</1>",
+    "queryAndFilters_one": "Todos los recursos que coincidan con <0/> y <1>{{count}} filtro</1>",
+    "queryAndFilters_other": "Todos los recursos que coincidan con <0/> y <1>{{count}} filtros</1>"
+  }
+}

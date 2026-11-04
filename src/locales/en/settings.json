@@ -9,6 +9,9 @@
     "about": "About"
   },
   "appearance": {
+    "language": "Language",
+    "languageHint": "The window reloads to switch.",
+    "languageSystem": "System ({{name}})",
     "theme": "Theme",
     "accent": "Accent colour",
     "accentHint": "Buttons, selection and focus rings.",

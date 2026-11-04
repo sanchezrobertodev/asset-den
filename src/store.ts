@@ -88,6 +88,8 @@ interface State extends Prefs {
   setThumbSize: (n: number) => void;
   setTheme: (t: Theme) => void;
   setAccent: (a: AccentId) => void;
+  /** Saves the UI language and reloads the window in it. */
+  setLanguage: (language: string) => void;
   setPixelated: (p: boolean) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
@@ -147,8 +149,8 @@ const noSimilar = () => {
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, accent, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
-    savePrefs({ theme, accent, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
+    const { theme, accent, language, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
+    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -451,6 +453,11 @@ export const useStore = create<State>((set, get) => {
       applyTheme(get().theme, accent);
       set({ accent });
       persist();
+    },
+    setLanguage: (language) => {
+      set({ language });
+      persist();
+      location.reload();
     },
     setPixelated: (pixelated) => {
       set({ pixelated });

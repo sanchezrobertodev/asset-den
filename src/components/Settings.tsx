@@ -6,10 +6,11 @@ import { api } from "../api";
 import { useAppUpdate } from "../appUpdate";
 import { baseName } from "../lib/format";
 import { bytes } from "../lib/fmt";
-import { t } from "../lib/i18n";
+import { locales, t } from "../lib/i18n";
 import type { Theme } from "../lib/prefs";
 import { ACCENTS, THEMES, accentName, themeById, themeName, type ThemeId } from "../lib/themes";
 import { forgetThumbnails } from "../lib/thumbs";
+import { languageName, systemLanguage } from "../locales";
 import { useStore } from "../store";
 import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
 import { Button, Label, Modal, T } from "./ui";
@@ -34,6 +35,27 @@ function Row({ label, hint, children }: { label: string; hint?: ReactNode; child
       </div>
       {children}
     </div>
+  );
+}
+
+/** The UI language; System follows the OS languages. Changing it reloads the window. */
+function LanguagePicker() {
+  const language = useStore((s) => s.language);
+  const setLanguage = useStore((s) => s.setLanguage);
+  return (
+    <select
+      aria-label={t("settings.appearance.language")}
+      value={locales().includes(language) ? language : "system"}
+      onChange={(e) => setLanguage(e.target.value)}
+      className="h-[30px] flex-none rounded-lg border border-line-strong bg-field px-1.5 text-fg"
+    >
+      <option value="system">{t("settings.appearance.languageSystem", { name: languageName(systemLanguage) })}</option>
+      {locales().map((code) => (
+        <option key={code} value={code} lang={code}>
+          {languageName(code)}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -189,6 +211,9 @@ export function SettingsDialog() {
   return (
     <Modal title={t("settings.title")} onClose={close} wide>
       <Section title={t("settings.sections.appearance")}>
+        <Row label={t("settings.appearance.language")} hint={t("settings.appearance.languageHint")}>
+          <LanguagePicker />
+        </Row>
         <div className="flex flex-col gap-2.5 py-2">
           <span className="text-fg">{t("settings.appearance.theme")}</span>
           <ThemePicker />

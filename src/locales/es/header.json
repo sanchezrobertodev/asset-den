@@ -1,0 +1,70 @@
+{
+  "titles": {
+    "library": "Biblioteca",
+    "favorites": "Favoritos",
+    "collections": "Colecciones",
+    "duplicates": "Duplicados",
+    "insights": "Estadísticas"
+  },
+  "favoritesIn": "<0>Favoritos</0> <1>en</1> <2/>",
+  "searchPlaceholder": "Buscar recursos, {{hash}}etiquetas, {{type}}",
+  "import": "Importar",
+  "similar": {
+    "stop": "Dejar de mostrar imágenes similares a {{name}}",
+    "label": "Similares a {{name}}",
+    "notAnalysed_one": "{{count}} imagen aún sin analizar",
+    "notAnalysed_other": "{{count}} imágenes aún sin analizar",
+    "strict": "Estricto",
+    "loose": "Amplio",
+    "slider": "Cuánto pueden diferir las imágenes similares",
+    "sliderValue_one": "Hasta {{max}} de 64 bits distintos, {{count}} imagen",
+    "sliderValue_other": "Hasta {{max}} de 64 bits distintos, {{count}} imágenes"
+  },
+  "sort": {
+    "label": "Ordenar",
+    "name": "Nombre",
+    "kind": "Tipo",
+    "size": "Tamaño",
+    "mtime": "Modificado",
+    "folder": "Carpeta",
+    "descending": "Descendente (haz clic para ascendente)",
+    "ascending": "Ascendente (haz clic para descendente)"
+  },
+  "all": "Todos",
+  "includeSubfolders": "Incluir subcarpetas",
+  "clearSearch": "Borrar búsqueda",
+  "query": "“{{query}}”",
+  "assets_one": "{{count}} recurso",
+  "assets_other": "{{count}} recursos",
+  "assetsInFolders_one": "{{assets}} en {{count}} carpeta",
+  "assetsInFolders_other": "{{assets}} en {{count}} carpetas",
+  "subfolders": "Subcarpetas",
+  "moreSubfolders_one": "+{{count}} más en el menú de carpetas",
+  "moreSubfolders_other": "+{{count}} más en el menú de carpetas",
+  "grouping": "Agrupación",
+  "byFolder": "Por carpeta",
+  "allTogether": "Todo junto",
+  "layout": "Vista",
+  "grid": "Cuadrícula",
+  "list": "Lista",
+  "thumbSize": "Tamaño de las miniaturas",
+  "pixelatedOn": "Escalado de pixel art activado",
+  "pixelatedOff": "Escalado de pixel art desactivado",
+  "saveSmart": {
+    "button": "Guardar como colección inteligente",
+    "name": "Nombre de la colección inteligente",
+    "placeholder": "Nombre de la colección",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  },
+  "folderPath": "Ruta de la carpeta",
+  "foldersIn": "Carpetas en {{name}}",
+  "wholeLibrary": "Mostrar toda la biblioteca",
+  "inFolder": "En {{name}}",
+  "recentFolders": "Carpetas recientes",
+  "keys": {
+    "move": "{{keys}} mover",
+    "open": "{{keys}} abrir",
+    "parent": "{{keys}} subir"
+  }
+}

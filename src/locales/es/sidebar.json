@@ -1,0 +1,50 @@
+{
+  "library": "Biblioteca",
+  "favorites": "Favoritos",
+  "collections": "Colecciones",
+  "duplicates": "Duplicados",
+  "insights": "Estadísticas",
+  "newCollection": "Nueva colección",
+  "smartCollection": "Colección inteligente",
+  "noCollections": "Agrupa recursos para un nivel o un paquete.",
+  "folders": "Carpetas",
+  "importFolder": "Importar una carpeta",
+  "importFolderLink": "+ Importar una carpeta",
+  "folderCount_one": "{{count}} carpeta",
+  "folderCount_other": "{{count}} carpetas",
+  "librarySize_one": "{{size}} · {{count}} archivo",
+  "librarySize_other": "{{size}} · {{count}} archivos",
+  "sizeByType": "Tamaño de la biblioteca por tipo",
+  "kindSize": "{{kind}}: {{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "Buscar actualizaciones",
+  "theme": "Tema: {{name}} (haz clic para cambiarlo)",
+  "shortcuts": "Atajos de teclado ({{keys}})",
+  "settings": "Configuración",
+  "cancel": "Cancelar",
+  "folder": {
+    "locateTitle": "Ubicar {{name}}",
+    "subfolders": "Subcarpetas de {{name}}",
+    "unreachableTitle": "{{path}}\nNo se puede acceder a esta carpeta. Sus recursos conservan sus etiquetas y colecciones: ubícala si se movió, o vuelve a escanearla cuando esté de vuelta.",
+    "unreachable": "No se puede acceder a esta carpeta:",
+    "scanning": "Escaneando",
+    "locate": "Ubicar {{name}} (si se movió)",
+    "rescan": "Volver a escanear {{name}}",
+    "remove": "Quitar {{name}} de la biblioteca (los archivos se quedan en el disco)"
+  },
+  "relink": {
+    "someTitle": "Solo algunos archivos de {{name}} están ahí",
+    "noneTitle": "Ninguno de los archivos de {{name}} está ahí",
+    "confirm": "Volver a vincular igual",
+    "body_one": "Mimikit revisó {{count}} archivo de esta carpeta y encontró {{found}} en <0>{{path}}</0>. Si vuelves a vincularla, el escaneo quita los recursos que no encuentre ahí, con sus etiquetas, calificaciones, notas y colecciones. Tus archivos no se tocan.",
+    "body_other": "Mimikit revisó {{count}} archivos de esta carpeta y encontró {{found}} en <0>{{path}}</0>. Si vuelves a vincularla, el escaneo quita los recursos que no encuentre ahí, con sus etiquetas, calificaciones, notas y colecciones. Tus archivos no se tocan."
+  },
+  "removeRoot": {
+    "title": "¿Quitar {{name}} de la biblioteca?",
+    "confirm": "Quitar",
+    "body_zero": "Esto quita sus recursos de la biblioteca, con sus etiquetas, calificaciones, notas, cuadrículas de sprites y su lugar en las colecciones. Tus archivos se quedan en el disco.",
+    "body_one": "Esto quita de la biblioteca el recurso de esta carpeta, con sus etiquetas, calificaciones, notas, cuadrículas de sprites y su lugar en las colecciones. Tus archivos se quedan en el disco.",
+    "body_other": "Esto quita de la biblioteca los {{count}} recursos de esta carpeta, con sus etiquetas, calificaciones, notas, cuadrículas de sprites y su lugar en las colecciones. Tus archivos se quedan en el disco."
+  }
+}

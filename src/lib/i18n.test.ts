@@ -1,6 +1,6 @@
 // node --experimental-strip-types src/lib/i18n.test.ts
 import assert from "node:assert/strict";
-import { addLocale, parseTags, setLocale, t, tNodes, translateError, type TKey } from "./i18n.ts";
+import { addLocale, matchLocale, parseTags, setLocale, t, tNodes, translateError, type TKey } from "./i18n.ts";
 
 const k = (s: string) => s as TKey;
 
@@ -74,5 +74,17 @@ assert.equal(
 );
 assert.equal(translateError("database is locked"), "database is locked");
 setLocale("en");
+
+// The OS languages pick the UI language
+const have = ["en", "es", "pt-BR", "fr", "de", "ja", "zh-CN"];
+assert.equal(matchLocale(["es-MX", "en"], have), "es");
+assert.equal(matchLocale(["en-US", "es"], have), "en"); // the first OS language wins
+assert.equal(matchLocale(["pt-PT"], have), "pt-BR");
+assert.equal(matchLocale(["zh-Hans-SG"], have), "zh-CN");
+assert.equal(matchLocale(["zh-SG"], have), "zh-CN");
+assert.equal(matchLocale(["zh-TW", "ja"], have), "ja"); // Traditional Chinese doesn't get Simplified
+assert.equal(matchLocale(["zh-Hant"], have), "en");
+assert.equal(matchLocale(["ko-KR"], have), "en");
+assert.equal(matchLocale(["FR-ca"], have), "fr");
 
 console.log("i18n tests passed");

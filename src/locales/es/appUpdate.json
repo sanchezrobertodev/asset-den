@@ -1,0 +1,22 @@
+{
+  "starting": "Iniciando la descarga…",
+  "installing": "Instalando…",
+  "downloadingOf": "Descargando {{done}} de {{total}} ({{percent}}%).",
+  "downloading": "Descargando {{done}}.",
+  "notice": "<0>Mimikit {{version}}</0> está disponible",
+  "view": "Ver",
+  "title": "Mimikit {{version}}",
+  "updates": "Actualizaciones",
+  "later": "Más tarde",
+  "install": "Instalar y reiniciar",
+  "close": "Cerrar",
+  "retry": "Reintentar",
+  "checking": "Buscando una versión nueva…",
+  "upToDate": "Tienes la versión más reciente.",
+  "upToDateVersion": "Tienes la versión más reciente ({{version}}).",
+  "installFailed": "No se pudo instalar la actualización: {{error}}",
+  "checkFailed": "No se pudo comprobar si hay actualizaciones: {{error}}",
+  "current": "Tienes la versión {{version}}. Las actualizaciones están firmadas y Mimikit verifica la firma antes de instalarlas.",
+  "progressLabel": "Descarga de la actualización",
+  "restartNote": "Mimikit se reinicia al terminar."
+}

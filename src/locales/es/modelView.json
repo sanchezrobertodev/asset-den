@@ -1,0 +1,12 @@
+{
+  "loading": "Cargando modelo…",
+  "triangles_one": "{{count}} triángulo",
+  "triangles_other": "{{count}} triángulos",
+  "vertices_one": "{{count}} vértice",
+  "vertices_other": "{{count}} vértices",
+  "clips_one": "{{count}} animación",
+  "clips_other": "{{count}} animaciones",
+  "wireframe": "Wireframe",
+  "animate": "Animar",
+  "resetView": "Restablecer vista"
+}

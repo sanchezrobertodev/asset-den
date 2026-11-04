@@ -1,0 +1,7 @@
+{
+  "playFailed": "No se puede reproducir este archivo aquí: {{error}}",
+  "pause": "Pausar",
+  "play": "Reproducir",
+  "loopTitle": "Volver a reproducir desde el inicio al terminar",
+  "loop": "Repetir"
+}

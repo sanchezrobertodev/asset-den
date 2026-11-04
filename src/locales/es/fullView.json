@@ -1,0 +1,17 @@
+{
+  "label": "Pantalla completa: {{name}}",
+  "close": "Cerrar pantalla completa ({{key}})",
+  "position": "{{index}} de {{total}}",
+  "favorite": "Favorito ({{key}})",
+  "showInFolder": "Mostrar en la carpeta",
+  "open": "Abrir",
+  "previous": "Anterior ({{key}})",
+  "next": "Siguiente ({{key}})",
+  "tags": "Etiquetas",
+  "noTags": "Sin etiquetas",
+  "collections": "Colecciones",
+  "noCollections": "No está en ninguna colección",
+  "note": "Nota",
+  "noNote": "Sin nota",
+  "filmstrip": "Tira de miniaturas"
+}

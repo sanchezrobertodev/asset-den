@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "Archivos",
+    "totalSize": "Tamaño total",
+    "untagged": "Sin etiquetas",
+    "showUntagged": "Ver sin etiquetas →",
+    "duplicates": "Grupos de duplicados",
+    "reviewDuplicates": "Revisar duplicados →",
+    "allClear": "Todo en orden"
+  },
+  "storageByType": "Espacio por tipo",
+  "total": "{{size}} en total",
+  "largest": "Archivos más grandes",
+  "folders": "Carpetas"
+}

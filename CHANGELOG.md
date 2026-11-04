@@ -7,6 +7,9 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Added
 
+- Mimikit in Spanish. It follows the system language, or pick one in **Settings → Appearance → Language**.
+- On Windows the installer follows the system language too: English, Spanish, Brazilian Portuguese, French, German,
+  Japanese or Simplified Chinese.
 - Five more themes in **Settings → Appearance**: Black (pure black for OLED screens), Midnight, Sepia, High contrast
   dark and High contrast light. Each theme shows a small preview. The theme button in the sidebar still switches
   between System, Dark and Light.

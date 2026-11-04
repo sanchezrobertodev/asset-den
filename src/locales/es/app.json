@@ -1,0 +1,26 @@
+{
+  "undo": "Deshacer",
+  "dismiss": "Descartar",
+  "scanning": "Escaneando {{names}}…",
+  "scanFinished_one": "Escaneo terminado. {{count}} archivo en la biblioteca.",
+  "scanFinished_other": "Escaneo terminado. {{count}} archivos en la biblioteca.",
+  "skipToAssets": "Saltar a los recursos",
+  "empty": {
+    "scanningTitle": "Escaneando…",
+    "scanningBody": "Los recursos aparecen aquí en cuanto se indexan.",
+    "noDirectFilesIn": "No hay archivos directamente en {{name}}",
+    "noDirectFilesHere": "No hay archivos directamente en esta carpeta",
+    "inSubfolders": "Sus recursos están en subcarpetas.",
+    "includeSubfolders": "Incluir subcarpetas",
+    "noSimilarTitle": "Nada se parece a {{name}}",
+    "noSimilarBody_one": "Ninguna otra imagen analizada está a {{count}} bit o menos de distancia. Intenta con una coincidencia menos estricta arriba.",
+    "noSimilarBody_other": "Ninguna otra imagen analizada está a {{count}} bits o menos de distancia. Intenta con una coincidencia menos estricta arriba.",
+    "backToLibrary": "Volver a la biblioteca",
+    "noFavoritesTitle": "Todavía no hay favoritos",
+    "noFavoritesBody": "Presiona {{key}} en cualquier recurso para agregarlo aquí.",
+    "noMatchesTitle": "Ningún recurso coincide con estos filtros",
+    "noMatchesBody": "Intenta quitar un tipo, una carpeta o un filtro de búsqueda.",
+    "clearFilters": "Borrar búsqueda y filtros"
+  },
+  "allShortcuts": "todos los atajos"
+}
