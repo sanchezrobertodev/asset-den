@@ -1,0 +1,17 @@
+{
+  "label": "Vollbild: {{name}}",
+  "close": "Vollbild schließen ({{key}})",
+  "position": "{{index}} von {{total}}",
+  "favorite": "Favorit ({{key}})",
+  "showInFolder": "Im Ordner anzeigen",
+  "open": "Öffnen",
+  "previous": "Vorheriges ({{key}})",
+  "next": "Nächstes ({{key}})",
+  "tags": "Tags",
+  "noTags": "Keine Tags",
+  "collections": "Sammlungen",
+  "noCollections": "In keiner Sammlung",
+  "note": "Notiz",
+  "noNote": "Keine Notiz",
+  "filmstrip": "Filmstreifen"
+}

@@ -1,0 +1,50 @@
+{
+  "library": "Bibliothek",
+  "favorites": "Favoriten",
+  "collections": "Sammlungen",
+  "duplicates": "Duplikate",
+  "insights": "Statistiken",
+  "newCollection": "Neue Sammlung",
+  "smartCollection": "Intelligente Sammlung",
+  "noCollections": "Fasse Assets für ein Level oder ein Pack zusammen.",
+  "folders": "Ordner",
+  "importFolder": "Ordner importieren",
+  "importFolderLink": "+ Ordner importieren",
+  "folderCount_one": "{{count}} Ordner",
+  "folderCount_other": "{{count}} Ordner",
+  "librarySize_one": "{{size}} · {{count}} Datei",
+  "librarySize_other": "{{size}} · {{count}} Dateien",
+  "sizeByType": "Bibliotheksgröße nach Typ",
+  "kindSize": "{{kind}}: {{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "Nach Updates suchen",
+  "theme": "Design: {{name}} (klicken zum Wechseln)",
+  "shortcuts": "Tastenkürzel ({{keys}})",
+  "settings": "Einstellungen",
+  "cancel": "Abbrechen",
+  "folder": {
+    "locateTitle": "Neuen Ort für {{name}} wählen",
+    "subfolders": "Unterordner von {{name}}",
+    "unreachableTitle": "{{path}}\nDieser Ordner ist nicht erreichbar. Seine Assets behalten ihre Tags und Sammlungen: Gib den neuen Ort an, falls er verschoben wurde, oder scanne neu, sobald er wieder da ist.",
+    "unreachable": "Ordner nicht erreichbar:",
+    "scanning": "Wird gescannt",
+    "locate": "Neuen Ort für {{name}} wählen (falls verschoben)",
+    "rescan": "{{name}} neu scannen",
+    "remove": "{{name}} aus der Bibliothek entfernen (Dateien bleiben auf der Festplatte)"
+  },
+  "relink": {
+    "someTitle": "Nur einige Dateien von {{name}} sind dort",
+    "noneTitle": "Keine Dateien von {{name}} sind dort",
+    "confirm": "Trotzdem neu verknüpfen",
+    "body_one": "Mimikit hat {{count}} Datei dieses Ordners geprüft und {{found}} in <0>{{path}}</0> gefunden. Wenn du neu verknüpfst, entfernt der neue Scan die Assets, die er dort nicht findet, samt Tags, Bewertungen, Notizen und Sammlungen. Deine Dateien bleiben unberührt.",
+    "body_other": "Mimikit hat {{count}} Dateien dieses Ordners geprüft und {{found}} davon in <0>{{path}}</0> gefunden. Wenn du neu verknüpfst, entfernt der neue Scan die Assets, die er dort nicht findet, samt Tags, Bewertungen, Notizen und Sammlungen. Deine Dateien bleiben unberührt."
+  },
+  "removeRoot": {
+    "title": "{{name}} aus der Bibliothek entfernen?",
+    "confirm": "Entfernen",
+    "body_zero": "Das entfernt die Assets des Ordners aus der Bibliothek, samt Tags, Bewertungen, Notizen, Sammlungszugehörigkeiten und Sprite-Rastern. Deine Dateien bleiben auf der Festplatte.",
+    "body_one": "Das entfernt das Asset in diesem Ordner aus der Bibliothek, samt Tags, Bewertungen, Notizen, Sammlungszugehörigkeiten und Sprite-Rastern. Deine Dateien bleiben auf der Festplatte.",
+    "body_other": "Das entfernt die {{count}} Assets in diesem Ordner aus der Bibliothek, samt Tags, Bewertungen, Notizen, Sammlungszugehörigkeiten und Sprite-Rastern. Deine Dateien bleiben auf der Festplatte."
+  }
+}

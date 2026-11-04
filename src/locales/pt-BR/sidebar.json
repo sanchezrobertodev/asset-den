@@ -1,0 +1,53 @@
+{
+  "library": "Biblioteca",
+  "favorites": "Favoritos",
+  "collections": "Coleções",
+  "duplicates": "Duplicatas",
+  "insights": "Estatísticas",
+  "newCollection": "Nova coleção",
+  "smartCollection": "Coleção inteligente",
+  "noCollections": "Agrupe recursos de uma fase ou de um pacote.",
+  "folders": "Pastas",
+  "importFolder": "Importar uma pasta",
+  "importFolderLink": "+ Importar uma pasta",
+  "folderCount_zero": "{{count}} pastas",
+  "folderCount_one": "{{count}} pasta",
+  "folderCount_other": "{{count}} pastas",
+  "librarySize_zero": "{{size}} · {{count}} arquivos",
+  "librarySize_one": "{{size}} · {{count}} arquivo",
+  "librarySize_other": "{{size}} · {{count}} arquivos",
+  "sizeByType": "Tamanho da biblioteca por tipo",
+  "kindSize": "{{kind}}: {{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "Verificar atualizações",
+  "theme": "Tema: {{name}} (clique para mudar)",
+  "shortcuts": "Atalhos de teclado ({{keys}})",
+  "settings": "Configurações",
+  "cancel": "Cancelar",
+  "folder": {
+    "locateTitle": "Localizar {{name}}",
+    "subfolders": "Subpastas de {{name}}",
+    "unreachableTitle": "{{path}}\nNão é possível acessar esta pasta. Os recursos dela mantêm as tags e coleções: localize-a se ela foi movida, ou reescaneie quando ela voltar.",
+    "unreachable": "Não é possível acessar esta pasta:",
+    "scanning": "Escaneando",
+    "locate": "Localizar {{name}} (se foi movida)",
+    "rescan": "Reescanear {{name}}",
+    "remove": "Remover {{name}} da biblioteca (os arquivos continuam no disco)"
+  },
+  "relink": {
+    "someTitle": "Só parte dos arquivos de {{name}} está lá",
+    "noneTitle": "Nenhum dos arquivos de {{name}} está lá",
+    "confirm": "Revincular mesmo assim",
+    "body_zero": "O Mimikit verificou {{count}} arquivos desta pasta e encontrou {{found}} em <0>{{path}}</0>. Se você revincular, o reescaneamento remove os recursos que não encontrar lá, com as tags, avaliações, notas e coleções deles. Seus arquivos não são alterados.",
+    "body_one": "O Mimikit verificou {{count}} arquivo desta pasta e encontrou {{found}} em <0>{{path}}</0>. Se você revincular, o reescaneamento remove os recursos que não encontrar lá, com as tags, avaliações, notas e coleções deles. Seus arquivos não são alterados.",
+    "body_other": "O Mimikit verificou {{count}} arquivos desta pasta e encontrou {{found}} em <0>{{path}}</0>. Se você revincular, o reescaneamento remove os recursos que não encontrar lá, com as tags, avaliações, notas e coleções deles. Seus arquivos não são alterados."
+  },
+  "removeRoot": {
+    "title": "Remover {{name}} da biblioteca?",
+    "confirm": "Remover",
+    "body_zero": "Isso remove os recursos dela da biblioteca, com tags, avaliações, notas, vínculos com coleções e grades de sprite. Seus arquivos continuam no disco.",
+    "body_one": "Isso remove da biblioteca {{count}} recurso desta pasta, com tags, avaliações, notas, vínculos com coleções e grades de sprite. Seus arquivos continuam no disco.",
+    "body_other": "Isso remove da biblioteca os {{count}} recursos desta pasta, com tags, avaliações, notas, vínculos com coleções e grades de sprite. Seus arquivos continuam no disco."
+  }
+}

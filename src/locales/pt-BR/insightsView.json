@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "Arquivos",
+    "totalSize": "Tamanho total",
+    "untagged": "Sem tags",
+    "showUntagged": "Mostrar sem tags →",
+    "duplicates": "Grupos de duplicatas",
+    "reviewDuplicates": "Revisar duplicatas →",
+    "allClear": "Tudo certo"
+  },
+  "storageByType": "Espaço por tipo",
+  "total": "{{size}} no total",
+  "largest": "Maiores arquivos",
+  "folders": "Pastas"
+}

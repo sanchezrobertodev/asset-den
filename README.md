@@ -49,10 +49,13 @@ byte-for-byte identical. "Copy to folder…" only ever creates new files.
   them to the Trash, with tags, favorites, ratings, notes and collections merged into the kept file.
 - **Insights**: totals, storage by type, the largest files and folders. Each row jumps to the matching assets.
 - **Updates** (Windows): the app checks for a new version on launch and installs it in place. See [Updates](#updates).
-- **Themes**: dark, light, or follow the system, from the sidebar footer.
+- **Themes**: light, dark, black, midnight, sepia and two high-contrast themes, plus eight accent colours, in
+  **Settings → Appearance**. The sidebar footer switches between System, Dark and Light.
+- **Languages**: English, Spanish, Brazilian Portuguese, French, German, Japanese and Simplified Chinese. Mimikit
+  follows the system language, or pick one in **Settings → Appearance**. See [Translations](#translations).
 - **Accessibility**: works from the keyboard alone (focus rings everywhere, dialogs that keep and return focus, a skip
   link to the assets, arrow keys for stars) and with screen readers (named controls, announced toasts and scans). Text
-  meets WCAG AA contrast in both themes, and the system's "reduce motion" setting stops anything from playing by itself.
+  meets WCAG AA contrast in every theme (AAA in the high-contrast ones), and the system's "reduce motion" setting stops anything from playing by itself.
 
 ![Side panel on an OBJ model with its .mtl texture, tags and collections](docs/screenshot-model-panel.webp)
 
@@ -177,6 +180,13 @@ The app icon's artwork lives in `icon/`. After changing it, `make icons` rebuild
 - Syntax highlighting for text and code is not built yet.
 - The visual design comes from the "Asset Den UI/UX redesign" project in Claude Design. The tokens live in
   `src/index.css`, and the rationale in `design-system/mimikit/MASTER.md`.
+
+## Translations
+
+The translations were written with AI and checked in the app, not by native speakers, so some wording will be off.
+Corrections are welcome: edit the language's files in `src/locales/` and open a pull request.
+`src/locales/README.md` explains the format and has the glossary. To add a language, copy `src/locales/en/` to a
+new folder named by its language tag; `make check` lists anything missing.
 
 ## Support
 

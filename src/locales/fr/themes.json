@@ -1,0 +1,20 @@
+{
+  "system": "Système",
+  "light": "Clair",
+  "dark": "Sombre",
+  "black": "Noir",
+  "midnight": "Minuit",
+  "sepia": "Sépia",
+  "hc-dark": "Contraste élevé sombre",
+  "hc-light": "Contraste élevé clair",
+  "accents": {
+    "green": "Vert",
+    "teal": "Bleu canard",
+    "blue": "Bleu",
+    "violet": "Violet",
+    "pink": "Rose",
+    "red": "Rouge",
+    "orange": "Orange",
+    "amber": "Ambre"
+  }
+}

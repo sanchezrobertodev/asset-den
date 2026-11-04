@@ -1,0 +1,17 @@
+{
+  "label": "全画面：{{name}}",
+  "close": "全画面を閉じる（{{key}}）",
+  "position": "{{index}}/{{total}}",
+  "favorite": "お気に入り（{{key}}）",
+  "showInFolder": "フォルダーに表示",
+  "open": "開く",
+  "previous": "前へ（{{key}}）",
+  "next": "次へ（{{key}}）",
+  "tags": "タグ",
+  "noTags": "タグなし",
+  "collections": "コレクション",
+  "noCollections": "コレクションなし",
+  "note": "メモ",
+  "noNote": "メモなし",
+  "filmstrip": "フィルムストリップ"
+}

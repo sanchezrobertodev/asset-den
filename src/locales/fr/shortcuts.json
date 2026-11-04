@@ -1,0 +1,53 @@
+{
+  "title": "Raccourcis clavier",
+  "groups": {
+    "navigate": "Navigation",
+    "preview": "Aperçu",
+    "organize": "Organisation",
+    "search": "Recherche"
+  },
+  "keys": {
+    "ctrl": "Ctrl",
+    "alt": "Alt",
+    "space": "Espace",
+    "esc": "Esc",
+    "tab": "Tab",
+    "scroll": "Molette",
+    "ctrlClick": "Ctrl + clic",
+    "shiftClick": "Maj + clic"
+  },
+  "label": {
+    "move": "Ressource précédente ou suivante (aussi ↑ ↓)",
+    "parent": "Remonter au dossier parent",
+    "back": "Quitter un champ de texte, fermer le plein écran, puis le panneau latéral, puis effacer la sélection",
+    "skip": "Depuis le haut de la fenêtre : aller aux ressources",
+    "help": "Afficher ces raccourcis",
+    "peek": "Aperçu rapide dans le panneau latéral",
+    "full": "Plein écran",
+    "full-back": "Revenir au panneau latéral depuis le plein écran (aussi Espace)",
+    "zoom": "Zoomer sur une image en plein écran (glisser pour déplacer, double-clic pour réinitialiser)",
+    "favorite": "Ajouter la sélection aux favoris ou l'en retirer",
+    "rate": "Attribuer de 1 à 5 étoiles à la sélection",
+    "unrate": "Effacer l'évaluation de la sélection",
+    "stars": "Changer l'évaluation quand les étoiles ont le focus",
+    "tag": "Ajouter le tag saisi (Retour arrière dans un champ de tag vide retire le dernier)",
+    "select-all": "Sélectionner toutes les ressources affichées",
+    "toggle": "Ajouter à la sélection ou en retirer",
+    "range": "Sélectionner une plage",
+    "search": "Rechercher des ressources, dossiers et actions",
+    "search-slash": "Rechercher",
+    "results": "Parcourir les résultats",
+    "run": "Ouvrir le résultat en surbrillance",
+    "close": "Fermer la recherche"
+  },
+  "hint": {
+    "move": "naviguer",
+    "peek": "aperçu rapide",
+    "full": "plein écran",
+    "full-back": "retour au panneau latéral",
+    "favorite": "favori",
+    "rate": "évaluer",
+    "unrate": "effacer l'évaluation",
+    "search": "rechercher"
+  }
+}

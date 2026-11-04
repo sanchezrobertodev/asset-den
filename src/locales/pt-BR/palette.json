@@ -1,0 +1,49 @@
+{
+  "tokens": {
+    "tag": "{{token}}tag",
+    "folder": "{{token}}pasta",
+    "word": "{{token}}palavra"
+  },
+  "inCollection_zero": "Nenhum resultado em {{name}}",
+  "inCollection_one": "Mostrar {{count}} resultado em {{name}}",
+  "inCollection_other": "Mostrar {{count}} resultados em {{name}}",
+  "duplicates_zero": "Nenhum grupo de duplicatas corresponde",
+  "duplicates_one": "Mostrar {{count}} grupo de duplicatas",
+  "duplicates_other": "Mostrar {{count}} grupos de duplicatas",
+  "showMatch": "Mostrar o resultado na biblioteca",
+  "showAll_zero": "Nenhum recurso corresponde",
+  "showAll_one": "Mostrar {{count}} resultado na biblioteca",
+  "showAll_other": "Mostrar todos os {{count}} resultados na biblioteca",
+  "assets_zero": "Recursos · {{count}}",
+  "assets_one": "Recursos · {{count}}",
+  "assets_other": "Recursos · {{count}}",
+  "folders": "Pastas",
+  "files_zero": "{{count}} arquivos",
+  "files_one": "{{count}} arquivo",
+  "files_other": "{{count}} arquivos",
+  "actions": {
+    "title": "Ações",
+    "duplicates": "Revisar duplicatas",
+    "insights": "Abrir Estatísticas",
+    "newCollection": "Nova coleção",
+    "favorites": "Mostrar favoritos",
+    "import": "Importar uma pasta",
+    "listView": "Mudar para exibição em lista",
+    "gridView": "Mudar para exibição em grade",
+    "clearFilters": "Limpar busca e filtros",
+    "settings": "Configurações",
+    "updates": "Verificar atualizações",
+    "shortcuts": "Atalhos de teclado"
+  },
+  "dialog": "Busca",
+  "input": "Buscar recursos, pastas e ações",
+  "placeholder": "Buscar recursos, pastas, ações",
+  "filters": "Filtros",
+  "results": "Resultados",
+  "noResults": "Nada corresponde. Tente {{type}}, {{tag}}, {{rating}}, {{folder}} ou {{color}}.",
+  "keys": {
+    "move": "{{keys}} mover",
+    "select": "{{keys}} selecionar",
+    "close": "{{keys}} fechar"
+  }
+}

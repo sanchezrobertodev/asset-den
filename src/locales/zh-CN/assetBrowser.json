@@ -1,0 +1,15 @@
+{
+  "dragFailed": "无法开始拖动：{{error}}",
+  "favorite": "已收藏",
+  "stars_other": "{{count}} 星",
+  "assets": "资源",
+  "groupInfo_other": "{{count}} 个文件 · {{size}}",
+  "columns": {
+    "name": "名称",
+    "type": "类型",
+    "dims": "尺寸 / 时长",
+    "size": "大小",
+    "folder": "文件夹",
+    "modified": "修改时间"
+  }
+}

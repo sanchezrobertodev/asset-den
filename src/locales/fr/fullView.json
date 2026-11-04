@@ -1,0 +1,17 @@
+{
+  "label": "Plein écran : {{name}}",
+  "close": "Quitter le plein écran ({{key}})",
+  "position": "{{index}} sur {{total}}",
+  "favorite": "Favori ({{key}})",
+  "showInFolder": "Afficher dans le dossier",
+  "open": "Ouvrir",
+  "previous": "Précédent ({{key}})",
+  "next": "Suivant ({{key}})",
+  "tags": "Tags",
+  "noTags": "Aucun tag",
+  "collections": "Collections",
+  "noCollections": "Dans aucune collection",
+  "note": "Note",
+  "noNote": "Aucune note",
+  "filmstrip": "Pellicule"
+}

@@ -1,0 +1,31 @@
+{
+  "kinds": {
+    "image": "画像",
+    "audio": "オーディオ",
+    "model": "3Dモデル",
+    "font": "フォント",
+    "video": "動画",
+    "text": "テキスト・データ",
+    "other": "その他"
+  },
+  "units": {
+    "b": "B",
+    "kb": "KB",
+    "mb": "MB",
+    "gb": "GB",
+    "tb": "TB"
+  },
+  "time": {
+    "never": "—",
+    "justNow": "たった今",
+    "yesterday": "昨日",
+    "relativeStyle": "narrow"
+  },
+  "audio": {
+    "mono": "モノラル",
+    "stereo": "ステレオ",
+    "channels": "{{count}}ch",
+    "khz": "{{value}} kHz",
+    "bits": "{{bits}}ビット"
+  }
+}

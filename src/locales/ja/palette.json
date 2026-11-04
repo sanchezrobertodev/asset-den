@@ -1,0 +1,42 @@
+{
+  "tokens": {
+    "tag": "{{token}}タグ",
+    "folder": "{{token}}フォルダー",
+    "word": "{{token}}語句"
+  },
+  "inCollection_zero": "「{{name}}」には一致するものがありません",
+  "inCollection_other": "「{{name}}」で一致する{{count}}件を表示",
+  "duplicates_zero": "一致する重複グループはありません",
+  "duplicates_other": "{{count}}件の重複グループを表示",
+  "showMatch": "一致したアセットをライブラリで表示",
+  "showAll_zero": "一致するアセットはありません",
+  "showAll_other": "一致する{{count}}件をすべてライブラリで表示",
+  "assets_other": "アセット · {{count}}",
+  "folders": "フォルダー",
+  "files_other": "{{count}}個のファイル",
+  "actions": {
+    "title": "アクション",
+    "duplicates": "重複を確認",
+    "insights": "統計を開く",
+    "newCollection": "新しいコレクション",
+    "favorites": "お気に入りを表示",
+    "import": "フォルダーをインポート",
+    "listView": "リスト表示に切り替え",
+    "gridView": "グリッド表示に切り替え",
+    "clearFilters": "検索とフィルターをクリア",
+    "settings": "設定",
+    "updates": "アップデートを確認",
+    "shortcuts": "キーボードショートカット"
+  },
+  "dialog": "検索",
+  "input": "アセット、フォルダー、アクションを検索",
+  "placeholder": "アセット、フォルダー、アクションを検索",
+  "filters": "フィルター",
+  "results": "結果",
+  "noResults": "一致するものはありません。{{type}}、{{tag}}、{{rating}}、{{folder}}、{{color}}を試してください。",
+  "keys": {
+    "move": "{{keys}} 移動",
+    "select": "{{keys}} 選択",
+    "close": "{{keys}} 閉じる"
+  }
+}

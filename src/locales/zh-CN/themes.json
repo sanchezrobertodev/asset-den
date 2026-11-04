@@ -1,0 +1,20 @@
+{
+  "system": "跟随系统",
+  "light": "浅色",
+  "dark": "深色",
+  "black": "纯黑",
+  "midnight": "午夜",
+  "sepia": "棕褐色",
+  "hc-dark": "高对比度深色",
+  "hc-light": "高对比度浅色",
+  "accents": {
+    "green": "绿色",
+    "teal": "蓝绿色",
+    "blue": "蓝色",
+    "violet": "紫罗兰色",
+    "pink": "粉色",
+    "red": "红色",
+    "orange": "橙色",
+    "amber": "琥珀色"
+  }
+}

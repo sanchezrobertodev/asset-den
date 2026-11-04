@@ -1,0 +1,17 @@
+{
+  "label": "Tela cheia: {{name}}",
+  "close": "Sair da tela cheia ({{key}})",
+  "position": "{{index}} de {{total}}",
+  "favorite": "Favorito ({{key}})",
+  "showInFolder": "Mostrar na pasta",
+  "open": "Abrir",
+  "previous": "Anterior ({{key}})",
+  "next": "Próximo ({{key}})",
+  "tags": "Tags",
+  "noTags": "Sem tags",
+  "collections": "Coleções",
+  "noCollections": "Em nenhuma coleção",
+  "note": "Nota",
+  "noNote": "Sem nota",
+  "filmstrip": "Tira de miniaturas"
+}

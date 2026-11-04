@@ -1,0 +1,56 @@
+{
+  "previewFailed": {
+    "title": "Vorschau nicht möglich",
+    "body": "Die Datei ist vielleicht beschädigt oder nutzt eine Formatvariante, die Mimikit nicht lesen kann."
+  },
+  "open": "Öffnen",
+  "showInFolder": "Im Ordner anzeigen",
+  "pathCopied": "Pfad kopiert",
+  "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
+  "identicalTo": "Identisch mit {{names}}",
+  "review": "Prüfen →",
+  "meta": {
+    "dimensions": "Maße",
+    "audio": "Audio",
+    "size": "Größe",
+    "format": "Format",
+    "modified": "Geändert"
+  },
+  "tags": {
+    "label": "Tags",
+    "remove": "Tag {{tag}} entfernen",
+    "add": "Tag hinzufügen",
+    "placeholder": "Tag hinzufügen, Enter drücken"
+  },
+  "rating": {
+    "label": "Bewertung",
+    "clear": "Bewertung entfernen ({{key}})",
+    "rate_one": "Mit {{count}} Stern bewerten ({{key}})",
+    "rate_other": "Mit {{count}} Sternen bewerten ({{key}})",
+    "stars_one": "{{count}} Stern",
+    "stars_other": "{{count}} Sterne",
+    "mixed": "Gemischt"
+  },
+  "note": {
+    "label": "Notiz",
+    "placeholder": "Notiz hinzufügen"
+  },
+  "collections": {
+    "label": "Sammlungen",
+    "new": "+ Neue Sammlung"
+  },
+  "details": "Details",
+  "previous": "Vorheriges ({{key}})",
+  "next": "Nächstes ({{key}})",
+  "position": "{{index}} von {{total}}",
+  "fullScreen": "Vollbild",
+  "close": "Schließen ({{key}})",
+  "selected_one": "{{count}} ausgewählt",
+  "selected_other": "{{count}} ausgewählt",
+  "selectionSize": "{{size}} · zusammen herausziehen",
+  "favoriteAll": "Alle zu Favoriten",
+  "unfavoriteAll": "Alle aus Favoriten",
+  "copyPath": "Pfad kopieren",
+  "favorite": "Favorit ({{key}})",
+  "findSimilar": "Ähnliche finden"
+}

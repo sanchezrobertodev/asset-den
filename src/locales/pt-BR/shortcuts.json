@@ -1,0 +1,53 @@
+{
+  "title": "Atalhos de teclado",
+  "groups": {
+    "navigate": "Navegar",
+    "preview": "Visualizar",
+    "organize": "Organizar",
+    "search": "Buscar"
+  },
+  "keys": {
+    "ctrl": "Ctrl",
+    "alt": "Alt",
+    "space": "Espaço",
+    "esc": "Esc",
+    "tab": "Tab",
+    "scroll": "Roda do mouse",
+    "ctrlClick": "Ctrl + clique",
+    "shiftClick": "Shift + clique"
+  },
+  "label": {
+    "move": "Recurso anterior ou próximo (também ↑ ↓)",
+    "parent": "Subir para a pasta superior",
+    "back": "Sair de um campo de texto, fechar a tela cheia, depois o painel lateral e, por fim, limpar a seleção",
+    "skip": "No topo da janela: pular para os recursos",
+    "help": "Mostrar estes atalhos",
+    "peek": "Visualização rápida no painel lateral",
+    "full": "Tela cheia",
+    "full-back": "Voltar da tela cheia para o painel lateral (também Espaço)",
+    "zoom": "Ampliar uma imagem na tela cheia (arraste para mover, clique duplo para redefinir)",
+    "favorite": "Favoritar ou desfavoritar a seleção",
+    "rate": "Avaliar a seleção com 1 a 5 estrelas",
+    "unrate": "Limpar a avaliação da seleção",
+    "stars": "Mudar a avaliação quando as estrelas estão em foco",
+    "tag": "Adicionar a tag digitada (Backspace em um campo de tag vazio remove a última)",
+    "select-all": "Selecionar todos os recursos exibidos",
+    "toggle": "Adicionar à seleção ou remover dela",
+    "range": "Selecionar um intervalo",
+    "search": "Buscar recursos, pastas e ações",
+    "search-slash": "Buscar",
+    "results": "Percorrer os resultados",
+    "run": "Abrir o resultado destacado",
+    "close": "Fechar a busca"
+  },
+  "hint": {
+    "move": "mover",
+    "peek": "visualização rápida",
+    "full": "tela cheia",
+    "full-back": "voltar ao painel lateral",
+    "favorite": "favoritar",
+    "rate": "avaliar",
+    "unrate": "limpar avaliação",
+    "search": "buscar"
+  }
+}

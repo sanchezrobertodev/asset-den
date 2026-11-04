@@ -1,0 +1,22 @@
+{
+  "started": "Bilder werden analysiert…",
+  "paused": "Bildanalyse pausiert.",
+  "resumed": "Bildanalyse fortgesetzt.",
+  "finished_one": "Bildanalyse abgeschlossen. {{count}} Bild analysiert.",
+  "finished_other": "Bildanalyse abgeschlossen. {{count}} Bilder analysiert.",
+  "stopped_one": "Bildanalyse gestoppt. {{done}} von {{count}} Bild analysiert.",
+  "stopped_other": "Bildanalyse gestoppt. {{done}} von {{count}} Bildern analysiert.",
+  "pausedTitle": "Analyse pausiert",
+  "runningTitle": "Bildanalyse läuft",
+  "resume": "Bildanalyse fortsetzen",
+  "pause": "Bildanalyse pausieren",
+  "cancel": "Bildanalyse abbrechen",
+  "progress": "{{done}} von {{total}}",
+  "pending_one": "{{count}} Bild ist noch nicht analysiert – die Ergebnisse umfassen nur {{covered}}.",
+  "pending_other": "{{count}} Bilder sind noch nicht analysiert – die Ergebnisse umfassen nur {{covered}}.",
+  "covered_one": "das eine analysierte",
+  "covered_other": "die {{count}} analysierten",
+  "analysingNow": "Wird analysiert…",
+  "resumeAnalysis": "Analyse fortsetzen",
+  "analyseNow": "Jetzt analysieren"
+}

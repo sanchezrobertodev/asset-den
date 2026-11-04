@@ -1,0 +1,53 @@
+{
+  "title": "Tastenkürzel",
+  "groups": {
+    "navigate": "Navigieren",
+    "preview": "Vorschau",
+    "organize": "Organisieren",
+    "search": "Suchen"
+  },
+  "keys": {
+    "ctrl": "Strg",
+    "alt": "Alt",
+    "space": "Leertaste",
+    "esc": "Esc",
+    "tab": "Tab",
+    "scroll": "Mausrad",
+    "ctrlClick": "Strg + Klick",
+    "shiftClick": "Umschalt + Klick"
+  },
+  "label": {
+    "move": "Vorheriges oder nächstes Asset (auch ↑ ↓)",
+    "parent": "Zum übergeordneten Ordner",
+    "back": "Textfeld verlassen, Vollbild schließen, dann den Seitenbereich, dann die Auswahl aufheben",
+    "skip": "Am Fensteranfang: zu den Assets springen",
+    "help": "Diese Tastenkürzel anzeigen",
+    "peek": "Schnellansicht im Seitenbereich",
+    "full": "Vollbild",
+    "full-back": "Vom Vollbild zurück zum Seitenbereich (auch Leertaste)",
+    "zoom": "Bild im Vollbild zoomen (ziehen zum Verschieben, Doppelklick zum Zurücksetzen)",
+    "favorite": "Auswahl als Favorit markieren oder Markierung aufheben",
+    "rate": "Auswahl mit 1 bis 5 Sternen bewerten",
+    "unrate": "Bewertung der Auswahl entfernen",
+    "stars": "Bewertung ändern, während die Sterne den Fokus haben",
+    "tag": "Eingegebenes Tag hinzufügen (Rücktaste in einem leeren Tag-Feld entfernt das letzte)",
+    "select-all": "Alle angezeigten Assets auswählen",
+    "toggle": "Zur Auswahl hinzufügen oder daraus entfernen",
+    "range": "Bereich auswählen",
+    "search": "Assets, Ordner und Aktionen durchsuchen",
+    "search-slash": "Suchen",
+    "results": "Zwischen den Ergebnissen wechseln",
+    "run": "Markiertes Ergebnis öffnen",
+    "close": "Suche schließen"
+  },
+  "hint": {
+    "move": "blättern",
+    "peek": "Schnellansicht",
+    "full": "Vollbild",
+    "full-back": "zum Seitenbereich",
+    "favorite": "Favorit",
+    "rate": "bewerten",
+    "unrate": "Bewertung entfernen",
+    "search": "suchen"
+  }
+}

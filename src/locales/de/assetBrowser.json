@@ -1,0 +1,17 @@
+{
+  "dragFailed": "Ziehen konnte nicht gestartet werden: {{error}}",
+  "favorite": "Favorit",
+  "stars_one": "{{count}} Stern",
+  "stars_other": "{{count}} Sterne",
+  "assets": "Assets",
+  "groupInfo_one": "{{count}} Datei · {{size}}",
+  "groupInfo_other": "{{count}} Dateien · {{size}}",
+  "columns": {
+    "name": "Name",
+    "type": "Typ",
+    "dims": "Maße / Länge",
+    "size": "Größe",
+    "folder": "Ordner",
+    "modified": "Geändert"
+  }
+}

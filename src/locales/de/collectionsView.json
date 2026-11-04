@@ -1,0 +1,40 @@
+{
+  "smartCollection": "Intelligente Sammlung",
+  "summary_one": "{{count}} Asset · {{size}}",
+  "summary_other": "{{count}} Assets · {{size}}",
+  "newCollectionButton": "+ Neue Sammlung",
+  "nameLabel": "Name der Sammlung",
+  "remove_one": "{{count}} Asset entfernen",
+  "remove_other": "{{count}} Assets entfernen",
+  "openAsSearch": "Als Suche öffnen",
+  "useSearchFirst": "Durchsuche oder filtere zuerst die Bibliothek",
+  "useSearch": "Aktuelle Suche verwenden",
+  "delete": "Löschen",
+  "copyToFolder": "In Ordner kopieren…",
+  "noMatch": {
+    "title": "Kein Asset dieser Sammlung passt zu diesen Filtern",
+    "body": "Versuch, einen Typ, eine Suche oder einen Filter zu entfernen.",
+    "clear": "Suche und Filter zurücksetzen"
+  },
+  "smartEmpty": {
+    "title": "Noch passt nichts zu dieser intelligenten Sammlung",
+    "body": "Ihre Assets erscheinen hier, sobald Dateien zu ihrer Suche passen."
+  },
+  "empty": {
+    "title": "Diese Sammlung ist leer",
+    "body": "Füge Assets in einem beliebigen Seitenbereich hinzu, oder wähle Assets in der Bibliothek aus und hake diese Sammlung im Seitenbereich an."
+  },
+  "none": {
+    "title": "Noch keine Sammlungen",
+    "body": "Fasse die Assets für ein Level, einen Charakter oder ein Pack zusammen.",
+    "newCollection": "Neue Sammlung"
+  },
+  "rule": {
+    "anything": "Alle Assets <2>ohne Einschränkung</2>",
+    "query": "Alle Assets, die zu <0/> passen",
+    "filters_one": "Alle Assets, die zu <1>{{count}} Filter</1> passen",
+    "filters_other": "Alle Assets, die zu <1>{{count}} Filtern</1> passen",
+    "queryAndFilters_one": "Alle Assets, die zu <0/> und <1>{{count}} Filter</1> passen",
+    "queryAndFilters_other": "Alle Assets, die zu <0/> und <1>{{count}} Filtern</1> passen"
+  }
+}

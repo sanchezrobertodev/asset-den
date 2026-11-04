@@ -1,0 +1,50 @@
+{
+  "presets": {
+    "tiny": "極小 ≤ 64px",
+    "small": "小 ≤ 256px",
+    "textures": "テクスチャ ≥ 1024px"
+  },
+  "dates": {
+    "any": "指定なし",
+    "hours_other": "{{count}}時間",
+    "days_other": "{{count}}日",
+    "years_other": "{{count}}年"
+  },
+  "clear": "クリア",
+  "clearGroup": "{{group}}をクリア",
+  "any": "指定なし",
+  "button_zero": "その他のフィルター",
+  "button_other": "フィルター · {{count}}",
+  "title": "フィルター",
+  "clearAll": "すべてクリア",
+  "close": "フィルターを閉じる",
+  "groups": {
+    "extension": "拡張子",
+    "imageSize": "画像サイズ",
+    "audioLength": "オーディオの長さ",
+    "sizeDate": "ファイルサイズと日付",
+    "tags": "タグ",
+    "rating": "評価",
+    "colour": "色"
+  },
+  "extFiles_other": ".{{ext}}、{{count}}個のファイル",
+  "squareOnly": "正方形のみ",
+  "minWidth": "最小幅",
+  "maxWidth": "最大幅",
+  "minHeight": "最小の高さ",
+  "maxHeight": "最大の高さ",
+  "dimsNote": "単位はピクセルです。寸法がわかっている画像のみ一致します。",
+  "minSeconds": "最小（秒）",
+  "maxSeconds": "最大（秒）",
+  "lengthNote": "長さがわかっているオーディオファイルのみ一致します。",
+  "minSize": "最小サイズ（MB）",
+  "maxSize": "最大サイズ（MB）",
+  "modifiedIn": "この期間内に更新",
+  "untaggedOnly": "タグなしのみ",
+  "tagsNote": "選択したタグのいずれかを持つアセットに一致します。",
+  "stars_other": "星{{count}}つ",
+  "starsAtLeast_other": "星{{count}}つ以上",
+  "customColour": "カスタムカラー",
+  "custom": "カスタム",
+  "colourNote": "この色を主な色の1つに含む画像です。検索では{{nameExample}}または{{hexExample}}と入力します。"
+}

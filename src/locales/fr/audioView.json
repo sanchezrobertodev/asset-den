@@ -1,0 +1,7 @@
+{
+  "playFailed": "Impossible de lire ce fichier ici : {{error}}",
+  "pause": "Pause",
+  "play": "Lecture",
+  "loopTitle": "Reprendre au début à la fin de la lecture",
+  "loop": "Boucle"
+}

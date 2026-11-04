@@ -1,0 +1,7 @@
+{
+  "playFailed": "无法在此播放该文件：{{error}}",
+  "pause": "暂停",
+  "play": "播放",
+  "loopTitle": "播放结束后从头重新播放",
+  "loop": "循环"
+}

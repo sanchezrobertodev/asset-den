@@ -1,0 +1,87 @@
+{
+  "title": "设置",
+  "sections": {
+    "appearance": "外观",
+    "library": "资源库",
+    "backups": "备份",
+    "storage": "存储",
+    "updates": "更新",
+    "about": "关于"
+  },
+  "appearance": {
+    "language": "语言",
+    "languageHint": "切换时窗口会重新加载。",
+    "languageSystem": "跟随系统（{{name}}）",
+    "theme": "主题",
+    "accent": "强调色",
+    "accentHint": "用于按钮、选中项和焦点环。",
+    "thumbSize": "缩略图大小",
+    "thumbSizeHint": "网格中卡片的大小。网格上方的滑块也可以调整。",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "像素画缩放",
+    "pixelatedHint": "放大图片时保持像素锐利，而不做平滑处理。"
+  },
+  "updates": {
+    "checkOnLaunch": "启动时检查更新",
+    "checkOnLaunchHint": "启动几秒后在后台静默检查。未经确认不会安装任何内容。"
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "开源软件，MIT 许可证",
+    "releases": "版本发布",
+    "source": "源代码",
+    "support": "支持 Mimikit",
+    "supportHint": "Mimikit 免费使用，打赏可支持后续开发。"
+  },
+  "ignored": {
+    "title": "忽略的文件夹",
+    "hint": "在每个资源库文件夹中，都会跳过使用这些名称的文件夹，就像隐藏文件夹、node_modules 和 .meta 文件一样。",
+    "remove": "不再忽略 {{name}}",
+    "addAnother": "再添加一个，按 Enter",
+    "placeholder": "文件夹名称，如 Backup 或 _old，然后按 Enter",
+    "invalid": "请输入一个文件夹名称，而不是路径。",
+    "saved": "已保存。重新扫描后才会应用到资源库中已有的文件。",
+    "pending": "更改将在下次重新扫描时生效。文件仍保留在磁盘上。",
+    "rescanning": "正在重新扫描…",
+    "rescan": "立即重新扫描"
+  },
+  "analysis": {
+    "underMinute": "不到 1 分钟",
+    "minutes_other": "约 {{count}} 分钟",
+    "hours_other": "约 {{count}} 小时",
+    "title": "图像分析",
+    "progress_other": "已为“查找相似”和按颜色搜索分析了 <0>{{done}}</0> / <0>{{count}}</0> 张图片。",
+    "remaining_other": "剩余 {{count}} 张预计用时{{time}}，仅占用空闲 CPU。浏览到的图片会即时分析。",
+    "asYouGo": "浏览到的图片会即时分析。",
+    "resume": "继续",
+    "pause": "暂停",
+    "analyse": "分析图片",
+    "keep": "自动分析新增和更改的图片",
+    "keepHint": "Mimikit 打开期间，图片一经添加或更改就会进行分析。首次完整分析后会自动开启。"
+  },
+  "cancel": "取消",
+  "backups": {
+    "pickTitle": "将资源库备份保存到…",
+    "saved": "已将 {{name}} 保存到 {{folder}}。",
+    "restoreTitle": "恢复 {{name}}？",
+    "restoreHint": "这会替换当前资源库：文件夹、标签、评分、备注、合集和 sprite 网格。当前资源库会先保存到备份文件夹。Mimikit 将重启以完成恢复。",
+    "restoring": "正在恢复…",
+    "restoreRestart": "恢复并重启",
+    "library": "资源库备份",
+    "libraryHint": "包括文件夹、标签、评分、备注、合集和 sprite 网格，不包括资源文件本身。",
+    "backingUp": "正在备份…",
+    "backUp": "备份…",
+    "restore": "恢复…",
+    "auto": "自动备份",
+    "autoHint": "每天在 Mimikit 打开时备份一次，保留最近 5 份。",
+    "showFolder": "显示文件夹"
+  },
+  "cache": {
+    "clearedCache": "已清除缩略图缓存。浏览时会重新生成缩略图。",
+    "cleared": "已清除 {{size}}。浏览时会重新生成缩略图。",
+    "title": "缩略图缓存",
+    "hint": "Mimikit 生成的缩略图和预览共占用 <0>{{size}}</0>。资源文件不受影响。",
+    "clearing": "正在清除…",
+    "clear": "清除缩略图缓存"
+  }
+}

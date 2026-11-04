@@ -1,0 +1,54 @@
+{
+  "image": {
+    "decoding": "正在解码…",
+    "animateTitle": "将图片作为 sprite sheet 播放",
+    "animate": "播放动画",
+    "cantDisplay": "WebView 无法显示此图片。",
+    "zoom": "{{percent}}%",
+    "zoomShown": "以 {{percent}}% 显示",
+    "zoomHint": "滚轮缩放，拖动平移"
+  },
+  "export": {
+    "pickFolder": "将 {{name}} 的帧导出到…",
+    "failed_other": "已导出 {{count}} 帧。{{failed}} 帧失败：{{errors}}",
+    "allEmpty": "所有帧都为空，因此未导出任何内容。",
+    "done_other": "已将 {{count}} 帧导出到 {{folder}}",
+    "showInFolder": "在文件夹中显示",
+    "button": "导出帧…",
+    "skipEmpty": "跳过完全透明的帧",
+    "chooseFolder": "选择文件夹…"
+  },
+  "sprite": {
+    "slicing": "正在切分…",
+    "frameLabel": "{{name}}，第 {{frame}} 帧，共 {{total}} 帧",
+    "previousFrame": "上一帧",
+    "pause": "暂停",
+    "play": "播放",
+    "nextFrame": "下一帧",
+    "columns": "列",
+    "rows": "行",
+    "frame": "帧",
+    "frameWidth": "帧宽度（像素）",
+    "frameHeight": "帧高度（像素）",
+    "fps": "fps",
+    "framesPerSecond": "每秒帧数",
+    "loop": "循环",
+    "pixelTitle": "像素画缩放",
+    "pixel": "像素"
+  },
+  "font": {
+    "pangram": "The quick brown fox jumps over the lazy dog",
+    "loadFailed": "无法加载此字体。",
+    "loading": "正在加载字体…",
+    "sample": "示例文本"
+  },
+  "text": {
+    "reading": "正在读取…",
+    "truncated": "… 仅显示 {{size}} 的开头部分",
+    "moreLines_other": "… 还有 {{count}} 行"
+  },
+  "loadingAudio": "正在加载音频…",
+  "loadingModel": "正在加载模型…",
+  "videoUnsupported": "此视频格式无法在此播放。",
+  "noPreview": "此文件类型无法预览"
+}

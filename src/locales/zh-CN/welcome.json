@@ -1,0 +1,19 @@
+{
+  "title": "欢迎使用 Mimikit",
+  "intro": "选择一个游戏资源文件夹，Mimikit 会为其中的每个 sprite、音频、模型、字体和视频建立索引，并持续监视变化。",
+  "importFolder": "导入文件夹",
+  "readOnly": "之后还可以添加更多文件夹。Mimikit 只读取文件夹，绝不会更改其中的文件。",
+  "tips": "提示",
+  "drag": {
+    "title": "拖入引擎",
+    "body": "将任意卡片拖到 Unity、Godot 或文件夹中，即可把文件复制过去。"
+  },
+  "preview": {
+    "title": "就地预览",
+    "body": "选中资源后按 {{peekKey}} 查看，按 Enter 全屏。"
+  },
+  "search": {
+    "title": "查找任何内容",
+    "body": "随时随地搜索名称、{{tagExample}}、{{typeExample}} 或文件夹。"
+  }
+}

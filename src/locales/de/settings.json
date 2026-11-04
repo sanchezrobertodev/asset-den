@@ -1,0 +1,91 @@
+{
+  "title": "Einstellungen",
+  "sections": {
+    "appearance": "Darstellung",
+    "library": "Bibliothek",
+    "backups": "Sicherungen",
+    "storage": "Speicher",
+    "updates": "Updates",
+    "about": "Info"
+  },
+  "appearance": {
+    "language": "Sprache",
+    "languageHint": "Zum Wechseln wird das Fenster neu geladen.",
+    "languageSystem": "System ({{name}})",
+    "theme": "Design",
+    "accent": "Akzentfarbe",
+    "accentHint": "Schaltflächen, Auswahl und Fokusrahmen.",
+    "thumbSize": "Vorschaubildgröße",
+    "thumbSizeHint": "Kartengröße im Raster. Der Regler über dem Raster ändert sie ebenfalls.",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "Pixel-Art-Skalierung",
+    "pixelatedHint": "Bilder mit scharfen Pixeln vergrößern, statt sie zu glätten."
+  },
+  "updates": {
+    "checkOnLaunch": "Beim Start nach Updates suchen",
+    "checkOnLaunchHint": "Sucht unauffällig ein paar Sekunden nach dem Start. Nichts wird ohne Rückfrage installiert."
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "Open Source, MIT-Lizenz",
+    "releases": "Releases",
+    "source": "Quellcode",
+    "support": "Mimikit unterstützen",
+    "supportHint": "Es ist kostenlos. Trinkgelder halten es am Laufen."
+  },
+  "ignored": {
+    "title": "Ignorierte Ordner",
+    "hint": "Ordner mit diesen Namen werden in jedem Bibliotheksordner übersprungen – so wie schon versteckte Ordner, node_modules und .meta-Dateien.",
+    "remove": "{{name}} nicht mehr ignorieren",
+    "addAnother": "Weiteren hinzufügen, Enter drücken",
+    "placeholder": "Ordnername, z. B. Backup oder _old, dann Enter",
+    "invalid": "Gib einen Ordnernamen ein, keinen Pfad.",
+    "saved": "Gespeichert. Scanne neu, damit es auch für Dateien gilt, die schon in der Bibliothek sind.",
+    "pending": "Änderungen gelten beim nächsten Scan. Die Dateien bleiben auf der Festplatte.",
+    "rescanning": "Wird neu gescannt…",
+    "rescan": "Jetzt neu scannen"
+  },
+  "analysis": {
+    "underMinute": "unter einer Minute",
+    "minutes_one": "etwa {{count}} Minute",
+    "minutes_other": "etwa {{count}} Minuten",
+    "hours_one": "etwa {{count}} Stunde",
+    "hours_other": "etwa {{count}} Stunden",
+    "title": "Bildanalyse",
+    "progress_one": "<0>{{done}}</0> von <0>{{count}}</0> Bild für „Ähnliche finden“ und die Farbsuche analysiert.",
+    "progress_other": "<0>{{done}}</0> von <0>{{count}}</0> Bildern für „Ähnliche finden“ und die Farbsuche analysiert.",
+    "remaining_one": "Das übrige Bild braucht {{time}} mit freier CPU-Leistung. Bilder, die du durchblätterst, werden dabei analysiert.",
+    "remaining_other": "Die übrigen {{count}} brauchen {{time}} mit freier CPU-Leistung. Bilder, die du durchblätterst, werden dabei analysiert.",
+    "asYouGo": "Bilder, die du durchblätterst, werden dabei analysiert.",
+    "resume": "Fortsetzen",
+    "pause": "Pausieren",
+    "analyse": "Bilder analysieren",
+    "keep": "Neue und geänderte Bilder automatisch analysieren",
+    "keepHint": "Analysiert Bilder, sobald sie hinzugefügt oder geändert werden, solange Mimikit offen ist. Schaltet sich nach der ersten vollständigen Analyse von selbst ein."
+  },
+  "cancel": "Abbrechen",
+  "backups": {
+    "pickTitle": "Bibliothekssicherung speichern in…",
+    "saved": "{{name}} in {{folder}} gespeichert.",
+    "restoreTitle": "{{name}} wiederherstellen?",
+    "restoreHint": "Das ersetzt deine Bibliothek: Ordner, Tags, Bewertungen, Notizen, Sammlungen und Sprite-Raster. Die aktuelle Bibliothek wird vorher im Sicherungsordner gespeichert. Zum Abschluss startet Mimikit neu.",
+    "restoring": "Wird wiederhergestellt…",
+    "restoreRestart": "Wiederherstellen und neu starten",
+    "library": "Bibliothekssicherung",
+    "libraryHint": "Ordner, Tags, Bewertungen, Notizen, Sammlungen und Sprite-Raster. Deine Asset-Dateien sind nicht enthalten.",
+    "backingUp": "Wird gesichert…",
+    "backUp": "Sichern…",
+    "restore": "Wiederherstellen…",
+    "auto": "Automatische Sicherungen",
+    "autoHint": "Einmal täglich beim Start von Mimikit. Die letzten 5 bleiben erhalten.",
+    "showFolder": "Ordner anzeigen"
+  },
+  "cache": {
+    "clearedCache": "Vorschaubild-Cache geleert. Vorschaubilder werden beim Durchblättern neu erstellt.",
+    "cleared": "{{size}} freigegeben. Vorschaubilder werden beim Durchblättern neu erstellt.",
+    "title": "Vorschaubild-Cache",
+    "hint": "<0>{{size}}</0> an Vorschaubildern und Vorschauen, die Mimikit erstellt hat. Deine Asset-Dateien bleiben unberührt.",
+    "clearing": "Wird geleert…",
+    "clear": "Cache leeren"
+  }
+}

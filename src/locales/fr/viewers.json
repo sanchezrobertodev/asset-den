@@ -1,0 +1,57 @@
+{
+  "image": {
+    "decoding": "Décodage…",
+    "animateTitle": "Lire l'image comme une sprite sheet",
+    "animate": "Animer",
+    "cantDisplay": "La webview ne peut pas afficher cette image.",
+    "zoom": "{{percent}} %",
+    "zoomShown": "affichée à {{percent}} %",
+    "zoomHint": "molette pour zoomer, glisser pour déplacer"
+  },
+  "export": {
+    "pickFolder": "Exporter les frames de {{name}} dans…",
+    "failed_one": "{{count}} frame exportée. Échec pour {{failed}} : {{errors}}",
+    "failed_other": "{{count}} frames exportées. Échec pour {{failed}} : {{errors}}",
+    "allEmpty": "Toutes les frames sont vides, rien n'a donc été exporté.",
+    "done_one": "{{count}} frame exportée dans {{folder}}",
+    "done_other": "{{count}} frames exportées dans {{folder}}",
+    "showInFolder": "Afficher dans le dossier",
+    "button": "Exporter les frames…",
+    "skipEmpty": "Ignorer les frames entièrement transparentes",
+    "chooseFolder": "Choisir un dossier…"
+  },
+  "sprite": {
+    "slicing": "Découpage…",
+    "frameLabel": "{{name}}, frame {{frame}} sur {{total}}",
+    "previousFrame": "Frame précédente",
+    "pause": "Pause",
+    "play": "Lecture",
+    "nextFrame": "Frame suivante",
+    "columns": "Colonnes",
+    "rows": "Lignes",
+    "frame": "frame",
+    "frameWidth": "Largeur de frame en pixels",
+    "frameHeight": "Hauteur de frame en pixels",
+    "fps": "fps",
+    "framesPerSecond": "Frames par seconde",
+    "loop": "Boucle",
+    "pixelTitle": "Mise à l'échelle pixel art",
+    "pixel": "Pixel"
+  },
+  "font": {
+    "pangram": "Portez ce vieux whisky au juge blond qui fume",
+    "loadFailed": "Impossible de charger cette police.",
+    "loading": "Chargement de la police…",
+    "sample": "Texte d'exemple"
+  },
+  "text": {
+    "reading": "Lecture du fichier…",
+    "truncated": "… affichage du début de {{size}}",
+    "moreLines_one": "… {{count}} ligne de plus",
+    "moreLines_other": "… {{count}} lignes de plus"
+  },
+  "loadingAudio": "Chargement de l'audio…",
+  "loadingModel": "Chargement du modèle…",
+  "videoUnsupported": "Ce format vidéo ne peut pas être lu ici.",
+  "noPreview": "Pas d'aperçu pour ce type de fichier"
+}

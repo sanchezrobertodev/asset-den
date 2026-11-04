@@ -1,0 +1,70 @@
+{
+  "titles": {
+    "library": "Bibliothèque",
+    "favorites": "Favoris",
+    "collections": "Collections",
+    "duplicates": "Doublons",
+    "insights": "Statistiques"
+  },
+  "favoritesIn": "<0>Favoris</0> <1>dans</1> <2/>",
+  "searchPlaceholder": "Chercher des ressources, {{hash}}tags, {{type}}",
+  "import": "Importer",
+  "similar": {
+    "stop": "Ne plus afficher les images similaires à {{name}}",
+    "label": "Similaires à {{name}}",
+    "notAnalysed_one": "{{count}} image pas encore analysée",
+    "notAnalysed_other": "{{count}} images pas encore analysées",
+    "strict": "Strict",
+    "loose": "Large",
+    "slider": "Écart permis entre images similaires",
+    "sliderValue_one": "Jusqu'à {{max}} bits sur 64 d'écart, {{count}} image",
+    "sliderValue_other": "Jusqu'à {{max}} bits sur 64 d'écart, {{count}} images"
+  },
+  "sort": {
+    "label": "Trier",
+    "name": "Nom",
+    "kind": "Type",
+    "size": "Taille",
+    "mtime": "Modifié",
+    "folder": "Dossier",
+    "descending": "Décroissant (cliquer pour croissant)",
+    "ascending": "Croissant (cliquer pour décroissant)"
+  },
+  "all": "Tout",
+  "includeSubfolders": "Inclure les sous-dossiers",
+  "clearSearch": "Effacer la recherche",
+  "query": "« {{query}} »",
+  "assets_one": "{{count}} ressource",
+  "assets_other": "{{count}} ressources",
+  "assetsInFolders_one": "{{assets}} dans {{count}} dossier",
+  "assetsInFolders_other": "{{assets}} dans {{count}} dossiers",
+  "subfolders": "Sous-dossiers",
+  "moreSubfolders_one": "+{{count}} autre dans le menu du dossier",
+  "moreSubfolders_other": "+{{count}} autres dans le menu du dossier",
+  "grouping": "Regroupement",
+  "byFolder": "Par dossier",
+  "allTogether": "Tout ensemble",
+  "layout": "Disposition",
+  "grid": "Grille",
+  "list": "Liste",
+  "thumbSize": "Taille des miniatures",
+  "pixelatedOn": "Mise à l'échelle pixel art activée",
+  "pixelatedOff": "Mise à l'échelle pixel art désactivée",
+  "saveSmart": {
+    "button": "Créer une collection intelligente",
+    "name": "Nom de la collection intelligente",
+    "placeholder": "Nom de la collection",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "folderPath": "Chemin du dossier",
+  "foldersIn": "Dossiers dans {{name}}",
+  "wholeLibrary": "Afficher toute la bibliothèque",
+  "inFolder": "Dans {{name}}",
+  "recentFolders": "Dossiers récents",
+  "keys": {
+    "move": "{{keys}} naviguer",
+    "open": "{{keys}} ouvrir",
+    "parent": "{{keys}} dossier parent"
+  }
+}

@@ -151,7 +151,7 @@ function ThemePicker() {
                 <ThemePreview id={id} />
               )}
             </span>
-            <span className="truncate px-0.5">{themeName(id)}</span>
+            <span className="line-clamp-2 px-0.5">{themeName(id)}</span>
           </button>
         );
       })}

@@ -1,0 +1,50 @@
+{
+  "presets": {
+    "tiny": "极小 ≤ 64px",
+    "small": "小 ≤ 256px",
+    "textures": "纹理 ≥ 1024px"
+  },
+  "dates": {
+    "any": "不限",
+    "hours_other": "{{count}} 小时",
+    "days_other": "{{count}} 天",
+    "years_other": "{{count}} 年"
+  },
+  "clear": "清除",
+  "clearGroup": "清除{{group}}",
+  "any": "不限",
+  "button_zero": "更多筛选",
+  "button_other": "筛选 · {{count}}",
+  "title": "筛选",
+  "clearAll": "全部清除",
+  "close": "关闭筛选",
+  "groups": {
+    "extension": "扩展名",
+    "imageSize": "图片尺寸",
+    "audioLength": "音频时长",
+    "sizeDate": "文件大小和日期",
+    "tags": "标签",
+    "rating": "评分",
+    "colour": "颜色"
+  },
+  "extFiles_other": ".{{ext}}，{{count}} 个文件",
+  "squareOnly": "仅限正方形",
+  "minWidth": "最小宽度",
+  "maxWidth": "最大宽度",
+  "minHeight": "最小高度",
+  "maxHeight": "最大高度",
+  "dimsNote": "单位为像素。仅匹配尺寸已知的图片。",
+  "minSeconds": "最短（秒）",
+  "maxSeconds": "最长（秒）",
+  "lengthNote": "仅匹配时长已知的音频文件。",
+  "minSize": "最小（MB）",
+  "maxSize": "最大（MB）",
+  "modifiedIn": "修改于过去",
+  "untaggedOnly": "仅限无标签",
+  "tagsNote": "匹配带有任一所选标签的资源。",
+  "stars_other": "{{count}} 星",
+  "starsAtLeast_other": "{{count}} 星及以上",
+  "customColour": "自定义颜色",
+  "custom": "自定义",
+  "colourNote": "主要颜色之一为此颜色的图片。搜索时可用 {{nameExample}} 或 {{hexExample}}。"
+}

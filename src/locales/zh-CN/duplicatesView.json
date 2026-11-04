@@ -1,0 +1,52 @@
+{
+  "sorts": {
+    "space": "可释放空间",
+    "copies": "副本最多",
+    "newest": "最新",
+    "name": "名称"
+  },
+  "fullScreen": "全屏：{{name}}",
+  "keepLabel": "保留 {{folder}} 中的 {{name}}",
+  "keeping": "✓ 保留",
+  "keepThis": "保留这个",
+  "details": {
+    "folder": "文件夹",
+    "size": "大小",
+    "modified": "修改时间",
+    "tags": "标签",
+    "collections": "合集",
+    "none": "无"
+  },
+  "groupsLabel": "重复组",
+  "title": "重复项",
+  "groups_other": "{{count}} 个重复组",
+  "shownGroups_other": "{{shown}} / {{count}} 个重复组",
+  "checking": "正在检查大小相同的文件…",
+  "identicalFrees": "这些文件内容完全相同。移除多余的副本可释放 {{size}}。",
+  "identical": "这些文件内容完全相同。",
+  "nothing": "没有需要检查的内容。",
+  "sort": "排序",
+  "whichKeep": "要保留哪一个？",
+  "bothIdentical": "两个文件逐字节完全相同（各 {{size}}）。",
+  "allIdentical_other": "全部 {{count}} 个文件逐字节完全相同（各 {{size}}）。",
+  "movesTo_other": "被移除副本的标签、收藏和合集会转移到保留的那一个。",
+  "copyToKeep": "要保留的副本",
+  "groupOf_other": "第 {{index}} 组，共 {{count}} 组",
+  "notDuplicates": "不是重复项",
+  "keepBoth": "两个都保留",
+  "keepAll": "全部保留",
+  "noMatchTitle": "没有符合这些筛选条件的重复组",
+  "noMatchHint": "请尝试移除类型、搜索或筛选。",
+  "clearFilters": "清除搜索和筛选",
+  "emptyTitle": "没有重复项了",
+  "emptyHint": "文件发生变化时，Mimikit 会重新检查。",
+  "trash": {
+    "move": "将 {{name}} 移到回收站",
+    "moveCopies_other": "将 {{count}} 个副本移到回收站",
+    "ask": "将 {{name}} 移到回收站？",
+    "askCopies_other": "将 {{count}} 个副本移到回收站？",
+    "cancel": "取消",
+    "confirm": "移到回收站",
+    "body_other": "{{names}} 将移到系统回收站，之后可从中恢复。其标签、收藏和合集会转移到 <0>{{keep}}</0>。Mimikit 会先确认这些文件仍然完全相同。"
+  }
+}

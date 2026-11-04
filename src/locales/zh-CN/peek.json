@@ -1,0 +1,53 @@
+{
+  "previewFailed": {
+    "title": "无法预览此文件",
+    "body": "文件可能已损坏，或使用了 Mimikit 无法读取的格式变体。"
+  },
+  "open": "打开",
+  "showInFolder": "在文件夹中显示",
+  "pathCopied": "已复制路径",
+  "copyFailed": "无法复制到剪贴板。",
+  "identicalTo": "与 {{names}} 完全相同",
+  "review": "检查 →",
+  "meta": {
+    "dimensions": "尺寸",
+    "audio": "音频",
+    "size": "大小",
+    "format": "格式",
+    "modified": "修改时间"
+  },
+  "tags": {
+    "label": "标签",
+    "remove": "移除标签 {{tag}}",
+    "add": "添加标签",
+    "placeholder": "添加标签，按 Enter"
+  },
+  "rating": {
+    "label": "评分",
+    "clear": "清除评分（{{key}}）",
+    "rate_other": "评为 {{count}} 星（{{key}}）",
+    "stars_other": "{{count}} 星",
+    "mixed": "不一"
+  },
+  "note": {
+    "label": "备注",
+    "placeholder": "添加备注"
+  },
+  "collections": {
+    "label": "合集",
+    "new": "+ 新建合集"
+  },
+  "details": "详细信息",
+  "previous": "上一个（{{key}}）",
+  "next": "下一个（{{key}}）",
+  "position": "{{index}} / {{total}}",
+  "fullScreen": "全屏",
+  "close": "关闭（{{key}}）",
+  "selected_other": "已选择 {{count}} 个",
+  "selectionSize": "{{size}} · 可一起拖出",
+  "favoriteAll": "全部收藏",
+  "unfavoriteAll": "全部取消收藏",
+  "copyPath": "复制路径",
+  "favorite": "收藏（{{key}}）",
+  "findSimilar": "查找相似"
+}

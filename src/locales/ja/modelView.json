@@ -1,0 +1,9 @@
+{
+  "loading": "モデルを読み込んでいます…",
+  "triangles_other": "三角面 {{count}}",
+  "vertices_other": "頂点 {{count}}",
+  "clips_other": "アニメーション {{count}}",
+  "wireframe": "ワイヤーフレーム",
+  "animate": "アニメーション",
+  "resetView": "表示をリセット"
+}

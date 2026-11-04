@@ -1,0 +1,24 @@
+{
+  "undo": "元に戻す",
+  "dismiss": "閉じる",
+  "scanning": "{{names}}をスキャンしています…",
+  "scanFinished_other": "スキャンが完了しました。ライブラリには{{count}}個のファイルがあります。",
+  "skipToAssets": "アセットへスキップ",
+  "empty": {
+    "scanningTitle": "スキャンしています…",
+    "scanningBody": "インデックスが作成されたアセットから順にここに表示されます。",
+    "noDirectFilesIn": "「{{name}}」の直下にファイルはありません",
+    "noDirectFilesHere": "このフォルダーの直下にファイルはありません",
+    "inSubfolders": "アセットはサブフォルダーにあります。",
+    "includeSubfolders": "サブフォルダーを含める",
+    "noSimilarTitle": "「{{name}}」に似た画像はありません",
+    "noSimilarBody_other": "差が{{count}}ビット以内の解析済み画像はほかにありません。上で一致の条件をゆるめてみてください。",
+    "backToLibrary": "ライブラリに戻る",
+    "noFavoritesTitle": "お気に入りはまだありません",
+    "noFavoritesBody": "アセットで{{key}}キーを押すと、ここに追加されます。",
+    "noMatchesTitle": "これらのフィルターに一致するアセットはありません",
+    "noMatchesBody": "種類、フォルダー、検索のフィルターを外してみてください。",
+    "clearFilters": "検索とフィルターをクリア"
+  },
+  "allShortcuts": "すべてのショートカット"
+}

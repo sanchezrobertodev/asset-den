@@ -1,0 +1,31 @@
+{
+  "kinds": {
+    "image": "Images",
+    "audio": "Audio",
+    "model": "Modèles 3D",
+    "font": "Polices",
+    "video": "Vidéo",
+    "text": "Texte et données",
+    "other": "Autres"
+  },
+  "units": {
+    "b": "o",
+    "kb": "Ko",
+    "mb": "Mo",
+    "gb": "Go",
+    "tb": "To"
+  },
+  "time": {
+    "never": "—",
+    "justNow": "À l'instant",
+    "yesterday": "Hier",
+    "relativeStyle": "short"
+  },
+  "audio": {
+    "mono": "mono",
+    "stereo": "stéréo",
+    "channels": "{{count}} canaux",
+    "khz": "{{value}} kHz",
+    "bits": "{{bits}} bits"
+  }
+}

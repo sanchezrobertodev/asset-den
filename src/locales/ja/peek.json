@@ -1,0 +1,53 @@
+{
+  "previewFailed": {
+    "title": "このファイルをプレビューできませんでした",
+    "body": "破損しているか、Mimikitが読み込めない形式の可能性があります。"
+  },
+  "open": "開く",
+  "showInFolder": "フォルダーに表示",
+  "pathCopied": "パスをコピーしました",
+  "copyFailed": "クリップボードにコピーできませんでした。",
+  "identicalTo": "{{names}}と同一",
+  "review": "確認 →",
+  "meta": {
+    "dimensions": "寸法",
+    "audio": "オーディオ",
+    "size": "サイズ",
+    "format": "形式",
+    "modified": "更新日時"
+  },
+  "tags": {
+    "label": "タグ",
+    "remove": "タグ「{{tag}}」を削除",
+    "add": "タグを追加",
+    "placeholder": "タグを入力してEnter"
+  },
+  "rating": {
+    "label": "評価",
+    "clear": "評価をクリア（{{key}}）",
+    "rate_other": "星{{count}}つで評価（{{key}}）",
+    "stars_other": "星{{count}}つ",
+    "mixed": "混在"
+  },
+  "note": {
+    "label": "メモ",
+    "placeholder": "メモを追加"
+  },
+  "collections": {
+    "label": "コレクション",
+    "new": "+ 新しいコレクション"
+  },
+  "details": "詳細",
+  "previous": "前へ（{{key}}）",
+  "next": "次へ（{{key}}）",
+  "position": "{{index}}/{{total}}",
+  "fullScreen": "全画面",
+  "close": "閉じる（{{key}}）",
+  "selected_other": "{{count}}個を選択中",
+  "selectionSize": "{{size}} · まとめてドラッグできます",
+  "favoriteAll": "すべてお気に入りに追加",
+  "unfavoriteAll": "すべてお気に入りから外す",
+  "copyPath": "パスをコピー",
+  "favorite": "お気に入り（{{key}}）",
+  "findSimilar": "類似を検索"
+}

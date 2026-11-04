@@ -1,0 +1,52 @@
+{
+  "sorts": {
+    "space": "解放できる容量",
+    "copies": "コピーが多い順",
+    "newest": "新しい順",
+    "name": "名前"
+  },
+  "fullScreen": "全画面：{{name}}",
+  "keepLabel": "{{folder}}の「{{name}}」を残す",
+  "keeping": "✓ 残す",
+  "keepThis": "これを残す",
+  "details": {
+    "folder": "フォルダー",
+    "size": "サイズ",
+    "modified": "更新日時",
+    "tags": "タグ",
+    "collections": "コレクション",
+    "none": "なし"
+  },
+  "groupsLabel": "重複グループ",
+  "title": "重複",
+  "groups_other": "{{count}}件の重複グループ",
+  "shownGroups_other": "{{count}}件中{{shown}}件の重複グループ",
+  "checking": "同じサイズのファイルを確認しています…",
+  "identicalFrees": "内容が同一のファイルです。余分なコピーを削除すると{{size}}が空きます。",
+  "identical": "内容が同一のファイルです。",
+  "nothing": "確認するものはありません。",
+  "sort": "並べ替え",
+  "whichKeep": "どれを残しますか？",
+  "bothIdentical": "2つのファイルはバイト単位で同一です（各{{size}}）。",
+  "allIdentical_other": "{{count}}個のファイルはすべてバイト単位で同一です（各{{size}}）。",
+  "movesTo_other": "削除したコピーのタグ、お気に入り、コレクションは、残すファイルに移ります。",
+  "copyToKeep": "残すコピー",
+  "groupOf_other": "グループ{{index}}/{{count}}",
+  "notDuplicates": "重複ではない",
+  "keepBoth": "両方残す",
+  "keepAll": "すべて残す",
+  "noMatchTitle": "これらのフィルターに一致する重複グループはありません",
+  "noMatchHint": "種類、検索、フィルターを外してみてください。",
+  "clearFilters": "検索とフィルターをクリア",
+  "emptyTitle": "重複は残っていません",
+  "emptyHint": "ファイルが変更されるたびに、Mimikitが再確認します。",
+  "trash": {
+    "move": "「{{name}}」をごみ箱に移動",
+    "moveCopies_other": "{{count}}個のコピーをごみ箱に移動",
+    "ask": "「{{name}}」をごみ箱に移動しますか？",
+    "askCopies_other": "{{count}}個のコピーをごみ箱に移動しますか？",
+    "cancel": "キャンセル",
+    "confirm": "ごみ箱に移動",
+    "body_other": "{{names}}はシステムのごみ箱に移動され、そこから復元できます。タグ、お気に入り、コレクションは<0>{{keep}}</0>に移ります。Mimikitは先に、ファイルがまだ同一かどうかを確認します。"
+  }
+}

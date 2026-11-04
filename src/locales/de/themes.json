@@ -1,0 +1,20 @@
+{
+  "system": "System",
+  "light": "Hell",
+  "dark": "Dunkel",
+  "black": "Schwarz",
+  "midnight": "Mitternacht",
+  "sepia": "Sepia",
+  "hc-dark": "Hoher Kontrast dunkel",
+  "hc-light": "Hoher Kontrast hell",
+  "accents": {
+    "green": "Grün",
+    "teal": "Türkis",
+    "blue": "Blau",
+    "violet": "Violett",
+    "pink": "Pink",
+    "red": "Rot",
+    "orange": "Orange",
+    "amber": "Bernstein"
+  }
+}
