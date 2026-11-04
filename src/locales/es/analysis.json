@@ -1,0 +1,22 @@
+{
+  "started": "Analizando imágenes…",
+  "paused": "Análisis de imágenes en pausa.",
+  "resumed": "Se reanudó el análisis de imágenes.",
+  "finished_one": "Terminó el análisis de imágenes. Se analizó {{count}} imagen.",
+  "finished_other": "Terminó el análisis de imágenes. Se analizaron {{count}} imágenes.",
+  "stopped_one": "Se detuvo el análisis de imágenes. {{done}} de {{count}} imagen analizada.",
+  "stopped_other": "Se detuvo el análisis de imágenes. {{done}} de {{count}} imágenes analizadas.",
+  "pausedTitle": "Análisis en pausa",
+  "runningTitle": "Analizando imágenes",
+  "resume": "Reanudar el análisis de imágenes",
+  "pause": "Pausar el análisis de imágenes",
+  "cancel": "Cancelar el análisis de imágenes",
+  "progress": "{{done}} de {{total}}",
+  "pending_one": "{{count}} imagen aún no está analizada — los resultados solo cubren {{covered}}.",
+  "pending_other": "{{count}} imágenes aún no están analizadas — los resultados solo cubren {{covered}}.",
+  "covered_one": "la única que sí lo está",
+  "covered_other": "las {{count}} que sí lo están",
+  "analysingNow": "Analizando ahora…",
+  "resumeAnalysis": "Reanudar análisis",
+  "analyseNow": "Analizar ahora"
+}

@@ -207,7 +207,7 @@ export function FilterButton() {
                   {t("filterPanel.squareOnly")}
                 </Chip>
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <NumField label={t("filterPanel.minWidth")} value={f.minW} onChange={(v) => setFilters({ minW: v })} />
                 <NumField label={t("filterPanel.maxWidth")} value={f.maxW} onChange={(v) => setFilters({ maxW: v })} />
                 <NumField label={t("filterPanel.minHeight")} value={f.minH} onChange={(v) => setFilters({ minH: v })} />

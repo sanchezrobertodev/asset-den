@@ -1,0 +1,57 @@
+{
+  "image": {
+    "decoding": "Decodificando…",
+    "animateTitle": "Reproducir la imagen como sprite sheet",
+    "animate": "Animar",
+    "cantDisplay": "La vista web no puede mostrar esta imagen.",
+    "zoom": "{{percent}}%",
+    "zoomShown": "mostrada al {{percent}}%",
+    "zoomHint": "rueda para hacer zoom, arrastra para desplazarte"
+  },
+  "export": {
+    "pickFolder": "Exportar los fotogramas de {{name}} a…",
+    "failed_one": "Se exportó {{count}} fotograma. {{failed}} con error: {{errors}}",
+    "failed_other": "Se exportaron {{count}} fotogramas. {{failed}} con error: {{errors}}",
+    "allEmpty": "Todos los fotogramas están vacíos, así que no se exportó nada.",
+    "done_one": "Se exportó {{count}} fotograma a {{folder}}",
+    "done_other": "Se exportaron {{count}} fotogramas a {{folder}}",
+    "showInFolder": "Mostrar en la carpeta",
+    "button": "Exportar fotogramas…",
+    "skipEmpty": "Omitir fotogramas totalmente transparentes",
+    "chooseFolder": "Elegir carpeta…"
+  },
+  "sprite": {
+    "slicing": "Dividiendo…",
+    "frameLabel": "{{name}}, fotograma {{frame}} de {{total}}",
+    "previousFrame": "Fotograma anterior",
+    "pause": "Pausar",
+    "play": "Reproducir",
+    "nextFrame": "Fotograma siguiente",
+    "columns": "Columnas",
+    "rows": "Filas",
+    "frame": "fotograma",
+    "frameWidth": "Ancho del fotograma en píxeles",
+    "frameHeight": "Alto del fotograma en píxeles",
+    "fps": "fps",
+    "framesPerSecond": "Fotogramas por segundo",
+    "loop": "Repetir",
+    "pixelTitle": "Escalado de pixel art",
+    "pixel": "Píxel"
+  },
+  "font": {
+    "pangram": "El veloz murciélago hindú comía feliz cardillo y kiwi. La cigüeña tocaba el saxofón detrás del palenque de paja.",
+    "loadFailed": "No se pudo cargar esta fuente.",
+    "loading": "Cargando fuente…",
+    "sample": "Texto de muestra"
+  },
+  "text": {
+    "reading": "Leyendo…",
+    "truncated": "… se muestra el inicio de {{size}}",
+    "moreLines_one": "… {{count}} línea más",
+    "moreLines_other": "… {{count}} líneas más"
+  },
+  "loadingAudio": "Cargando audio…",
+  "loadingModel": "Cargando modelo…",
+  "videoUnsupported": "Este formato de video no se puede reproducir aquí.",
+  "noPreview": "No hay vista previa para este tipo de archivo"
+}

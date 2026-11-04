@@ -103,6 +103,23 @@ export function setLocale(code: string, format = code) {
   nf = new Intl.NumberFormat(region);
 }
 
+/**
+ * The best of `available` for the OS languages in `wanted`, in order, or "en": the same tag, else the same language
+ * (any Spanish gets es, any Portuguese pt-BR). Traditional Chinese (zh-Hant, zh-TW, zh-HK, zh-MO) doesn't get
+ * Simplified.
+ */
+export function matchLocale(wanted: readonly string[], available: readonly string[]): string {
+  const base = (l: string) => l.split("-")[0].toLowerCase();
+  for (const w of wanted) {
+    const same = available.find((a) => a.toLowerCase() === w.toLowerCase());
+    if (same) return same;
+    if (base(w) === "zh" && !/-hans(-|$)/i.test(w) && /-(hant|tw|hk|mo)(-|$)/i.test(w)) continue;
+    const near = available.find((a) => base(a) === base(w));
+    if (near) return near;
+  }
+  return "en";
+}
+
 export const locale = () => lang;
 /** The locale for Intl formatters. */
 export const formatLocale = () => region;
