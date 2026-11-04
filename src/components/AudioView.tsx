@@ -3,7 +3,7 @@ import { Pause, Play, Repeat } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { errorText, fileUrl } from "../api";
-import { reducedMotion } from "../lib/prefs";
+import { onThemeColors, reducedMotion, themeColor } from "../lib/prefs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { toggleChip, usePreviewFailure } from "./Viewers";
@@ -22,13 +22,12 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
     if (!box.current) return;
     setPlaying(false);
     let live = true;
-    const css = getComputedStyle(document.documentElement);
     const w = WaveSurfer.create({
       container: box.current,
       url: fileUrl(asset.path),
       height: full ? 180 : 90,
-      waveColor: css.getPropertyValue("--line-x").trim(),
-      progressColor: css.getPropertyValue("--accent").trim(),
+      waveColor: themeColor("--line-x"),
+      progressColor: themeColor("--accent"),
       cursorWidth: 0,
       barWidth: full ? 4 : 3,
       barGap: full ? 3 : 2,
@@ -50,6 +49,9 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
       w.destroy();
     };
   }, [asset.id, asset.path, asset.mtime, full, fail]);
+
+  // A theme or accent change repaints the waveform without reloading the audio.
+  useEffect(() => onThemeColors(() => ws.current?.setOptions({ waveColor: themeColor("--line-x"), progressColor: themeColor("--accent") })), []);
 
   const fmt = (s: number) => (s < 10 && s % 1 ? `0:0${s.toFixed(1)}` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`);
   return (

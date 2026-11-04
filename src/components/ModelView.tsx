@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { errorText } from "../api";
 import { addLights, dispose, frame, loadModel, stats } from "../lib/models";
-import { reducedMotion } from "../lib/prefs";
+import { onThemeColors, reducedMotion, themeColor } from "../lib/prefs";
 import type { Asset } from "../types";
 import { chip, Note, toggleChip, usePreviewFailure } from "./Viewers";
 
@@ -36,6 +36,19 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
     const clock = new THREE.Clock();
     let mixer: THREE.AnimationMixer | null = null;
     let object: THREE.Object3D | null = null;
+    let grid: THREE.GridHelper | null = null;
+    // The grid bakes its colours in, so a theme change builds a new one.
+    const placeGrid = (size: number, y: number) => {
+      if (grid) {
+        scene.remove(grid);
+        grid.dispose();
+      }
+      grid = new THREE.GridHelper(size, 20, new THREE.Color(themeColor("--line-x")), new THREE.Color(themeColor("--line")));
+      grid.position.y = y;
+      scene.add(grid);
+    };
+    let regrid = () => {};
+    const offTheme = onThemeColors(() => regrid());
     let raf = 0;
     let live = true;
 
@@ -64,10 +77,9 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
         scene.add(o);
         const r = frame(camera, o, controls.target);
         reset.current = () => frame(camera, o, controls.target);
-        const css = getComputedStyle(document.documentElement);
-        const grid = new THREE.GridHelper(r * 4, 20, new THREE.Color(css.getPropertyValue("--line-x").trim()), new THREE.Color(css.getPropertyValue("--line").trim()));
-        grid.position.y = new THREE.Box3().setFromObject(o).min.y;
-        scene.add(grid);
+        const floor = new THREE.Box3().setFromObject(o).min.y;
+        regrid = () => placeGrid(r * 4, floor);
+        regrid();
         if (animations.length) {
           mixer = new THREE.AnimationMixer(o);
           mixer.clipAction(animations[0]).play();
@@ -84,6 +96,7 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
 
     return () => {
       live = false;
+      offTheme();
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
