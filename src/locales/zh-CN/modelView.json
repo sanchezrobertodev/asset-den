@@ -1,0 +1,9 @@
+{
+  "loading": "正在加载模型…",
+  "triangles_other": "{{count}} 三角面",
+  "vertices_other": "{{count}} 顶点",
+  "clips_other": "{{count}} 动画",
+  "wireframe": "线框",
+  "animate": "播放动画",
+  "resetView": "重置视图"
+}

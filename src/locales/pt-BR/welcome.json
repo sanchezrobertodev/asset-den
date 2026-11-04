@@ -1,0 +1,19 @@
+{
+  "title": "Boas-vindas ao Mimikit",
+  "intro": "Escolha uma pasta de recursos do seu jogo: o Mimikit indexa cada sprite, som, modelo, fonte e vídeo dela e continua de olho nas mudanças.",
+  "importFolder": "Importar uma pasta",
+  "readOnly": "Você pode adicionar mais pastas depois. O Mimikit só lê essas pastas: seus arquivos nunca são alterados.",
+  "tips": "Dicas",
+  "drag": {
+    "title": "Arraste para a sua engine",
+    "body": "Solte qualquer card no Unity, no Godot ou em uma pasta para copiar o arquivo para lá."
+  },
+  "preview": {
+    "title": "Visualize sem sair daqui",
+    "body": "Selecione um recurso e pressione {{peekKey}} para ver, ou Enter para tela cheia."
+  },
+  "search": {
+    "title": "Encontre qualquer coisa",
+    "body": "Busque nomes, {{tagExample}}, {{typeExample}} ou pastas de qualquer lugar."
+  }
+}

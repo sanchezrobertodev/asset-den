@@ -1,0 +1,20 @@
+{
+  "system": "システム",
+  "light": "ライト",
+  "dark": "ダーク",
+  "black": "ブラック",
+  "midnight": "ミッドナイト",
+  "sepia": "セピア",
+  "hc-dark": "ハイコントラスト（ダーク）",
+  "hc-light": "ハイコントラスト（ライト）",
+  "accents": {
+    "green": "緑",
+    "teal": "青緑",
+    "blue": "青",
+    "violet": "バイオレット",
+    "pink": "ピンク",
+    "red": "赤",
+    "orange": "オレンジ",
+    "amber": "アンバー"
+  }
+}

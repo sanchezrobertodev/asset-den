@@ -1,0 +1,65 @@
+{
+  "titles": {
+    "library": "ライブラリ",
+    "favorites": "お気に入り",
+    "collections": "コレクション",
+    "duplicates": "重複",
+    "insights": "統計"
+  },
+  "favoritesIn": "<2/> <1>内の</1> <0>お気に入り</0>",
+  "searchPlaceholder": "アセット、{{hash}}タグ、{{type}}を検索",
+  "import": "インポート",
+  "similar": {
+    "stop": "「{{name}}」に似た画像の表示をやめる",
+    "label": "{{name}}に類似",
+    "notAnalysed_other": "{{count}}枚の画像が未解析",
+    "strict": "厳密",
+    "loose": "大まか",
+    "slider": "類似画像として許容する違い",
+    "sliderValue_other": "64ビット中最大{{max}}ビットの違い、{{count}}枚"
+  },
+  "sort": {
+    "label": "並べ替え",
+    "name": "名前",
+    "kind": "種類",
+    "size": "サイズ",
+    "mtime": "更新日時",
+    "folder": "フォルダー",
+    "descending": "降順（クリックで昇順）",
+    "ascending": "昇順（クリックで降順）"
+  },
+  "all": "すべて",
+  "includeSubfolders": "サブフォルダーを含める",
+  "clearSearch": "検索をクリア",
+  "query": "「{{query}}」",
+  "assets_other": "{{count}}個のアセット",
+  "assetsInFolders_other": "{{count}}個のフォルダーに{{assets}}",
+  "subfolders": "サブフォルダー",
+  "moreSubfolders_other": "フォルダーメニューにあと{{count}}個",
+  "grouping": "グループ化",
+  "byFolder": "フォルダー別",
+  "allTogether": "まとめて",
+  "layout": "レイアウト",
+  "grid": "グリッド",
+  "list": "リスト",
+  "thumbSize": "サムネイルのサイズ",
+  "pixelatedOn": "ドット絵の拡大表示：オン",
+  "pixelatedOff": "ドット絵の拡大表示：オフ",
+  "saveSmart": {
+    "button": "スマートコレクションとして保存",
+    "name": "スマートコレクション名",
+    "placeholder": "コレクション名",
+    "save": "保存",
+    "cancel": "キャンセル"
+  },
+  "folderPath": "フォルダーのパス",
+  "foldersIn": "{{name}}内のフォルダー",
+  "wholeLibrary": "ライブラリ全体を表示",
+  "inFolder": "{{name}}内",
+  "recentFolders": "最近のフォルダー",
+  "keys": {
+    "move": "{{keys}} 移動",
+    "open": "{{keys}} 開く",
+    "parent": "{{keys}} 親フォルダー"
+  }
+}

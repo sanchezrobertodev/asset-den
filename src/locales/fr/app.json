@@ -1,0 +1,26 @@
+{
+  "undo": "Annuler",
+  "dismiss": "Fermer",
+  "scanning": "Scan de {{names}}…",
+  "scanFinished_one": "Scan terminé. {{count}} fichier dans la bibliothèque.",
+  "scanFinished_other": "Scan terminé. {{count}} fichiers dans la bibliothèque.",
+  "skipToAssets": "Aller aux ressources",
+  "empty": {
+    "scanningTitle": "Scan en cours…",
+    "scanningBody": "Les ressources apparaissent ici dès qu'elles sont indexées.",
+    "noDirectFilesIn": "Aucun fichier directement dans {{name}}",
+    "noDirectFilesHere": "Aucun fichier directement dans ce dossier",
+    "inSubfolders": "Ses ressources sont dans des sous-dossiers.",
+    "includeSubfolders": "Inclure les sous-dossiers",
+    "noSimilarTitle": "Rien ne ressemble à {{name}}",
+    "noSimilarBody_one": "Aucune autre image analysée n'en diffère de {{count}} bit ou moins. Essayez une correspondance plus large ci-dessus.",
+    "noSimilarBody_other": "Aucune autre image analysée n'en diffère de {{count}} bits ou moins. Essayez une correspondance plus large ci-dessus.",
+    "backToLibrary": "Retour à la bibliothèque",
+    "noFavoritesTitle": "Aucun favori pour l'instant",
+    "noFavoritesBody": "Appuyez sur {{key}} sur une ressource pour l'ajouter ici.",
+    "noMatchesTitle": "Aucune ressource ne correspond à ces filtres",
+    "noMatchesBody": "Essayez de retirer un type, un dossier ou un filtre de recherche.",
+    "clearFilters": "Effacer la recherche et les filtres"
+  },
+  "allShortcuts": "tous les raccourcis"
+}

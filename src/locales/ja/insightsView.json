@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "ファイル数",
+    "totalSize": "合計サイズ",
+    "untagged": "タグなし",
+    "showUntagged": "タグなしを表示 →",
+    "duplicates": "重複グループ",
+    "reviewDuplicates": "重複を確認 →",
+    "allClear": "問題なし"
+  },
+  "storageByType": "種類別の容量",
+  "total": "合計{{size}}",
+  "largest": "大きいファイル",
+  "folders": "フォルダー"
+}

@@ -1,0 +1,87 @@
+{
+  "title": "設定",
+  "sections": {
+    "appearance": "外観",
+    "library": "ライブラリ",
+    "backups": "バックアップ",
+    "storage": "ストレージ",
+    "updates": "アップデート",
+    "about": "情報"
+  },
+  "appearance": {
+    "language": "言語",
+    "languageHint": "切り替えるとウィンドウが再読み込みされます。",
+    "languageSystem": "システム（{{name}}）",
+    "theme": "テーマ",
+    "accent": "アクセントカラー",
+    "accentHint": "ボタン、選択、フォーカスリングに使われます。",
+    "thumbSize": "サムネイルのサイズ",
+    "thumbSizeHint": "グリッドのカードの大きさです。グリッド上部のスライダーでも変更できます。",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "ドット絵の拡大表示",
+    "pixelatedHint": "画像を拡大するとき、なめらかにせず、ピクセルをくっきり表示します。"
+  },
+  "updates": {
+    "checkOnLaunch": "起動時にアップデートを確認",
+    "checkOnLaunchHint": "起動の数秒後にバックグラウンドで確認します。確認なしにインストールされることはありません。"
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "オープンソース、MITライセンス",
+    "releases": "リリース",
+    "source": "ソースコード",
+    "support": "Mimikitを支援",
+    "supportHint": "無料です。チップが開発を支えています。"
+  },
+  "ignored": {
+    "title": "無視するフォルダー",
+    "hint": "これらの名前のフォルダーは、隠しフォルダー、node_modules、.metaファイルと同じように、すべてのライブラリフォルダーでスキップされます。",
+    "remove": "「{{name}}」の無視をやめる",
+    "addAnother": "別の名前を入力してEnter",
+    "placeholder": "フォルダー名（Backup、_oldなど）を入力してEnter",
+    "invalid": "パスではなく、フォルダー名を1つ入力してください。",
+    "saved": "保存しました。ライブラリ内の既存のファイルに適用するには、再スキャンしてください。",
+    "pending": "変更は次の再スキャンで適用されます。ファイルはディスクに残ります。",
+    "rescanning": "再スキャンしています…",
+    "rescan": "今すぐ再スキャン"
+  },
+  "analysis": {
+    "underMinute": "1分未満",
+    "minutes_other": "約{{count}}分",
+    "hours_other": "約{{count}}時間",
+    "title": "画像解析",
+    "progress_other": "「類似を検索」と色による検索用に、<0>{{count}}</0>枚中<0>{{done}}</0>枚の画像を解析済みです。",
+    "remaining_other": "残り{{count}}枚は、空いているCPUを使って{{time}}で終わります。閲覧した画像はその都度解析されます。",
+    "asYouGo": "閲覧した画像はその都度解析されます。",
+    "resume": "再開",
+    "pause": "一時停止",
+    "analyse": "画像を解析",
+    "keep": "新しい画像や変更された画像を自動で解析",
+    "keepHint": "Mimikitを開いている間、追加・変更された画像を解析します。最初の完全な解析が終わると自動でオンになります。"
+  },
+  "cancel": "キャンセル",
+  "backups": {
+    "pickTitle": "ライブラリのバックアップの保存先…",
+    "saved": "「{{name}}」を「{{folder}}」に保存しました。",
+    "restoreTitle": "「{{name}}」を復元しますか？",
+    "restoreHint": "現在のライブラリ（フォルダー、タグ、評価、メモ、コレクション、スプライトグリッド）が置き換えられます。現在のライブラリは先にバックアップフォルダーに保存されます。完了するとMimikitが再起動します。",
+    "restoring": "復元しています…",
+    "restoreRestart": "復元して再起動",
+    "library": "ライブラリのバックアップ",
+    "libraryHint": "フォルダー、タグ、評価、メモ、コレクション、スプライトグリッドが対象です。アセットファイル自体は含まれません。",
+    "backingUp": "バックアップしています…",
+    "backUp": "バックアップ…",
+    "restore": "復元…",
+    "auto": "自動バックアップ",
+    "autoHint": "Mimikitを開いたときに1日1回作成されます。最新の5つが保持されます。",
+    "showFolder": "フォルダーを表示"
+  },
+  "cache": {
+    "clearedCache": "サムネイルキャッシュをクリアしました。サムネイルは閲覧時に再作成されます。",
+    "cleared": "{{size}}をクリアしました。サムネイルは閲覧時に再作成されます。",
+    "title": "サムネイルキャッシュ",
+    "hint": "Mimikitが作成したサムネイルとプレビュー（<0>{{size}}</0>）です。アセットファイルには影響しません。",
+    "clearing": "クリアしています…",
+    "clear": "サムネイルキャッシュをクリア"
+  }
+}

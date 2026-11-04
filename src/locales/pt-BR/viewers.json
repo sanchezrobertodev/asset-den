@@ -1,0 +1,60 @@
+{
+  "image": {
+    "decoding": "Decodificando…",
+    "animateTitle": "Reproduzir a imagem como sprite sheet",
+    "animate": "Animar",
+    "cantDisplay": "A webview não consegue exibir esta imagem.",
+    "zoom": "{{percent}}%",
+    "zoomShown": "exibida em {{percent}}%",
+    "zoomHint": "roda do mouse para zoom, arraste para mover"
+  },
+  "export": {
+    "pickFolder": "Exportar os quadros de {{name}} para…",
+    "failed_zero": "{{count}} quadros exportados. {{failed}} com erro: {{errors}}",
+    "failed_one": "{{count}} quadro exportado. {{failed}} com erro: {{errors}}",
+    "failed_other": "{{count}} quadros exportados. {{failed}} com erro: {{errors}}",
+    "allEmpty": "Todos os quadros estão vazios, então nada foi exportado.",
+    "done_zero": "{{count}} quadros exportados para {{folder}}",
+    "done_one": "{{count}} quadro exportado para {{folder}}",
+    "done_other": "{{count}} quadros exportados para {{folder}}",
+    "showInFolder": "Mostrar na pasta",
+    "button": "Exportar quadros…",
+    "skipEmpty": "Pular quadros totalmente transparentes",
+    "chooseFolder": "Escolher pasta…"
+  },
+  "sprite": {
+    "slicing": "Recortando…",
+    "frameLabel": "{{name}}, quadro {{frame}} de {{total}}",
+    "previousFrame": "Quadro anterior",
+    "pause": "Pausar",
+    "play": "Reproduzir",
+    "nextFrame": "Próximo quadro",
+    "columns": "Colunas",
+    "rows": "Linhas",
+    "frame": "quadro",
+    "frameWidth": "Largura do quadro em pixels",
+    "frameHeight": "Altura do quadro em pixels",
+    "fps": "fps",
+    "framesPerSecond": "Quadros por segundo",
+    "loop": "Repetir",
+    "pixelTitle": "Escala de pixel art",
+    "pixel": "Pixel"
+  },
+  "font": {
+    "pangram": "À noite, vovô Kowalsky vê o ímã cair no pé do pinguim queixoso e vovó põe açúcar no chá de tâmaras do jabuti feliz.",
+    "loadFailed": "Não foi possível carregar esta fonte.",
+    "loading": "Carregando fonte…",
+    "sample": "Texto de exemplo"
+  },
+  "text": {
+    "reading": "Lendo…",
+    "truncated": "… mostrando o início de {{size}}",
+    "moreLines_zero": "… mais {{count}} linhas",
+    "moreLines_one": "… mais {{count}} linha",
+    "moreLines_other": "… mais {{count}} linhas"
+  },
+  "loadingAudio": "Carregando áudio…",
+  "loadingModel": "Carregando modelo…",
+  "videoUnsupported": "Este formato de vídeo não pode ser reproduzido aqui.",
+  "noPreview": "Sem prévia para este tipo de arquivo"
+}

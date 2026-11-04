@@ -1,0 +1,17 @@
+{
+  "dragFailed": "Impossible de lancer le glisser-déposer : {{error}}",
+  "favorite": "favori",
+  "stars_one": "{{count}} étoile",
+  "stars_other": "{{count}} étoiles",
+  "assets": "Ressources",
+  "groupInfo_one": "{{count}} fichier · {{size}}",
+  "groupInfo_other": "{{count}} fichiers · {{size}}",
+  "columns": {
+    "name": "Nom",
+    "type": "Type",
+    "dims": "Dim. / durée",
+    "size": "Taille",
+    "folder": "Dossier",
+    "modified": "Modifié"
+  }
+}

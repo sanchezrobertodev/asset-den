@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "Fichiers",
+    "totalSize": "Taille totale",
+    "untagged": "Sans tag",
+    "showUntagged": "Les afficher →",
+    "duplicates": "Groupes de doublons",
+    "reviewDuplicates": "Examiner les doublons →",
+    "allClear": "Rien à signaler"
+  },
+  "storageByType": "Espace par type",
+  "total": "{{size}} au total",
+  "largest": "Plus gros fichiers",
+  "folders": "Dossiers"
+}

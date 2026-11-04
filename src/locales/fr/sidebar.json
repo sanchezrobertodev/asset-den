@@ -1,0 +1,50 @@
+{
+  "library": "Bibliothèque",
+  "favorites": "Favoris",
+  "collections": "Collections",
+  "duplicates": "Doublons",
+  "insights": "Statistiques",
+  "newCollection": "Nouvelle collection",
+  "smartCollection": "Collection intelligente",
+  "noCollections": "Regroupez des ressources pour un niveau ou un pack.",
+  "folders": "Dossiers",
+  "importFolder": "Importer un dossier",
+  "importFolderLink": "+ Importer un dossier",
+  "folderCount_one": "{{count}} dossier",
+  "folderCount_other": "{{count}} dossiers",
+  "librarySize_one": "{{size}} · {{count}} fichier",
+  "librarySize_other": "{{size}} · {{count}} fichiers",
+  "sizeByType": "Taille de la bibliothèque par type",
+  "kindSize": "{{kind}} : {{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "Rechercher les mises à jour",
+  "theme": "Thème : {{name}} (cliquer pour changer)",
+  "shortcuts": "Raccourcis clavier ({{keys}})",
+  "settings": "Paramètres",
+  "cancel": "Annuler",
+  "folder": {
+    "locateTitle": "Localiser {{name}}",
+    "subfolders": "Sous-dossiers de {{name}}",
+    "unreachableTitle": "{{path}}\nDossier inaccessible. Ses ressources gardent leurs tags et collections : localisez-le s'il a été déplacé, ou rescannez-le une fois qu'il est de retour.",
+    "unreachable": "Dossier inaccessible :",
+    "scanning": "Scan en cours",
+    "locate": "Localiser {{name}} (s'il a été déplacé)",
+    "rescan": "Rescanner {{name}}",
+    "remove": "Retirer {{name}} de la bibliothèque (les fichiers restent sur le disque)"
+  },
+  "relink": {
+    "someTitle": "Seule une partie des fichiers de {{name}} s'y trouve",
+    "noneTitle": "Aucun des fichiers de {{name}} ne s'y trouve",
+    "confirm": "Relier quand même",
+    "body_one": "Mimikit a vérifié {{count}} fichier de ce dossier et en a trouvé {{found}} dans <0>{{path}}</0>. Si vous reliez le dossier, le nouveau scan retire les ressources introuvables à cet emplacement, avec leurs tags, évaluations, notes et collections. Vos fichiers ne sont pas modifiés.",
+    "body_other": "Mimikit a vérifié {{count}} fichiers de ce dossier et en a trouvé {{found}} dans <0>{{path}}</0>. Si vous reliez le dossier, le nouveau scan retire les ressources introuvables à cet emplacement, avec leurs tags, évaluations, notes et collections. Vos fichiers ne sont pas modifiés."
+  },
+  "removeRoot": {
+    "title": "Retirer {{name}} de la bibliothèque ?",
+    "confirm": "Retirer",
+    "body_zero": "Cela retire ses ressources de la bibliothèque, avec leurs tags, évaluations, notes, appartenances aux collections et grilles de sprites. Vos fichiers restent sur le disque.",
+    "body_one": "Cela retire de la bibliothèque {{count}} ressource de ce dossier, avec ses tags, évaluations, notes, appartenances aux collections et grilles de sprites. Vos fichiers restent sur le disque.",
+    "body_other": "Cela retire de la bibliothèque les {{count}} ressources de ce dossier, avec leurs tags, évaluations, notes, appartenances aux collections et grilles de sprites. Vos fichiers restent sur le disque."
+  }
+}

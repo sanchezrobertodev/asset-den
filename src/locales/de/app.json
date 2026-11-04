@@ -1,0 +1,26 @@
+{
+  "undo": "Rückgängig",
+  "dismiss": "Schließen",
+  "scanning": "Scanne {{names}}…",
+  "scanFinished_one": "Scan abgeschlossen. {{count}} Datei in der Bibliothek.",
+  "scanFinished_other": "Scan abgeschlossen. {{count}} Dateien in der Bibliothek.",
+  "skipToAssets": "Zu den Assets springen",
+  "empty": {
+    "scanningTitle": "Wird gescannt…",
+    "scanningBody": "Assets erscheinen hier, sobald sie indexiert sind.",
+    "noDirectFilesIn": "Keine Dateien direkt in {{name}}",
+    "noDirectFilesHere": "Keine Dateien direkt in diesem Ordner",
+    "inSubfolders": "Die Assets liegen in Unterordnern.",
+    "includeSubfolders": "Unterordner einbeziehen",
+    "noSimilarTitle": "Nichts sieht aus wie {{name}}",
+    "noSimilarBody_one": "Kein anderes analysiertes Bild weicht um höchstens {{count}} Bit davon ab. Probier oben eine lockerere Einstellung.",
+    "noSimilarBody_other": "Kein anderes analysiertes Bild weicht um höchstens {{count}} Bit davon ab. Probier oben eine lockerere Einstellung.",
+    "backToLibrary": "Zurück zur Bibliothek",
+    "noFavoritesTitle": "Noch keine Favoriten",
+    "noFavoritesBody": "Drück {{key}} bei einem Asset, um es hier hinzuzufügen.",
+    "noMatchesTitle": "Keine Assets passen zu diesen Filtern",
+    "noMatchesBody": "Versuch, einen Typ-, Ordner- oder Suchfilter zu entfernen.",
+    "clearFilters": "Suche und Filter zurücksetzen"
+  },
+  "allShortcuts": "alle Tastenkürzel"
+}

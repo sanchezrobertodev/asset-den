@@ -1,0 +1,19 @@
+{
+  "dragFailed": "Não foi possível começar a arrastar: {{error}}",
+  "favorite": "favorito",
+  "stars_zero": "{{count}} estrelas",
+  "stars_one": "{{count}} estrela",
+  "stars_other": "{{count}} estrelas",
+  "assets": "Recursos",
+  "groupInfo_zero": "{{count}} arquivos · {{size}}",
+  "groupInfo_one": "{{count}} arquivo · {{size}}",
+  "groupInfo_other": "{{count}} arquivos · {{size}}",
+  "columns": {
+    "name": "Nome",
+    "type": "Tipo",
+    "dims": "Dim. / duração",
+    "size": "Tamanho",
+    "folder": "Pasta",
+    "modified": "Modificado"
+  }
+}

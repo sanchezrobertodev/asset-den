@@ -1,0 +1,12 @@
+{
+  "loading": "Chargement du modèle…",
+  "triangles_one": "{{count}} triangle",
+  "triangles_other": "{{count}} triangles",
+  "vertices_one": "{{count}} sommet",
+  "vertices_other": "{{count}} sommets",
+  "clips_one": "{{count}} anim.",
+  "clips_other": "{{count}} anim.",
+  "wireframe": "Fil de fer",
+  "animate": "Animer",
+  "resetView": "Réinitialiser la vue"
+}

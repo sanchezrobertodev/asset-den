@@ -1,0 +1,44 @@
+{
+  "smartCollection": "Coleção inteligente",
+  "summary_zero": "{{count}} recursos · {{size}}",
+  "summary_one": "{{count}} recurso · {{size}}",
+  "summary_other": "{{count}} recursos · {{size}}",
+  "newCollectionButton": "+ Nova coleção",
+  "nameLabel": "Nome da coleção",
+  "remove_zero": "Remover {{count}} recursos",
+  "remove_one": "Remover {{count}} recurso",
+  "remove_other": "Remover {{count}} recursos",
+  "openAsSearch": "Abrir como busca",
+  "useSearchFirst": "Busque ou filtre a biblioteca primeiro",
+  "useSearch": "Usar a busca atual",
+  "delete": "Excluir",
+  "copyToFolder": "Copiar para pasta…",
+  "noMatch": {
+    "title": "Nenhum recurso desta coleção corresponde a estes filtros",
+    "body": "Tente remover um tipo, a busca ou um filtro.",
+    "clear": "Limpar busca e filtros"
+  },
+  "smartEmpty": {
+    "title": "Nada corresponde a esta coleção inteligente ainda",
+    "body": "Os recursos aparecem aqui assim que algum arquivo corresponder à busca dela."
+  },
+  "empty": {
+    "title": "Esta coleção está vazia",
+    "body": "Adicione recursos por qualquer painel lateral, ou selecione recursos na biblioteca e marque esta coleção no painel lateral."
+  },
+  "none": {
+    "title": "Nenhuma coleção ainda",
+    "body": "Agrupe os recursos de uma fase, de um personagem ou de um pacote.",
+    "newCollection": "Nova coleção"
+  },
+  "rule": {
+    "anything": "Todo recurso que corresponde a <2>qualquer coisa</2>",
+    "query": "Todo recurso que corresponde a <0/>",
+    "filters_zero": "Todo recurso que corresponde a <1>{{count}} filtros</1>",
+    "filters_one": "Todo recurso que corresponde a <1>{{count}} filtro</1>",
+    "filters_other": "Todo recurso que corresponde a <1>{{count}} filtros</1>",
+    "queryAndFilters_zero": "Todo recurso que corresponde a <0/> <1>{{count}} filtros</1>",
+    "queryAndFilters_one": "Todo recurso que corresponde a <0/> <1>{{count}} filtro</1>",
+    "queryAndFilters_other": "Todo recurso que corresponde a <0/> <1>{{count}} filtros</1>"
+  }
+}

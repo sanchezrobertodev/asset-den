@@ -1,0 +1,18 @@
+{
+  "started": "正在分析图片…",
+  "paused": "图像分析已暂停。",
+  "resumed": "已继续图像分析。",
+  "finished_other": "图像分析完成，已分析 {{count}} 张图片。",
+  "stopped_other": "图像分析已停止，已分析 {{done}} / {{count}} 张图片。",
+  "pausedTitle": "分析已暂停",
+  "runningTitle": "正在分析图片",
+  "resume": "继续图像分析",
+  "pause": "暂停图像分析",
+  "cancel": "取消图像分析",
+  "progress": "{{done}} / {{total}}",
+  "pending_other": "{{count}} 张图片尚未分析，结果仅包含{{covered}}。",
+  "covered_other": "已分析的 {{count}} 张",
+  "analysingNow": "正在分析…",
+  "resumeAnalysis": "继续分析",
+  "analyseNow": "立即分析"
+}

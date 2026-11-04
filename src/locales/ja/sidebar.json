@@ -1,0 +1,46 @@
+{
+  "library": "ライブラリ",
+  "favorites": "お気に入り",
+  "collections": "コレクション",
+  "duplicates": "重複",
+  "insights": "統計",
+  "newCollection": "新しいコレクション",
+  "smartCollection": "スマートコレクション",
+  "noCollections": "レベルやパックごとにアセットをまとめられます。",
+  "folders": "フォルダー",
+  "importFolder": "フォルダーをインポート",
+  "importFolderLink": "+ フォルダーをインポート",
+  "folderCount_other": "{{count}}個のフォルダー",
+  "librarySize_other": "{{size}} · {{count}}個のファイル",
+  "sizeByType": "種類別のライブラリサイズ",
+  "kindSize": "{{kind}}：{{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "アップデートを確認",
+  "theme": "テーマ：{{name}}（クリックで変更）",
+  "shortcuts": "キーボードショートカット（{{keys}}）",
+  "settings": "設定",
+  "cancel": "キャンセル",
+  "folder": {
+    "locateTitle": "「{{name}}」の場所を指定",
+    "subfolders": "{{name}}のサブフォルダー",
+    "unreachableTitle": "{{path}}\nこのフォルダーにアクセスできません。アセットのタグとコレクションは保持されます。移動した場合は場所を指定し、戻ったら再スキャンしてください。",
+    "unreachable": "このフォルダーにアクセスできません：",
+    "scanning": "スキャン中",
+    "locate": "「{{name}}」の場所を指定（移動した場合）",
+    "rescan": "「{{name}}」を再スキャン",
+    "remove": "「{{name}}」をライブラリから削除（ファイルはディスクに残ります）"
+  },
+  "relink": {
+    "someTitle": "「{{name}}」のファイルの一部しか見つかりません",
+    "noneTitle": "「{{name}}」のファイルが1つも見つかりません",
+    "confirm": "それでも再リンク",
+    "body_other": "Mimikitはこのフォルダーのファイルを{{count}}個確認し、<0>{{path}}</0>で{{found}}個見つけました。再リンクすると、再スキャンでそこに見つからないアセットが、タグ、評価、メモ、コレクションとともに削除されます。ファイル自体には影響しません。"
+  },
+  "removeRoot": {
+    "title": "「{{name}}」をライブラリから削除しますか？",
+    "confirm": "削除",
+    "body_zero": "フォルダー内のアセットが、タグ、評価、メモ、コレクションへの登録、スプライトグリッドとともにライブラリから削除されます。ファイルはディスクに残ります。",
+    "body_other": "このフォルダー内の{{count}}個のアセットが、タグ、評価、メモ、コレクションへの登録、スプライトグリッドとともにライブラリから削除されます。ファイルはディスクに残ります。"
+  }
+}

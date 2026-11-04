@@ -1,0 +1,7 @@
+{
+  "playFailed": "Diese Datei kann hier nicht abgespielt werden: {{error}}",
+  "pause": "Pause",
+  "play": "Abspielen",
+  "loopTitle": "Am Ende wieder von vorn abspielen",
+  "loop": "Wiederholen"
+}

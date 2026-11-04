@@ -312,8 +312,23 @@
   --color-danger: var(--danger);
   --color-sel-row: var(--sel-row);
   --color-scrim: var(--scrim);
+}
+
+/* Not inline, so font-sans and font-mono read the variables and a language below can add its own fonts. */
+@theme {
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", monospace;
+}
+
+/* Geist has no Japanese or Chinese. Left to itself Windows picks Yu Gothic (full-width kana, thin), so name the UI
+   fonts: Windows first, then macOS. */
+:root:lang(ja) {
+  --font-sans: "Geist", "Yu Gothic UI", "Meiryo UI", "Hiragino Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", "Yu Gothic UI", "Meiryo UI", "Hiragino Sans", monospace;
+}
+:root:lang(zh) {
+  --font-sans: "Geist", "Microsoft YaHei UI", "PingFang SC", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", "Microsoft YaHei UI", "PingFang SC", monospace;
 }
 
 /* Kind hues from the design; "other" stays neutral. */
@@ -356,6 +371,12 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+}
+
+/* Japanese and Chinese have no letter case and read worse spaced out, so the tracked labels and headings drop it. */
+:lang(ja) *,
+:lang(zh) * {
+  letter-spacing: normal;
 }
 
 /* In the base layer so a component can restyle or drop its own ring (outline-none, -outline-offset-2). */

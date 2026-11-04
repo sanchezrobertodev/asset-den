@@ -1,0 +1,57 @@
+{
+  "image": {
+    "decoding": "Wird dekodiert…",
+    "animateTitle": "Bild als Sprite-Sheet abspielen",
+    "animate": "Animieren",
+    "cantDisplay": "Die Webansicht kann dieses Bild nicht anzeigen.",
+    "zoom": "{{percent}} %",
+    "zoomShown": "angezeigt mit {{percent}} %",
+    "zoomHint": "Mausrad zum Zoomen, Ziehen zum Verschieben"
+  },
+  "export": {
+    "pickFolder": "Frames von {{name}} exportieren nach…",
+    "failed_one": "{{count}} Frame exportiert. {{failed}} fehlgeschlagen: {{errors}}",
+    "failed_other": "{{count}} Frames exportiert. {{failed}} fehlgeschlagen: {{errors}}",
+    "allEmpty": "Alle Frames sind leer, daher wurde nichts exportiert.",
+    "done_one": "{{count}} Frame nach {{folder}} exportiert",
+    "done_other": "{{count}} Frames nach {{folder}} exportiert",
+    "showInFolder": "Im Ordner anzeigen",
+    "button": "Frames exportieren…",
+    "skipEmpty": "Komplett transparente Frames überspringen",
+    "chooseFolder": "Ordner wählen…"
+  },
+  "sprite": {
+    "slicing": "Wird zerlegt…",
+    "frameLabel": "{{name}}, Frame {{frame}} von {{total}}",
+    "previousFrame": "Vorheriger Frame",
+    "pause": "Pause",
+    "play": "Abspielen",
+    "nextFrame": "Nächster Frame",
+    "columns": "Spalten",
+    "rows": "Zeilen",
+    "frame": "Frame",
+    "frameWidth": "Frame-Breite in Pixeln",
+    "frameHeight": "Frame-Höhe in Pixeln",
+    "fps": "fps",
+    "framesPerSecond": "Frames pro Sekunde",
+    "loop": "Wiederholen",
+    "pixelTitle": "Pixel-Art-Skalierung",
+    "pixel": "Pixel"
+  },
+  "font": {
+    "pangram": "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern",
+    "loadFailed": "Diese Schrift konnte nicht geladen werden.",
+    "loading": "Schrift wird geladen…",
+    "sample": "Beispieltext"
+  },
+  "text": {
+    "reading": "Wird gelesen…",
+    "truncated": "… nur der Anfang von {{size}}",
+    "moreLines_one": "… {{count}} weitere Zeile",
+    "moreLines_other": "… {{count}} weitere Zeilen"
+  },
+  "loadingAudio": "Audio wird geladen…",
+  "loadingModel": "Modell wird geladen…",
+  "videoUnsupported": "Dieses Videoformat kann hier nicht abgespielt werden.",
+  "noPreview": "Keine Vorschau für diesen Dateityp"
+}

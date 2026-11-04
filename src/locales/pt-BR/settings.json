@@ -1,0 +1,95 @@
+{
+  "title": "Configurações",
+  "sections": {
+    "appearance": "Aparência",
+    "library": "Biblioteca",
+    "backups": "Backups",
+    "storage": "Armazenamento",
+    "updates": "Atualizações",
+    "about": "Sobre"
+  },
+  "appearance": {
+    "language": "Idioma",
+    "languageHint": "A janela é recarregada para trocar.",
+    "languageSystem": "Sistema ({{name}})",
+    "theme": "Tema",
+    "accent": "Cor de destaque",
+    "accentHint": "Botões, seleção e contornos de foco.",
+    "thumbSize": "Tamanho das miniaturas",
+    "thumbSizeHint": "Tamanho dos cards na grade. O controle deslizante acima da grade também o altera.",
+    "thumbSizeValue": "{{size}}px",
+    "pixelated": "Escala de pixel art",
+    "pixelatedHint": "Amplia as imagens com pixels nítidos em vez de suavizá-las."
+  },
+  "updates": {
+    "checkOnLaunch": "Verificar atualizações ao abrir",
+    "checkOnLaunchHint": "Verifica discretamente alguns segundos após a abertura. Nada é instalado sem perguntar."
+  },
+  "about": {
+    "version": "Mimikit {{version}}",
+    "license": "Código aberto, licença MIT",
+    "releases": "Versões",
+    "source": "Código-fonte",
+    "support": "Apoiar o Mimikit",
+    "supportHint": "É grátis. As doações ajudam a mantê-lo."
+  },
+  "ignored": {
+    "title": "Pastas ignoradas",
+    "hint": "Pastas com esses nomes são ignoradas em todas as pastas da biblioteca, como já acontece com pastas ocultas, node_modules e arquivos .meta.",
+    "remove": "Parar de ignorar {{name}}",
+    "addAnother": "Adicione outra e pressione Enter",
+    "placeholder": "Nome da pasta, como Backup ou _old, e depois Enter",
+    "invalid": "Digite um nome de pasta, não um caminho.",
+    "saved": "Salvo. Reescaneie para aplicar aos arquivos que já estão na biblioteca.",
+    "pending": "As mudanças valem a partir do próximo reescaneamento. Os arquivos continuam no disco.",
+    "rescanning": "Reescaneando…",
+    "rescan": "Reescanear agora"
+  },
+  "analysis": {
+    "underMinute": "menos de um minuto",
+    "minutes_zero": "cerca de {{count}} minutos",
+    "minutes_one": "cerca de {{count}} minuto",
+    "minutes_other": "cerca de {{count}} minutos",
+    "hours_zero": "cerca de {{count}} horas",
+    "hours_one": "cerca de {{count}} hora",
+    "hours_other": "cerca de {{count}} horas",
+    "title": "Análise de imagens",
+    "progress_zero": "<0>{{done}}</0> de <0>{{count}}</0> imagens analisadas para Encontrar semelhantes e busca por cor.",
+    "progress_one": "<0>{{done}}</0> de <0>{{count}}</0> imagem analisada para Encontrar semelhantes e busca por cor.",
+    "progress_other": "<0>{{done}}</0> de <0>{{count}}</0> imagens analisadas para Encontrar semelhantes e busca por cor.",
+    "remaining_zero": "Faltam {{count}}, que levam {{time}} usando a CPU ociosa. As imagens que você vê são analisadas na hora.",
+    "remaining_one": "Falta {{count}} imagem, que leva {{time}} usando a CPU ociosa. As imagens que você vê são analisadas na hora.",
+    "remaining_other": "Faltam {{count}}, que levam {{time}} usando a CPU ociosa. As imagens que você vê são analisadas na hora.",
+    "asYouGo": "As imagens que você vê são analisadas na hora.",
+    "resume": "Retomar",
+    "pause": "Pausar",
+    "analyse": "Analisar imagens",
+    "keep": "Manter imagens novas e alteradas analisadas",
+    "keepHint": "Analisa as imagens quando são adicionadas ou alteradas enquanto o Mimikit está aberto. Liga sozinho após a primeira análise completa."
+  },
+  "cancel": "Cancelar",
+  "backups": {
+    "pickTitle": "Salvar um backup da biblioteca em…",
+    "saved": "{{name}} salvo em {{folder}}.",
+    "restoreTitle": "Restaurar {{name}}?",
+    "restoreHint": "Ele substitui sua biblioteca: pastas, tags, avaliações, notas, coleções e grades de sprite. Antes, a biblioteca atual é salva na pasta de backups. O Mimikit reinicia para concluir.",
+    "restoring": "Restaurando…",
+    "restoreRestart": "Restaurar e reiniciar",
+    "library": "Backup da biblioteca",
+    "libraryHint": "Pastas, tags, avaliações, notas, coleções e grades de sprite. Seus arquivos de recursos não estão incluídos.",
+    "backingUp": "Fazendo backup…",
+    "backUp": "Fazer backup…",
+    "restore": "Restaurar…",
+    "auto": "Backups automáticos",
+    "autoHint": "Um por dia, quando o Mimikit abre. Os 5 últimos são mantidos.",
+    "showFolder": "Mostrar pasta"
+  },
+  "cache": {
+    "clearedCache": "Cache de miniaturas limpo. As miniaturas são refeitas conforme você navega.",
+    "cleared": "{{size}} liberados. As miniaturas são refeitas conforme você navega.",
+    "title": "Cache de miniaturas",
+    "hint": "<0>{{size}}</0> de miniaturas e prévias geradas pelo Mimikit. Seus arquivos de recursos não são alterados.",
+    "clearing": "Limpando…",
+    "clear": "Limpar cache de miniaturas"
+  }
+}

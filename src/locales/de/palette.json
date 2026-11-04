@@ -1,0 +1,47 @@
+{
+  "tokens": {
+    "tag": "{{token}}tag",
+    "folder": "{{token}}ordner",
+    "word": "{{token}}wort"
+  },
+  "inCollection_zero": "Keine Treffer in {{name}}",
+  "inCollection_one": "{{count}} Treffer in {{name}} anzeigen",
+  "inCollection_other": "{{count}} Treffer in {{name}} anzeigen",
+  "duplicates_zero": "Keine passenden Duplikatgruppen",
+  "duplicates_one": "{{count}} Duplikatgruppe anzeigen",
+  "duplicates_other": "{{count}} Duplikatgruppen anzeigen",
+  "showMatch": "Den Treffer in der Bibliothek anzeigen",
+  "showAll_zero": "Keine passenden Assets",
+  "showAll_one": "{{count}} Treffer in der Bibliothek anzeigen",
+  "showAll_other": "Alle {{count}} Treffer in der Bibliothek anzeigen",
+  "assets_one": "Assets · {{count}}",
+  "assets_other": "Assets · {{count}}",
+  "folders": "Ordner",
+  "files_one": "{{count}} Datei",
+  "files_other": "{{count}} Dateien",
+  "actions": {
+    "title": "Aktionen",
+    "duplicates": "Duplikate prüfen",
+    "insights": "Statistiken öffnen",
+    "newCollection": "Neue Sammlung",
+    "favorites": "Favoriten anzeigen",
+    "import": "Ordner importieren",
+    "listView": "Zur Listenansicht wechseln",
+    "gridView": "Zur Rasteransicht wechseln",
+    "clearFilters": "Suche und Filter zurücksetzen",
+    "settings": "Einstellungen",
+    "updates": "Nach Updates suchen",
+    "shortcuts": "Tastenkürzel"
+  },
+  "dialog": "Suche",
+  "input": "Assets, Ordner und Aktionen durchsuchen",
+  "placeholder": "Assets, Ordner, Aktionen suchen",
+  "filters": "Filter",
+  "results": "Ergebnisse",
+  "noResults": "Keine Treffer. Probier {{type}}, {{tag}}, {{rating}}, {{folder}} oder {{color}}.",
+  "keys": {
+    "move": "{{keys}} navigieren",
+    "select": "{{keys}} auswählen",
+    "close": "{{keys}} schließen"
+  }
+}

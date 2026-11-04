@@ -1,0 +1,18 @@
+{
+  "started": "画像を解析しています…",
+  "paused": "画像解析を一時停止しました。",
+  "resumed": "画像解析を再開しました。",
+  "finished_other": "画像解析が完了しました。{{count}}枚の画像を解析しました。",
+  "stopped_other": "画像解析を停止しました。{{count}}枚中{{done}}枚を解析しました。",
+  "pausedTitle": "解析を一時停止中",
+  "runningTitle": "画像を解析中",
+  "resume": "画像解析を再開",
+  "pause": "画像解析を一時停止",
+  "cancel": "画像解析をキャンセル",
+  "progress": "{{done}}/{{total}}",
+  "pending_other": "{{count}}枚の画像はまだ解析されていません。結果に含まれるのは{{covered}}だけです。",
+  "covered_other": "解析済みの{{count}}枚",
+  "analysingNow": "解析しています…",
+  "resumeAnalysis": "解析を再開",
+  "analyseNow": "今すぐ解析"
+}

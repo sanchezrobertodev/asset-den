@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "文件",
+    "totalSize": "总大小",
+    "untagged": "无标签",
+    "showUntagged": "显示无标签资源 →",
+    "duplicates": "重复组",
+    "reviewDuplicates": "检查重复项 →",
+    "allClear": "一切正常"
+  },
+  "storageByType": "各类型占用空间",
+  "total": "共 {{size}}",
+  "largest": "最大的文件",
+  "folders": "文件夹"
+}

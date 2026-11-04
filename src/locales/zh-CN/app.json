@@ -1,0 +1,24 @@
+{
+  "undo": "撤销",
+  "dismiss": "关闭",
+  "scanning": "正在扫描 {{names}}…",
+  "scanFinished_other": "扫描完成。资源库中共有 {{count}} 个文件。",
+  "skipToAssets": "跳转到资源",
+  "empty": {
+    "scanningTitle": "正在扫描…",
+    "scanningBody": "资源编入索引后会立即显示在这里。",
+    "noDirectFilesIn": "{{name}} 下没有直接存放的文件",
+    "noDirectFilesHere": "此文件夹下没有直接存放的文件",
+    "inSubfolders": "其中的资源位于子文件夹中。",
+    "includeSubfolders": "包含子文件夹",
+    "noSimilarTitle": "没有与 {{name}} 相似的图片",
+    "noSimilarBody_other": "没有其他已分析的图片与它相差在 {{count}} 位以内。可在上方尝试更宽松的匹配。",
+    "backToLibrary": "返回资源库",
+    "noFavoritesTitle": "还没有收藏",
+    "noFavoritesBody": "在任意资源上按 {{key}} 即可添加到这里。",
+    "noMatchesTitle": "没有符合这些筛选条件的资源",
+    "noMatchesBody": "请尝试移除类型、文件夹或搜索筛选。",
+    "clearFilters": "清除搜索和筛选"
+  },
+  "allShortcuts": "所有快捷键"
+}

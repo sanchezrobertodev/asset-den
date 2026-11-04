@@ -1,0 +1,36 @@
+{
+  "smartCollection": "智能合集",
+  "summary_other": "{{count}} 个资源 · {{size}}",
+  "newCollectionButton": "+ 新建合集",
+  "nameLabel": "合集名称",
+  "remove_other": "移除 {{count}} 个资源",
+  "openAsSearch": "作为搜索打开",
+  "useSearchFirst": "请先搜索或筛选资源库",
+  "useSearch": "使用当前搜索",
+  "delete": "删除",
+  "copyToFolder": "复制到文件夹…",
+  "noMatch": {
+    "title": "此合集中没有符合这些筛选条件的资源",
+    "body": "请尝试移除类型、搜索或筛选。",
+    "clear": "清除搜索和筛选"
+  },
+  "smartEmpty": {
+    "title": "暂时没有资源符合此智能合集",
+    "body": "一旦有文件符合其搜索条件，对应的资源就会显示在这里。"
+  },
+  "empty": {
+    "title": "此合集为空",
+    "body": "可从任意侧边面板添加资源，或在资源库中选择资源，然后在侧边面板中勾选此合集。"
+  },
+  "none": {
+    "title": "还没有合集",
+    "body": "把同一关卡、角色或资源包的资源归在一起。",
+    "newCollection": "新建合集"
+  },
+  "rule": {
+    "anything": "所有资源，<2>不设条件</2>",
+    "query": "匹配 <0/> 的所有资源",
+    "filters_other": "匹配 <1>{{count}} 个筛选条件</1> 的所有资源",
+    "queryAndFilters_other": "匹配 <0/> 和 <1>{{count}} 个筛选条件</1> 的所有资源"
+  }
+}

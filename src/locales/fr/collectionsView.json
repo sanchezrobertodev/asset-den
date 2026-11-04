@@ -1,0 +1,40 @@
+{
+  "smartCollection": "Collection intelligente",
+  "summary_one": "{{count}} ressource · {{size}}",
+  "summary_other": "{{count}} ressources · {{size}}",
+  "newCollectionButton": "+ Nouvelle collection",
+  "nameLabel": "Nom de la collection",
+  "remove_one": "Retirer {{count}} ressource",
+  "remove_other": "Retirer {{count}} ressources",
+  "openAsSearch": "Ouvrir comme recherche",
+  "useSearchFirst": "Recherchez ou filtrez d'abord dans la bibliothèque",
+  "useSearch": "Utiliser la recherche actuelle",
+  "delete": "Supprimer",
+  "copyToFolder": "Copier dans un dossier…",
+  "noMatch": {
+    "title": "Aucune ressource de cette collection ne correspond à ces filtres",
+    "body": "Essayez de retirer un type, une recherche ou un filtre.",
+    "clear": "Effacer la recherche et les filtres"
+  },
+  "smartEmpty": {
+    "title": "Rien ne correspond encore à cette collection intelligente",
+    "body": "Ses ressources apparaissent ici dès que des fichiers correspondent à sa recherche."
+  },
+  "empty": {
+    "title": "Cette collection est vide",
+    "body": "Ajoutez des ressources depuis n'importe quel panneau latéral, ou sélectionnez des ressources dans la bibliothèque et cochez cette collection dans le panneau latéral."
+  },
+  "none": {
+    "title": "Aucune collection pour l'instant",
+    "body": "Regroupez les ressources d'un niveau, d'un personnage ou d'un pack.",
+    "newCollection": "Nouvelle collection"
+  },
+  "rule": {
+    "anything": "Toutes les ressources, <2>sans condition</2>",
+    "query": "Toutes les ressources qui correspondent à <0/>",
+    "filters_one": "Toutes les ressources qui correspondent à <1>{{count}} filtre</1>",
+    "filters_other": "Toutes les ressources qui correspondent à <1>{{count}} filtres</1>",
+    "queryAndFilters_one": "Toutes les ressources qui correspondent à <0/> et <1>{{count}} filtre</1>",
+    "queryAndFilters_other": "Toutes les ressources qui correspondent à <0/> et <1>{{count}} filtres</1>"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Bienvenue dans Mimikit",
+  "intro": "Choisissez un dossier de ressources de jeu : Mimikit indexe chaque sprite, son, modèle, police et vidéo qu'il contient, puis suit ses modifications.",
+  "importFolder": "Importer un dossier",
+  "readOnly": "Vous pourrez ajouter d'autres dossiers plus tard. Mimikit ne fait que les lire : vos fichiers ne sont jamais modifiés.",
+  "tips": "Astuces",
+  "drag": {
+    "title": "Glissez vers votre moteur",
+    "body": "Déposez une carte dans Unity, Godot ou un dossier pour y copier le fichier."
+  },
+  "preview": {
+    "title": "Prévisualisez sur place",
+    "body": "Sélectionnez une ressource et appuyez sur {{peekKey}} pour la voir, ou sur Entrée pour le plein écran."
+  },
+  "search": {
+    "title": "Retrouvez tout",
+    "body": "Recherchez des noms, {{tagExample}}, {{typeExample}} ou des dossiers depuis n'importe où."
+  }
+}

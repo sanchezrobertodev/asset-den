@@ -1,0 +1,53 @@
+{
+  "title": "键盘快捷键",
+  "groups": {
+    "navigate": "导航",
+    "preview": "预览",
+    "organize": "整理",
+    "search": "搜索"
+  },
+  "keys": {
+    "ctrl": "Ctrl",
+    "alt": "Alt",
+    "space": "空格",
+    "esc": "Esc",
+    "tab": "Tab",
+    "scroll": "滚轮",
+    "ctrlClick": "Ctrl 单击",
+    "shiftClick": "Shift 单击"
+  },
+  "label": {
+    "move": "上一个或下一个资源（↑ ↓ 也可以）",
+    "parent": "转到上级文件夹",
+    "back": "退出文本框，关闭全屏，然后关闭侧边面板，最后清除选择",
+    "skip": "从窗口顶部：跳转到资源",
+    "help": "显示这些快捷键",
+    "peek": "在侧边面板中快速预览",
+    "full": "全屏",
+    "full-back": "从全屏返回侧边面板（空格也可以）",
+    "zoom": "在全屏中缩放图片（拖动可平移，双击可重置）",
+    "favorite": "收藏或取消收藏所选项",
+    "rate": "为所选项评 1 到 5 星",
+    "unrate": "清除所选项的评分",
+    "stars": "星级获得焦点时更改评分",
+    "tag": "添加输入的标签（在空的标签框中按 Backspace 会删除最后一个）",
+    "select-all": "选择显示的所有资源",
+    "toggle": "添加到选择或从选择中移除",
+    "range": "选择一个范围",
+    "search": "搜索资源、文件夹和操作",
+    "search-slash": "搜索",
+    "results": "在结果中移动",
+    "run": "打开高亮的结果",
+    "close": "关闭搜索"
+  },
+  "hint": {
+    "move": "移动",
+    "peek": "快速预览",
+    "full": "全屏",
+    "full-back": "返回侧边面板",
+    "favorite": "收藏",
+    "rate": "评分",
+    "unrate": "清除评分",
+    "search": "搜索"
+  }
+}

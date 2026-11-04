@@ -1,0 +1,65 @@
+{
+  "titles": {
+    "library": "资源库",
+    "favorites": "收藏",
+    "collections": "合集",
+    "duplicates": "重复项",
+    "insights": "统计"
+  },
+  "favoritesIn": "<2/> <1>中的</1> <0>收藏</0>",
+  "searchPlaceholder": "搜索资源、{{hash}}标签、{{type}}",
+  "import": "导入",
+  "similar": {
+    "stop": "停止显示与 {{name}} 相似的图片",
+    "label": "与 {{name}} 相似",
+    "notAnalysed_other": "{{count}} 张图片尚未分析",
+    "strict": "严格",
+    "loose": "宽松",
+    "slider": "相似图片允许的差异程度",
+    "sliderValue_other": "最多 {{max}}/64 位不同，{{count}} 张图片"
+  },
+  "sort": {
+    "label": "排序",
+    "name": "名称",
+    "kind": "类型",
+    "size": "大小",
+    "mtime": "修改时间",
+    "folder": "文件夹",
+    "descending": "降序（点击切换为升序）",
+    "ascending": "升序（点击切换为降序）"
+  },
+  "all": "全部",
+  "includeSubfolders": "包含子文件夹",
+  "clearSearch": "清除搜索",
+  "query": "“{{query}}”",
+  "assets_other": "{{count}} 个资源",
+  "assetsInFolders_other": "{{count}} 个文件夹中的 {{assets}}",
+  "subfolders": "子文件夹",
+  "moreSubfolders_other": "文件夹菜单中还有 {{count}} 个",
+  "grouping": "分组",
+  "byFolder": "按文件夹",
+  "allTogether": "不分组",
+  "layout": "布局",
+  "grid": "网格",
+  "list": "列表",
+  "thumbSize": "缩略图大小",
+  "pixelatedOn": "像素画缩放：开",
+  "pixelatedOff": "像素画缩放：关",
+  "saveSmart": {
+    "button": "另存为智能合集",
+    "name": "智能合集名称",
+    "placeholder": "合集名称",
+    "save": "保存",
+    "cancel": "取消"
+  },
+  "folderPath": "文件夹路径",
+  "foldersIn": "{{name}} 中的文件夹",
+  "wholeLibrary": "显示整个资源库",
+  "inFolder": "{{name}} 中",
+  "recentFolders": "最近的文件夹",
+  "keys": {
+    "move": "{{keys}} 移动",
+    "open": "{{keys}} 打开",
+    "parent": "{{keys}} 上级"
+  }
+}

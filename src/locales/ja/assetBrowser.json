@@ -1,0 +1,15 @@
+{
+  "dragFailed": "ドラッグを開始できませんでした：{{error}}",
+  "favorite": "お気に入り",
+  "stars_other": "星{{count}}つ",
+  "assets": "アセット",
+  "groupInfo_other": "{{count}}個のファイル · {{size}}",
+  "columns": {
+    "name": "名前",
+    "type": "種類",
+    "dims": "寸法 / 長さ",
+    "size": "サイズ",
+    "folder": "フォルダー",
+    "modified": "更新日時"
+  }
+}

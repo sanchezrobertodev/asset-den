@@ -1,0 +1,54 @@
+{
+  "image": {
+    "decoding": "デコードしています…",
+    "animateTitle": "画像をスプライトシートとして再生",
+    "animate": "アニメーション",
+    "cantDisplay": "WebViewではこの画像を表示できません。",
+    "zoom": "{{percent}}%",
+    "zoomShown": "{{percent}}%で表示",
+    "zoomHint": "ホイールでズーム、ドラッグで移動"
+  },
+  "export": {
+    "pickFolder": "「{{name}}」のフレームのエクスポート先…",
+    "failed_other": "{{count}}フレームをエクスポートしました。{{failed}}フレームは失敗しました：{{errors}}",
+    "allEmpty": "すべてのフレームが空のため、何もエクスポートしていません。",
+    "done_other": "{{count}}フレームを「{{folder}}」にエクスポートしました",
+    "showInFolder": "フォルダーに表示",
+    "button": "フレームをエクスポート…",
+    "skipEmpty": "完全に透明なフレームをスキップ",
+    "chooseFolder": "フォルダーを選択…"
+  },
+  "sprite": {
+    "slicing": "分割しています…",
+    "frameLabel": "{{name}}、フレーム{{frame}}/{{total}}",
+    "previousFrame": "前のフレーム",
+    "pause": "一時停止",
+    "play": "再生",
+    "nextFrame": "次のフレーム",
+    "columns": "列",
+    "rows": "行",
+    "frame": "フレーム",
+    "frameWidth": "フレームの幅（ピクセル）",
+    "frameHeight": "フレームの高さ（ピクセル）",
+    "fps": "fps",
+    "framesPerSecond": "1秒あたりのフレーム数",
+    "loop": "ループ",
+    "pixelTitle": "ドット絵の拡大表示",
+    "pixel": "ドット"
+  },
+  "font": {
+    "pangram": "The quick brown fox jumps over the lazy dog",
+    "loadFailed": "このフォントを読み込めませんでした。",
+    "loading": "フォントを読み込んでいます…",
+    "sample": "サンプルテキスト"
+  },
+  "text": {
+    "reading": "読み込んでいます…",
+    "truncated": "… {{size}}のうち先頭部分を表示しています",
+    "moreLines_other": "… ほか{{count}}行"
+  },
+  "loadingAudio": "オーディオを読み込んでいます…",
+  "loadingModel": "モデルを読み込んでいます…",
+  "videoUnsupported": "この動画形式はここでは再生できません。",
+  "noPreview": "この種類のファイルはプレビューできません"
+}

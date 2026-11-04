@@ -1,0 +1,46 @@
+{
+  "library": "资源库",
+  "favorites": "收藏",
+  "collections": "合集",
+  "duplicates": "重复项",
+  "insights": "统计",
+  "newCollection": "新建合集",
+  "smartCollection": "智能合集",
+  "noCollections": "把同一关卡或资源包的资源归在一起。",
+  "folders": "文件夹",
+  "importFolder": "导入文件夹",
+  "importFolderLink": "+ 导入文件夹",
+  "folderCount_other": "{{count}} 个文件夹",
+  "librarySize_other": "{{size}} · {{count}} 个文件",
+  "sizeByType": "按类型划分的资源库大小",
+  "kindSize": "{{kind}}：{{size}}",
+  "version": "Mimikit {{version}}",
+  "versionShort": "v{{version}}",
+  "checkUpdates": "检查更新",
+  "theme": "主题：{{name}}（点击切换）",
+  "shortcuts": "键盘快捷键（{{keys}}）",
+  "settings": "设置",
+  "cancel": "取消",
+  "folder": {
+    "locateTitle": "重新定位 {{name}}",
+    "subfolders": "{{name}} 的子文件夹",
+    "unreachableTitle": "{{path}}\n无法访问此文件夹。其中的资源会保留标签和合集：如果文件夹已移动，请重新定位；文件夹重新可用后，请重新扫描。",
+    "unreachable": "无法访问此文件夹：",
+    "scanning": "正在扫描",
+    "locate": "重新定位 {{name}}（如果已移动）",
+    "rescan": "重新扫描 {{name}}",
+    "remove": "从资源库中移除 {{name}}（文件仍保留在磁盘上）"
+  },
+  "relink": {
+    "someTitle": "{{name}} 的文件只有部分在该位置",
+    "noneTitle": "{{name}} 的文件都不在该位置",
+    "confirm": "仍然重新链接",
+    "body_other": "Mimikit 检查了此文件夹的 {{count}} 个文件，在 <0>{{path}}</0> 中找到了 {{found}} 个。如果重新链接，重新扫描时会移除在那里找不到的资源，以及它们的标签、评分、备注和合集。文件本身不受影响。"
+  },
+  "removeRoot": {
+    "title": "从资源库中移除 {{name}}？",
+    "confirm": "移除",
+    "body_zero": "这会从资源库中移除其中的资源，以及它们的标签、评分、备注、合集归属和 sprite 网格。文件仍保留在磁盘上。",
+    "body_other": "这会从资源库中移除此文件夹中的 {{count}} 个资源，以及它们的标签、评分、备注、合集归属和 sprite 网格。文件仍保留在磁盘上。"
+  }
+}

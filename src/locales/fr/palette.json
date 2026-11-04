@@ -1,0 +1,47 @@
+{
+  "tokens": {
+    "tag": "{{token}}tag",
+    "folder": "{{token}}dossier",
+    "word": "{{token}}mot"
+  },
+  "inCollection_zero": "Aucun résultat dans {{name}}",
+  "inCollection_one": "Afficher {{count}} résultat dans {{name}}",
+  "inCollection_other": "Afficher {{count}} résultats dans {{name}}",
+  "duplicates_zero": "Aucun groupe de doublons ne correspond",
+  "duplicates_one": "Afficher {{count}} groupe de doublons",
+  "duplicates_other": "Afficher {{count}} groupes de doublons",
+  "showMatch": "Afficher le résultat dans la bibliothèque",
+  "showAll_zero": "Aucune ressource ne correspond",
+  "showAll_one": "Afficher {{count}} résultat dans la bibliothèque",
+  "showAll_other": "Afficher les {{count}} résultats dans la bibliothèque",
+  "assets_one": "Ressources · {{count}}",
+  "assets_other": "Ressources · {{count}}",
+  "folders": "Dossiers",
+  "files_one": "{{count}} fichier",
+  "files_other": "{{count}} fichiers",
+  "actions": {
+    "title": "Actions",
+    "duplicates": "Examiner les doublons",
+    "insights": "Ouvrir les Statistiques",
+    "newCollection": "Nouvelle collection",
+    "favorites": "Afficher les favoris",
+    "import": "Importer un dossier",
+    "listView": "Passer en vue liste",
+    "gridView": "Passer en vue grille",
+    "clearFilters": "Effacer la recherche et les filtres",
+    "settings": "Paramètres",
+    "updates": "Rechercher les mises à jour",
+    "shortcuts": "Raccourcis clavier"
+  },
+  "dialog": "Recherche",
+  "input": "Rechercher des ressources, dossiers et actions",
+  "placeholder": "Rechercher ressources, dossiers, actions",
+  "filters": "Filtres",
+  "results": "Résultats",
+  "noResults": "Aucun résultat. Essayez {{type}}, {{tag}}, {{rating}}, {{folder}} ou {{color}}.",
+  "keys": {
+    "move": "{{keys}} naviguer",
+    "select": "{{keys}} choisir",
+    "close": "{{keys}} fermer"
+  }
+}

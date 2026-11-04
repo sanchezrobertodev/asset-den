@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "files": "Dateien",
+    "totalSize": "Gesamtgröße",
+    "untagged": "Ohne Tags",
+    "showUntagged": "Ohne Tags anzeigen →",
+    "duplicates": "Duplikatgruppen",
+    "reviewDuplicates": "Duplikate prüfen →",
+    "allClear": "Alles sauber"
+  },
+  "storageByType": "Speicher nach Typ",
+  "total": "{{size}} gesamt",
+  "largest": "Größte Dateien",
+  "folders": "Ordner"
+}

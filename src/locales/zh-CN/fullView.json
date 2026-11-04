@@ -1,0 +1,17 @@
+{
+  "label": "全屏：{{name}}",
+  "close": "关闭全屏（{{key}}）",
+  "position": "{{index}} / {{total}}",
+  "favorite": "收藏（{{key}}）",
+  "showInFolder": "在文件夹中显示",
+  "open": "打开",
+  "previous": "上一个（{{key}}）",
+  "next": "下一个（{{key}}）",
+  "tags": "标签",
+  "noTags": "无标签",
+  "collections": "合集",
+  "noCollections": "不在任何合集中",
+  "note": "备注",
+  "noNote": "无备注",
+  "filmstrip": "胶片栏"
+}

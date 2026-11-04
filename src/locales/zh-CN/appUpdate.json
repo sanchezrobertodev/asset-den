@@ -1,0 +1,22 @@
+{
+  "starting": "正在开始下载…",
+  "installing": "正在安装…",
+  "downloadingOf": "已下载 {{done}} / {{total}}（{{percent}}%）。",
+  "downloading": "已下载 {{done}}。",
+  "notice": "<0>Mimikit {{version}}</0> 已推出",
+  "view": "查看",
+  "title": "Mimikit {{version}}",
+  "updates": "更新",
+  "later": "稍后",
+  "install": "安装并重启",
+  "close": "关闭",
+  "retry": "重试",
+  "checking": "正在检查新版本…",
+  "upToDate": "已是最新版本。",
+  "upToDateVersion": "已是最新版本（{{version}}）。",
+  "installFailed": "无法安装更新：{{error}}",
+  "checkFailed": "无法检查更新：{{error}}",
+  "current": "当前版本为 {{version}}。更新均已签名，Mimikit 会在安装前验证签名。",
+  "progressLabel": "更新下载进度",
+  "restartNote": "完成后 Mimikit 会重启。"
+}

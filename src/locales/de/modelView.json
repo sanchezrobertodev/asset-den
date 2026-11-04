@@ -1,0 +1,12 @@
+{
+  "loading": "Modell wird geladen…",
+  "triangles_one": "{{count}} Tris",
+  "triangles_other": "{{count}} Tris",
+  "vertices_one": "{{count}} Verts",
+  "vertices_other": "{{count}} Verts",
+  "clips_one": "{{count}} Anim.",
+  "clips_other": "{{count}} Anim.",
+  "wireframe": "Drahtgitter",
+  "animate": "Animieren",
+  "resetView": "Ansicht zurücksetzen"
+}

@@ -1,0 +1,70 @@
+{
+  "titles": {
+    "library": "Bibliothek",
+    "favorites": "Favoriten",
+    "collections": "Sammlungen",
+    "duplicates": "Duplikate",
+    "insights": "Statistiken"
+  },
+  "favoritesIn": "<0>Favoriten</0> <1>in</1> <2/>",
+  "searchPlaceholder": "Assets, {{hash}}Tags, {{type}} suchen",
+  "import": "Importieren",
+  "similar": {
+    "stop": "Bilder ähnlich wie {{name}} nicht mehr anzeigen",
+    "label": "Ähnlich wie {{name}}",
+    "notAnalysed_one": "{{count}} Bild noch nicht analysiert",
+    "notAnalysed_other": "{{count}} Bilder noch nicht analysiert",
+    "strict": "Streng",
+    "loose": "Locker",
+    "slider": "Wie stark ähnliche Bilder abweichen dürfen",
+    "sliderValue_one": "Bis zu {{max}} von 64 Bit verschieden, {{count}} Bild",
+    "sliderValue_other": "Bis zu {{max}} von 64 Bit verschieden, {{count}} Bilder"
+  },
+  "sort": {
+    "label": "Sortieren",
+    "name": "Name",
+    "kind": "Typ",
+    "size": "Größe",
+    "mtime": "Geändert",
+    "folder": "Ordner",
+    "descending": "Absteigend (klicken für aufsteigend)",
+    "ascending": "Aufsteigend (klicken für absteigend)"
+  },
+  "all": "Alle",
+  "includeSubfolders": "Unterordner einbeziehen",
+  "clearSearch": "Suche leeren",
+  "query": "„{{query}}“",
+  "assets_one": "{{count}} Asset",
+  "assets_other": "{{count}} Assets",
+  "assetsInFolders_one": "{{assets}} in {{count}} Ordner",
+  "assetsInFolders_other": "{{assets}} in {{count}} Ordnern",
+  "subfolders": "Unterordner",
+  "moreSubfolders_one": "+{{count}} weiterer im Ordnermenü",
+  "moreSubfolders_other": "+{{count}} weitere im Ordnermenü",
+  "grouping": "Gruppierung",
+  "byFolder": "Nach Ordner",
+  "allTogether": "Alle zusammen",
+  "layout": "Ansicht",
+  "grid": "Raster",
+  "list": "Liste",
+  "thumbSize": "Vorschaubildgröße",
+  "pixelatedOn": "Pixel-Art-Skalierung an",
+  "pixelatedOff": "Pixel-Art-Skalierung aus",
+  "saveSmart": {
+    "button": "Als intelligente Sammlung speichern",
+    "name": "Name der intelligenten Sammlung",
+    "placeholder": "Name der Sammlung",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
+  },
+  "folderPath": "Ordnerpfad",
+  "foldersIn": "Ordner in {{name}}",
+  "wholeLibrary": "Ganze Bibliothek anzeigen",
+  "inFolder": "In {{name}}",
+  "recentFolders": "Letzte Ordner",
+  "keys": {
+    "move": "{{keys}} navigieren",
+    "open": "{{keys}} öffnen",
+    "parent": "{{keys}} nach oben"
+  }
+}
