@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-03
+
 ### Added
 
 - Mimikit in Spanish, Brazilian Portuguese, French, German, Japanese and Simplified Chinese. It follows the system
