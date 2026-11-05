@@ -113,6 +113,10 @@ for (const theme of THEMES) {
     }
     check("--accent-fg", col("--accent-fg").rgb, "--accent", col("--accent").rgb, text);
     check("--fg", col("--fg").rgb, "--sel-row", col("--sel-row").rgb, text);
+    // The highlighted row in Ctrl+K and the folder menu is --active, under every text colour.
+    for (const f of TEXT) check(f, col(f).rgb, "--active", col("--active").rgb, text);
+    // A selected list row's accent ring, against the row's fill and a hovered neighbour (WCAG 1.4.11; --bg is checked above).
+    for (const s of ["--sel-row", "--hover"]) check("--accent ring", col("--accent").rgb, s, col(s).rgb, 3);
     check("--invert-fg", col("--invert-fg").rgb, "--invert-bg", col("--invert-bg").rgb, text);
     check("--warn-fg", over(col("--warn-fg"), bg), "--warn-bg", over(col("--warn-bg"), bg), text);
     for (const [label, h, fgT, bgT] of [

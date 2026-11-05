@@ -34,6 +34,7 @@
     "select-all": "Alle angezeigten Assets auswählen",
     "toggle": "Zur Auswahl hinzufügen oder daraus entfernen",
     "range": "Bereich auswählen",
+    "undo": "Letzte Änderung rückgängig machen",
     "search": "Assets, Ordner und Aktionen durchsuchen",
     "search-slash": "Suchen",
     "results": "Zwischen den Ergebnissen wechseln",

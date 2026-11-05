@@ -5,6 +5,25 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+### Added
+
+- **Ctrl+Z** (⌘Z on macOS) undoes the last change that offered Undo (favorites, ratings, collections, "Not
+  duplicates"), even after its message has gone. It's listed with the other keyboard shortcuts (**?**).
+
+### Changed
+
+- A message with an Undo button stays on screen while the pointer or the keyboard focus is on it.
+- In Duplicates, the Move to Trash confirmation puts the focus on Cancel and shows Move to Trash in red, so pressing
+  Enter or Space right after it opens no longer moves files to the Trash.
+
+### Fixed
+
+- 3D models compressed with meshopt (`EXT_meshopt_compression`, as written by gltfpack and glTF-Transform) preview
+  and get thumbnails, instead of showing "Couldn't preview this file".
+- Selected rows in the list view have an accent outline. A faint tint was all that marked them.
+- In the high-contrast themes, the highlighted result in search (Ctrl+K) and the highlighted folder in the folder
+  path's menu are readable, and the folder line under a highlighted search result has enough contrast in every theme.
+
 ## [0.6.0] - 2026-11-05
 
 ### Added
