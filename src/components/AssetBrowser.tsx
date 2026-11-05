@@ -142,13 +142,15 @@ function GroupHead({ group }: { group: Group }) {
   );
 }
 
-function useActiveScroll(order: Asset[], lineOf: (index: number) => number, scrollTo: (line: number) => void) {
+/** Scrolls the active asset into view when it changes, and once `ready` (the grid knows its width, so its lines). */
+function useActiveScroll(order: Asset[], lineOf: (index: number) => number, scrollTo: (line: number) => void, ready = true) {
   const activeId = useStore((s) => s.activeId);
   useEffect(() => {
+    if (!ready) return;
     const i = order.findIndex((a) => a.id === activeId);
     if (i >= 0) scrollTo(lineOf(i));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
+  }, [activeId, ready]);
 }
 
 function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
@@ -210,6 +212,8 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
       return items.findIndex((l) => l.type === "items" && l.items.some((a) => a.id === id));
     },
     (line) => line >= 0 && v.scrollToIndex(line, { align: "auto" }),
+    // Until the first measure the grid has one column of zero width, so a line number would land elsewhere.
+    width > 0,
   );
   const lb = listboxProps(items, v.getVirtualItems().map((r) => r.index), activeId);
 

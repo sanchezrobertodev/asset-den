@@ -7,6 +7,7 @@ import { CollectionsView } from "./components/CollectionsView";
 import { DuplicatesView } from "./components/DuplicatesView";
 import { FullView } from "./components/FullView";
 import { BrowseBar, Header } from "./components/Header";
+import { HomeView } from "./components/HomeView";
 import { InsightsView } from "./components/InsightsView";
 import { Palette } from "./components/Palette";
 import { Peek } from "./components/Peek";
@@ -266,7 +267,7 @@ export default function App() {
       <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
         <main tabIndex={-1} className="flex min-h-0 min-w-0 flex-col focus-visible:outline-none">
           <Header />
-          {browse && !s.roots.length && (
+          {(browse || s.view === "home") && !s.roots.length && (
             <div className="min-h-0 flex-1">
               <Welcome />
             </div>
@@ -305,6 +306,7 @@ export default function App() {
           )}
           {s.view === "collections" && <CollectionsView items={order} groups={groups} scopeAssets={scopeAssets} />}
           {s.view === "duplicates" && <DuplicatesView visible={visible} scopeAssets={scopeAssets} />}
+          {s.view === "home" && s.roots.length > 0 && <HomeView />}
           {s.view === "insights" && <InsightsView />}
           {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
             <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">

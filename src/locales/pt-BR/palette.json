@@ -23,6 +23,7 @@
   "files_other": "{{count}} arquivos",
   "actions": {
     "title": "Ações",
+    "home": "Ir para Início",
     "duplicates": "Revisar duplicatas",
     "insights": "Abrir Estatísticas",
     "newCollection": "Nova coleção",

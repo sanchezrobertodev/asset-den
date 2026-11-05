@@ -16,6 +16,7 @@
   "files_other": "{{count}} 个文件",
   "actions": {
     "title": "操作",
+    "home": "前往主页",
     "duplicates": "检查重复项",
     "insights": "打开统计",
     "newCollection": "新建合集",

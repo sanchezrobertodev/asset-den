@@ -18,6 +18,7 @@ import type filterPanel from "../locales/en/filterPanel.json";
 import type fmt from "../locales/en/fmt.json";
 import type fullView from "../locales/en/fullView.json";
 import type header from "../locales/en/header.json";
+import type homeView from "../locales/en/homeView.json";
 import type insightsView from "../locales/en/insightsView.json";
 import type modelView from "../locales/en/modelView.json";
 import type palette from "../locales/en/palette.json";
@@ -47,6 +48,7 @@ interface Resources {
   fmt: typeof fmt;
   fullView: typeof fullView;
   header: typeof header;
+  homeView: typeof homeView;
   insightsView: typeof insightsView;
   modelView: typeof modelView;
   palette: typeof palette;

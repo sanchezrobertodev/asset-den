@@ -1,0 +1,38 @@
+{
+  "news": {
+    "updated": "<0>Mimikit wurde auf {{version}} aktualisiert.</0>",
+    "show": "Neuigkeiten ansehen",
+    "title": "Neu in Mimikit {{version}}",
+    "dismiss": "Ausblenden"
+  },
+  "search_one": "{{count}} Asset durchsuchen, {{hash}}Tags, {{type}}",
+  "search_other": "{{count}} Assets durchsuchen, {{hash}}Tags, {{type}}",
+  "examples": "Beispielsuchen",
+  "jumpBack": "Weitermachen",
+  "allCollections": "Alle Sammlungen",
+  "collection": "Sammlung",
+  "smartCollection": "Intelligente Sammlung",
+  "library": "Deine Bibliothek",
+  "total_one": "{{count}} Asset · {{size}}",
+  "total_other": "{{count}} Assets · {{size}}",
+  "insights": "Statistiken",
+  "recent": "Zuletzt geändert",
+  "newestFirst": "Bibliothek, neueste zuerst",
+  "favorites": "Favoriten und Bestbewertete",
+  "allFavorites": "Alle Favoriten",
+  "noFavorites": "Assets, die du als Favorit markierst (<0>{{keys}}</0>) oder mit 4 Sternen oder mehr bewertest, erscheinen hier.",
+  "attention": {
+    "title": "Zu prüfen",
+    "duplicates_one": "{{count}} Duplikatgruppe",
+    "duplicates_other": "{{count}} Duplikatgruppen",
+    "review": "Prüfen",
+    "offline": "{{name}} ist nicht erreichbar",
+    "show": "Anzeigen",
+    "unanalysed_one": "{{count}} Bild ist nicht analysiert, daher überspringen Farbsuche und Ähnliche finden es",
+    "unanalysed_other": "{{count}} Bilder sind nicht analysiert, daher überspringen Farbsuche und Ähnliche finden sie",
+    "analyse": "Analysieren",
+    "untagged_one": "{{count}} Asset hat keine Tags",
+    "untagged_other": "{{count}} Assets haben keine Tags",
+    "allClear": "Alles in Ordnung."
+  }
+}

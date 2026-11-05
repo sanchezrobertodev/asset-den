@@ -15,6 +15,7 @@ import { FilterButton } from "./FilterPanel";
 import { Button, focusAssets, IconButton, KindDot, KindName, Kbd, Segmented, T } from "./ui";
 
 const titles = {
+  home: t("header.titles.home"),
   library: t("header.titles.library"),
   favorites: t("header.titles.favorites"),
   collections: t("header.titles.collections"),
@@ -37,18 +38,21 @@ export function Header() {
       ) : (
         <h1 className="flex-none text-[17px] font-semibold tracking-[-.01em]">{titles[view]}</h1>
       )}
-      <button
-        type="button"
-        onClick={() => setPalette(true)}
-        className="ml-auto flex h-9 max-w-[380px] min-w-0 flex-[1_1_auto] items-center gap-2.5 overflow-hidden rounded-[9px] border border-line-strong bg-field px-3 text-left whitespace-nowrap text-muted hover:border-line-x"
-      >
-        <Search aria-hidden className="size-3.5 flex-none" />
-        <span className={clsx("min-w-0 flex-1 truncate", query && "text-fg")}>
-          {query || t("header.searchPlaceholder", { hash: "#", type: "type:audio" })}
-        </span>
-        <Kbd>{shortcut("search").keys}</Kbd>
-      </button>
-      <Button variant="accent" className="h-9 px-4" onClick={() => void importFolder()}>
+      {/* Home has its own big search field. */}
+      {view !== "home" && (
+        <button
+          type="button"
+          onClick={() => setPalette(true)}
+          className="ml-auto flex h-9 max-w-[380px] min-w-0 flex-[1_1_auto] items-center gap-2.5 overflow-hidden rounded-[9px] border border-line-strong bg-field px-3 text-left whitespace-nowrap text-muted hover:border-line-x"
+        >
+          <Search aria-hidden className="size-3.5 flex-none" />
+          <span className={clsx("min-w-0 flex-1 truncate", query && "text-fg")}>
+            {query || t("header.searchPlaceholder", { hash: "#", type: "type:audio" })}
+          </span>
+          <Kbd>{shortcut("search").keys}</Kbd>
+        </button>
+      )}
+      <Button variant="accent" className={clsx("h-9 px-4", view === "home" && "ml-auto")} onClick={() => void importFolder()}>
         {t("header.import")}
       </Button>
     </div>
