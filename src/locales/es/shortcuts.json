@@ -34,6 +34,7 @@
     "select-all": "Seleccionar todos los recursos visibles",
     "toggle": "Agregar a la selección o quitar de ella",
     "range": "Seleccionar un rango",
+    "undo": "Deshacer el último cambio",
     "search": "Buscar recursos, carpetas y acciones",
     "search-slash": "Buscar",
     "results": "Moverse por los resultados",

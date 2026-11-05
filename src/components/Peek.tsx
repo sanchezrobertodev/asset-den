@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, TriangleAlert, X } from "lucide-react";
 import { Component, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, errorText } from "../api";
 import { baseName, folderOf } from "../lib/format";
@@ -149,7 +149,7 @@ export function TagEditor({ items }: { items: Asset[] }) {
       <Label>{t("peek.tags.label")}</Label>
       <div className="focus-ring-within flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
         {shared.map((tag) => (
-          <span key={tag} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] text-xs">
+          <span key={tag} className="flex h-6 items-center gap-1.5 rounded-md bg-active py-0 pr-1 pl-[9px] text-xs inset-ring-1 inset-ring-line">
             #{tag}
             <button
               type="button"
@@ -159,7 +159,7 @@ export function TagEditor({ items }: { items: Asset[] }) {
                 input.current?.focus();
                 void removeTag(ids, tag);
               }}
-              className="flex size-4 items-center justify-center rounded text-muted hover:bg-line-x hover:text-fg"
+              className="flex size-4 items-center justify-center rounded text-muted hover:text-fg hover:inset-ring-1 hover:inset-ring-line-x"
             >
               <X aria-hidden className="size-3" />
             </button>
@@ -346,7 +346,7 @@ export function Peek({ list }: { list: Asset[] }) {
             onClick={() => void s.setFavorite(selectedAssets.map((x) => x.id), !selectedAssets.every((x) => x.favorite))}
             className="self-start"
           >
-            <span aria-hidden>{selectedAssets.every((x) => x.favorite) ? "★" : "☆"}</span>
+            <Heart aria-hidden className={clsx("size-4", selectedAssets.every((x) => x.favorite) && "fill-current text-fav")} />
             {selectedAssets.every((x) => x.favorite) ? t("peek.unfavoriteAll") : t("peek.favoriteAll")}
           </Button>
           <div className="flex flex-col gap-2">
@@ -419,10 +419,10 @@ function PeekBody({ a }: { a: Asset }) {
             label={t("peek.favorite", { key: shortcut("favorite").keys })}
             aria-pressed={a.favorite}
             bordered
-            className={clsx("size-[34px] rounded-[9px] text-base", a.favorite ? "text-star" : "text-muted")}
+            className="size-[34px] rounded-[9px] text-muted"
             onClick={() => void setFavorite([a.id], !a.favorite)}
           >
-            {a.favorite ? "★" : "☆"}
+            <Heart className={clsx("size-4", a.favorite && "fill-current text-fav")} />
           </IconButton>
         </div>
       </div>

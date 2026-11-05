@@ -59,13 +59,18 @@ function digit(e: KeyboardEvent) {
 }
 
 function Toast() {
-  const { toast, dismissToast } = useStore();
+  const { toast, dismissToast, holdToast, undo } = useStore();
   // Always mounted, so screen readers announce each message as it appears.
   return (
     <div aria-live={toast?.error ? "assertive" : "polite"} className="pointer-events-none absolute inset-x-0 bottom-6 z-[80] flex justify-center">
       {toast && (
         <div
           key={toast.id}
+          // The timer waits while the pointer or focus is on the toast, so there's time to reach its button.
+          onMouseEnter={() => holdToast(true)}
+          onMouseLeave={(e) => holdToast(e.currentTarget.contains(document.activeElement))}
+          onFocus={() => holdToast(true)}
+          onBlur={(e) => holdToast(e.currentTarget.matches(":hover") || e.currentTarget.contains(e.relatedTarget))}
           className={clsx(
             "pointer-events-auto flex max-w-[min(720px,90%)] items-center gap-3.5 rounded-[11px] bg-invert-bg py-2.5 pr-3 pl-4 text-invert-fg shadow-[0_16px_40px_-12px_rgba(0,0,0,.6)]",
             toast.error && "border-l-4 border-danger",
@@ -75,10 +80,7 @@ function Toast() {
           {toast.undo && (
             <button
               type="button"
-              onClick={() => {
-                dismissToast();
-                Promise.resolve().then(toast.undo).catch(useStore.getState().setError);
-              }}
+              onClick={() => undo(toast.undo)}
               className="h-7 rounded-[7px] bg-bg px-2.5 font-semibold whitespace-nowrap text-fg"
             >
               {toast.action ?? t("app.undo")}
@@ -193,6 +195,11 @@ export default function App() {
       if (typing(e.target)) {
         // Esc leaves the field for the asset list, where the shortcuts work again.
         if (e.key === "Escape") focusAssets();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && letter(e) === "z") {
+        e.preventDefault();
+        st.undo();
         return;
       }
       if (e.key === "?") {

@@ -74,7 +74,7 @@ The screenshots show a small sample library generated for them: procedural sprit
 
 Keyboard: <kbd>Ctrl/⌘ K</kbd> or <kbd>/</kbd> search · <kbd>Space</kbd> side panel · <kbd>Enter</kbd> full screen ·
 <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> favorite · <kbd>1</kbd>–<kbd>5</kbd> rate, <kbd>0</kbd> clear ·
-<kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and <kbd>Ctrl+A</kbd> select · <kbd>Esc</kbd> step back · <kbd>?</kbd> all shortcuts.
+<kbd>Shift</kbd>/<kbd>Ctrl</kbd>-click and <kbd>Ctrl+A</kbd> select · <kbd>Ctrl+Z</kbd> undo · <kbd>Esc</kbd> step back · <kbd>?</kbd> all shortcuts.
 
 ## Install
 

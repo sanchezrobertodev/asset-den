@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, X } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 import { bytes } from "../lib/fmt";
 import { t } from "../lib/i18n";
@@ -66,10 +66,10 @@ export function FullView({ list }: { list: Asset[] }) {
           label={t("fullView.favorite", { key: shortcut("favorite").keys })}
           aria-pressed={a.favorite}
           bordered
-          className={clsx("size-[34px] text-[15px]", a.favorite ? "text-star" : "text-muted")}
+          className="size-[34px] text-muted"
           onClick={() => void s.setFavorite([a.id], !a.favorite)}
         >
-          {a.favorite ? "★" : "☆"}
+          <Heart className={clsx("size-4", a.favorite && "fill-current text-fav")} />
         </IconButton>
         <Button onClick={() => void revealAsset(a)}>{t("fullView.showInFolder")}</Button>
         {a.kind !== "other" && (

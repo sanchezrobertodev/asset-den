@@ -336,7 +336,7 @@ function IgnoredFolders() {
       </div>
       <div className="focus-ring-within flex flex-wrap items-center gap-1.5 rounded-[9px] border border-line-strong bg-card p-1.5">
         {names.map((n) => (
-          <span key={n} className="flex h-6 items-center gap-1.5 rounded-md bg-line py-0 pr-1 pl-[9px] font-mono text-xs">
+          <span key={n} className="flex h-6 items-center gap-1.5 rounded-md bg-active py-0 pr-1 pl-[9px] font-mono text-xs inset-ring-1 inset-ring-line">
             {n}
             <button
               type="button"
@@ -346,7 +346,7 @@ function IgnoredFolders() {
                 e.currentTarget.closest("div")?.querySelector("input")?.focus();
                 void save(names.filter((x) => x !== n));
               }}
-              className="flex size-4 items-center justify-center rounded text-muted hover:bg-line-x hover:text-fg"
+              className="flex size-4 items-center justify-center rounded text-muted hover:text-fg hover:inset-ring-1 hover:inset-ring-line-x"
             >
               <X aria-hidden className="size-3" />
             </button>

@@ -1,10 +1,10 @@
 import clsx from "clsx";
-import { AudioLines, Box, Clapperboard, FileIcon, FileText, ImageIcon, Type, X, type LucideIcon } from "lucide-react";
+import { AudioLines, Box, Clapperboard, FileIcon, FileText, Heart, ImageIcon, Star, Type, X, type LucideIcon } from "lucide-react";
 import { cloneElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type ComponentProps, type ReactElement, type ReactNode } from "react";
 import { kindLabel } from "../lib/fmt";
 import { t, tNodes, type TagNode, type TKey, type Vars } from "../lib/i18n";
 import { useStore } from "../store";
-import type { Kind } from "../types";
+import type { Asset, Kind } from "../types";
 
 type Variant = "accent" | "invert" | "outline" | "ghost" | "danger";
 
@@ -94,6 +94,33 @@ export function KindPill({ kind, className }: { kind: Kind; className?: string }
       className={clsx("k-pill inline-flex items-center gap-1 rounded-md px-2 py-[3px] text-[11.5px] font-medium whitespace-nowrap", className)}
     >
       <KindName kind={kind} icon="size-3" />
+    </span>
+  );
+}
+
+/**
+ * The rating (★ 4) and the favorite heart in a thumbnail's corner, on card-coloured chips so they read over any
+ * image. Screen readers get them as text, for tiles that have no label of their own (one with a label skips it).
+ */
+export function ThumbBadges({ asset, small, className }: { asset: Pick<Asset, "favorite" | "rating">; small?: boolean; className?: string }) {
+  if (!asset.favorite && !asset.rating) return null;
+  const chip = clsx("flex items-center rounded-md bg-card leading-none", small ? "h-4 px-1" : "h-5 px-1.5");
+  const icon = clsx("fill-current", small ? "size-2.5" : "size-3");
+  const said = [asset.favorite ? t("assetBrowser.favorite") : null, asset.rating ? t("assetBrowser.stars", { count: asset.rating }) : null];
+  return (
+    <span className={clsx("pointer-events-none absolute flex gap-1", className)}>
+      <span className="sr-only">{said.filter(Boolean).join(", ")}</span>
+      {asset.rating > 0 && (
+        <span aria-hidden className={clsx(chip, "gap-0.5 font-mono font-medium text-fg", small ? "text-[10px]" : "text-[11px]")}>
+          <Star className={clsx(icon, "text-star")} />
+          {asset.rating}
+        </span>
+      )}
+      {asset.favorite && (
+        <span aria-hidden className={chip}>
+          <Heart className={clsx(icon, "text-fav")} />
+        </span>
+      )}
     </span>
   );
 }
