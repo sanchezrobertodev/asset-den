@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-05
+
 ### Added
 
 - Keyboard multi-select: **Shift+arrows** select a range, **Ctrl+arrows** (⌘ on macOS) move without changing the
