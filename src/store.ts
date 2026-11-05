@@ -75,6 +75,10 @@ interface State extends Prefs {
   setError: (e: unknown) => void;
   showToast: (message: string, undo?: Toast["undo"], action?: string) => void;
   dismissToast: () => void;
+  /** Stops the toast's timer while the pointer or focus is on it; false starts it again. */
+  holdToast: (hold: boolean) => void;
+  /** Runs a toast's button, or with no argument the last Undo offered (Ctrl+Z, also after its toast has closed). */
+  undo: (run?: Toast["undo"]) => void;
   go: (view: ViewName, extra?: Partial<Pick<State, "kinds" | "folder" | "colSel" | "dupSel" | "query">>) => void;
   setQuery: (q: string) => void;
   toggleKind: (k: Kind | "all") => void;
@@ -131,7 +135,10 @@ interface State extends Prefs {
 
 const prefs = loadPrefs();
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+let toastMs = 0;
 let toastSeq = 0;
+/** The newest Undo a toast offered, until it runs. */
+let lastUndo: Toast["undo"];
 /** Number of the last delta `assets` includes; -1 until the first full load. */
 let seq = -1;
 /** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
@@ -408,16 +415,28 @@ export const useStore = create<State>((set, get, store) => {
     },
 
     setError: (e) => {
-      if (toastTimer) clearTimeout(toastTimer);
       set({ toast: { id: ++toastSeq, message: errorText(e), error: true } });
-      toastTimer = setTimeout(() => get().dismissToast(), 8000);
+      toastMs = 8000;
+      get().holdToast(false);
     },
     showToast: (message, undo, action) => {
-      if (toastTimer) clearTimeout(toastTimer);
       set({ toast: { id: ++toastSeq, message, undo, action } });
-      toastTimer = setTimeout(() => get().dismissToast(), 4500);
+      if (undo && !action) lastUndo = undo;
+      toastMs = 4500;
+      get().holdToast(false);
     },
     dismissToast: () => set({ toast: null }),
+    holdToast: (hold) => {
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = hold || !get().toast ? null : setTimeout(() => get().dismissToast(), toastMs);
+    },
+    undo: (run = lastUndo) => {
+      // Once only: undoing a deleted collection twice would bring back two copies.
+      if (run === lastUndo) lastUndo = undefined;
+      if (!run) return;
+      get().dismissToast();
+      Promise.resolve().then(run).catch(get().setError);
+    },
 
     go: (view, extra = {}) => set({ view, full: false, palette: false, ...noSimilar(), ...extra, ...folderState(extra.folder) }),
     setQuery: (query) => set({ query }),

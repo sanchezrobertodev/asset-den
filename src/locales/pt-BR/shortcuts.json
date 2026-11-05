@@ -34,6 +34,7 @@
     "select-all": "Selecionar todos os recursos exibidos",
     "toggle": "Adicionar à seleção ou remover dela",
     "range": "Selecionar um intervalo",
+    "undo": "Desfazer a última alteração",
     "search": "Buscar recursos, pastas e ações",
     "search-slash": "Buscar",
     "results": "Percorrer os resultados",
