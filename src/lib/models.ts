@@ -4,6 +4,7 @@ import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { fileUrl } from "../api";
 import type { Asset } from "../types";
 import { mtlCandidates } from "./mtl.ts";
@@ -20,7 +21,8 @@ export async function loadModel(asset: Asset): Promise<LoadedModel> {
   switch (asset.ext) {
     case "glb":
     case "gltf": {
-      const g = await new GLTFLoader().loadAsync(url);
+      // Files packed with gltfpack or glTF-Transform use EXT_meshopt_compression, which GLTFLoader only reads with this.
+      const g = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);
       return { object: g.scene, animations: g.animations };
     }
     case "fbx": {

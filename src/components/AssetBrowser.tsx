@@ -350,7 +350,7 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                 style={{ top: row.start, height: ROW, gridTemplateColumns: COLS }}
                 className={clsx(
                   "absolute left-0 grid w-full cursor-pointer items-center border-b border-line-soft px-2.5 select-none",
-                  isSel ? "bg-sel-row" : "hover:bg-hover",
+                  isSel ? "bg-sel-row inset-ring-2 inset-ring-accent" : "hover:bg-hover",
                   a.id === activeId && "group-focus-visible/list:inset-ring-2 group-focus-visible/list:inset-ring-fg",
                 )}
               >

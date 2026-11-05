@@ -276,7 +276,7 @@ export function Palette() {
                     aria-selected={my === pi}
                     onMouseEnter={() => setPi(my)}
                     onClick={() => run(r)}
-                    className={clsx("flex min-h-11 cursor-pointer items-center gap-3 rounded-[9px] px-2.5", my === pi && "bg-line")}
+                    className={clsx("flex min-h-11 cursor-pointer items-center gap-3 rounded-[9px] px-2.5", my === pi && "bg-active inset-ring-1 inset-ring-line-x")}
                   >
                     {r.asset && <Thumb asset={r.asset} size="row" className="size-8 flex-none rounded-[7px]" />}
                     <span className="flex min-w-0 flex-1 flex-col gap-px">

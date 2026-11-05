@@ -467,7 +467,7 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
             role="menuitemradio"
             aria-checked={c.key === current}
             onClick={() => open(c.rootId, c.path)}
-            className="flex h-[38px] flex-none items-center gap-2.5 rounded-[9px] px-2.5 text-left text-fg -outline-offset-2 hover:bg-line focus:bg-line"
+            className="flex h-[38px] flex-none items-center gap-2.5 rounded-[9px] px-2.5 text-left text-fg -outline-offset-2 hover:bg-active focus:bg-active"
           >
             <Folder aria-hidden className={clsx("size-[15px] flex-none", c.key === current ? "text-accent" : "text-muted")} />
             <span className={clsx("min-w-0 flex-1 truncate", c.key === current && "font-semibold")}>{c.name}</span>
@@ -486,7 +486,7 @@ function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: stri
                 type="button"
                 role="menuitem"
                 onClick={() => open(f.rootId, f.path)}
-                className="flex h-[34px] items-center rounded-[9px] px-2.5 text-left text-fg-2 -outline-offset-2 hover:bg-line focus:bg-line"
+                className="flex h-[34px] items-center rounded-[9px] px-2.5 text-left text-fg-2 -outline-offset-2 hover:bg-active focus:bg-active"
               >
                 <span className="truncate">{[s.roots.length > 1 || !f.path ? rootName(f.rootId) : "", f.path].filter(Boolean).join("/")}</span>
               </button>
