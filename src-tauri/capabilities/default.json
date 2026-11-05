@@ -11,6 +11,7 @@
     "drag:default",
     "updater:default",
     "process:allow-restart",
-    "core:window:allow-set-theme"
+    "core:window:allow-set-theme",
+    "core:window:allow-request-user-attention"
   ]
 }

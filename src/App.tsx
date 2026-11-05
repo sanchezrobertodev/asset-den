@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { startAgents } from "./agent/bridge";
 import { useAppUpdate } from "./appUpdate";
+import { AgentAsk } from "./components/Agents";
 import { UpdateDialog } from "./components/AppUpdate";
 import { AssetBrowser } from "./components/AssetBrowser";
 import { CollectionsView } from "./components/CollectionsView";
@@ -126,14 +128,16 @@ export default function App() {
   const s = useStore();
 
   useEffect(() => {
-    void useStore.getState().init();
+    // Agent calls read the library, so the bridge starts once it's loaded.
+    void useStore.getState().init().then(startAgents);
     void useAppUpdate.getState().init();
     const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme, useStore.getState().accent));
     return off;
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
-  const similar = s.similar?.ids ?? null;
+  // "Find similar" results, or the assets an agent showed: only these, in their order.
+  const similar = s.similar?.ids ?? s.shown?.ids ?? null;
   const wantsColors = !!s.filters.color || parseQuery(s.query).colors.length > 0 || rulesWantColors(s.collections);
   // Colours only matter to a colour filter; otherwise their updates during an analysis pass mustn't re-sort the list.
   const palettes = wantsColors ? s.palettes : null;
@@ -330,6 +334,7 @@ export default function App() {
       {s.modal === "shortcuts" && <ShortcutsDialog />}
       {s.modal === "settings" && <SettingsDialog />}
       <UpdateDialog />
+      <AgentAsk />
       <Toast />
     </div>
   );

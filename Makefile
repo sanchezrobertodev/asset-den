@@ -32,6 +32,8 @@ ui-test:
 	node --experimental-strip-types src/lib/i18n.test.ts
 	node --experimental-strip-types src/lib/locales.test.ts
 	node --experimental-strip-types src/lib/news.test.ts
+	node --experimental-strip-types src/agent/tools.test.ts
+	node --experimental-strip-types src/agent/agent.test.ts
 	node scripts/feed.test.mjs
 
 test:

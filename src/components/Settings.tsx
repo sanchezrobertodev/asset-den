@@ -2,10 +2,12 @@ import clsx from "clsx";
 import { getVersion } from "@tauri-apps/api/app";
 import { Check, ExternalLink, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useAgents } from "../agent/bridge";
+import { agentName } from "../agent/run";
 import { api } from "../api";
 import { useAppUpdate } from "../appUpdate";
 import { baseName } from "../lib/format";
-import { bytes } from "../lib/fmt";
+import { ago, bytes } from "../lib/fmt";
 import { locales, t } from "../lib/i18n";
 import type { Theme } from "../lib/prefs";
 import { ACCENTS, THEMES, accentName, themeById, themeName, type ThemeId } from "../lib/themes";
@@ -266,6 +268,9 @@ export function SettingsDialog() {
       <Section title={t("settings.sections.library")}>
         <IgnoredFolders />
         <ImageAnalysis />
+      </Section>
+      <Section title={t("agents.title")}>
+        <Agents />
       </Section>
       <Section title={t("settings.sections.backups")}>
         <Backups />
@@ -543,5 +548,85 @@ function ThumbnailCache() {
         {clearing ? t("settings.cache.clearing") : t("settings.cache.clear")}
       </Button>
     </Row>
+  );
+}
+
+/** A setup command or config snippet, with Copy. */
+function Setup({ label, text }: { label: string; text: string }) {
+  const { setError, showToast } = useStore();
+  const copy = () => navigator.clipboard.writeText(text).then(() => showToast(t("agents.copied")), () => setError(t("agents.copyFailed")));
+  return (
+    <div className="flex flex-col gap-1.5 py-2">
+      <span className="text-xs text-muted">{label}</span>
+      <div className="flex items-start gap-2">
+        <pre className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-line-soft bg-active px-2.5 py-1.5 font-mono text-[11.5px] text-fg-2 select-all">
+          {text}
+        </pre>
+        <Button size="sm" onClick={() => void copy()}>
+          {t("agents.copy")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Settings › AI agents: the switch, how to connect an agent app, and who's connected (src/agent/bridge.ts). */
+function Agents() {
+  const a = useAgents();
+  const exe = a.exe ?? "mimikit";
+  const now = Date.now();
+  return (
+    <>
+      <Row label={t("agents.switch")} hint={a.on ? `${t("agents.switchHint")} ${t("agents.offNote")}` : t("agents.switchHint")}>
+        <Switch label={t("agents.switch")} on={a.on} onChange={(on) => void a.setOn(on)} />
+      </Row>
+      {a.on && (
+        <>
+          {a.questions.map((q) => (
+            <Row key={q.name} label={t("agents.askTitle", { name: agentName(q.name) })} hint={t("agents.askBody")}>
+              <div className="flex flex-none gap-2">
+                <Button size="sm" onClick={() => a.answer(q.name, false)}>
+                  {t("agents.deny")}
+                </Button>
+                <Button size="sm" variant="accent" onClick={() => a.answer(q.name, true)}>
+                  {t("agents.allow")}
+                </Button>
+              </div>
+            </Row>
+          ))}
+          <Setup label={t("agents.claudeCode")} text={`claude mcp add --scope user mimikit -- "${exe}" mcp`} />
+          <Setup label={t("agents.claudeDesktop")} text={JSON.stringify({ mcpServers: { mimikit: { command: exe, args: ["mcp"] } } }, null, 2)} />
+          <p className="pb-2 text-xs text-muted">{t("agents.other")}</p>
+          <span className="pt-2 text-fg">{t("agents.connected")}</span>
+          {a.sessions.length ? (
+            a.sessions.map((x) => (
+              <Row
+                key={x.pid}
+                label={`${agentName(x.name)} ${x.version}`}
+                hint={x.paused ? t("agents.paused") : t("agents.calls", { count: x.calls, ago: ago(x.last, now) })}
+              >
+                <div className="flex flex-none gap-2">
+                  <Button size="sm" onClick={() => a.pause(x.pid, !x.paused)}>
+                    {x.paused ? t("agents.resume") : t("agents.pause")}
+                  </Button>
+                  <Button size="sm" onClick={() => a.disconnect(x.pid)}>
+                    {t("agents.disconnect")}
+                  </Button>
+                </div>
+              </Row>
+            ))
+          ) : (
+            <p className="py-2 text-xs text-muted">{t("agents.none")}</p>
+          )}
+          {a.allowed.map((name) => (
+            <Row key={name} label={`${t("agents.allowed")}: ${agentName(name)}`} hint={t("agents.allowedHint")}>
+              <Button size="sm" onClick={() => a.forget(name)}>
+                {t("agents.forget")}
+              </Button>
+            </Row>
+          ))}
+        </>
+      )}
+    </>
   );
 }

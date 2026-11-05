@@ -30,7 +30,12 @@ psd = "0.3"
 notify-debouncer-full = "0.7"
 blake3 = "1"
 trash = "5"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "rt", "net", "io-util", "time"] }
+# `mimikit mcp`, the relay agent apps start: the official MCP SDK, on stdio.
+rmcp = { version = "3.8", default-features = false, features = ["server", "transport-io"] }
+# The agent bridge's random token, and the data folder the relay finds it in.
+getrandom = "0.3"
+dirs = "7"
 # Header probing only (no decoding): formats for the audio extensions in kind.rs. Opus has no Symphonia support.
 symphonia = { version = "0.6", default-features = false, features = ["wav", "ogg", "mp3", "flac", "isomp4", "aac", "id3v2"] }
 # Low OS priority for background passes (image analysis, duplicate hashing, audio headers).
@@ -38,6 +43,8 @@ thread-priority = "3"
 
 [dev-dependencies]
 tempfile = "3"
+# An MCP client for the relay's tests.
+rmcp = { version = "3.8", default-features = false, features = ["client"] }
 
 [profile.release]
 codegen-units = 1

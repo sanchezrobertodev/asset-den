@@ -5,6 +5,14 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+### Added
+
+- AI agents: Claude Code, Claude Desktop and other MCP apps can search your library and look at your assets, so you
+  can ask one to "find a coin sprite and tell me its path". Turn it on in **Settings → AI agents**, which shows the
+  command or config to connect each app. Agents only read: nothing in the library or your files changes. Each app asks
+  you first, and Settings lists the connected ones with Pause and Disconnect. An agent can also show you assets in the
+  library. See [AI agents](README.md#ai-agents-mcp).
+
 ## [0.6.0] - 2026-11-05
 
 ### Added
