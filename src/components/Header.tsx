@@ -191,6 +191,20 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
         </button>
       )}
       {s.similar && <SimilarChip chip={chip(true)} />}
+      {s.shown && (
+        <button
+          type="button"
+          className={clsx(chip(true), "pr-2")}
+          onClick={() => {
+            s.clearSimilar();
+            focusAssets();
+          }}
+          aria-label={t("agents.shownStop", { name: s.shown.by })}
+        >
+          {t("agents.shown", { name: s.shown.by })}
+          <X aria-hidden className="size-3.5 opacity-55" />
+        </button>
+      )}
       <FilterButton />
       {/* A smart collection saves only the search, type chips and filters: not Favorites or the open folder. */}
       {s.view === "library" && !s.folder && (s.query.trim() || s.kinds.length > 0 || activeFilterCount(s.filters) > 0) && <SaveSmart />}
@@ -210,7 +224,7 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
 
   // Screen readers hear the count when the search, chips or filters change, not on every batch a scan adds. During a
   // scan the count is still moving, so they wait for its "Scan finished" message instead.
-  const scope = JSON.stringify([s.view, s.query, s.kinds, s.folder, s.subfolders, s.filters, s.similar?.id]);
+  const scope = JSON.stringify([s.view, s.query, s.kinds, s.folder, s.subfolders, s.filters, s.similar?.id, s.shown]);
   const lastScope = useRef(scope);
   const [said, setSaid] = useState("");
   useEffect(() => {

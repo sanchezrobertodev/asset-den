@@ -4,6 +4,7 @@
 // t("peek.title") looks a key up in the chosen language, then in English. {{name}} placeholders take `vars`, numbers
 // formatted for the locale. With a numeric `count`, "key_one" / "key_other" (and "_zero", "_few", "_many" where the
 // language has them) are picked by Intl.PluralRules.
+import type agents from "../locales/en/agents.json";
 import type analysis from "../locales/en/analysis.json";
 import type api from "../locales/en/api.json";
 import type app from "../locales/en/app.json";
@@ -34,6 +35,7 @@ import type viewers from "../locales/en/viewers.json";
 import type welcome from "../locales/en/welcome.json";
 
 interface Resources {
+  agents: typeof agents;
   analysis: typeof analysis;
   api: typeof api;
   app: typeof app;

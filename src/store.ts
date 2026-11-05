@@ -64,6 +64,8 @@ interface State extends Prefs {
   analysis: AnalysisStatus;
   /** "Find similar" scope of the library: images like `id` within `max` bits, closest first. */
   similar: { id: number; name: string; max: number; ids: number[] } | null;
+  /** Assets an AI agent showed the user (its `show` tool), in its order, and the agent app's name. */
+  shown: { ids: number[]; by: string } | null;
 
   init: () => Promise<void>;
   reload: () => Promise<void>;
@@ -131,6 +133,8 @@ interface State extends Prefs {
   loadPalettes: () => Promise<void>;
   findSimilar: (id: number, max?: number) => Promise<void>;
   clearSimilar: () => void;
+  /** Opens the library on just these assets, for an agent's `show`. */
+  showAssets: (ids: number[], by: string) => void;
 }
 
 const prefs = loadPrefs();
@@ -154,10 +158,10 @@ let noteSaves: Promise<unknown> = Promise.resolve();
 let paletteBacklog: [number, Swatch[]][] | null = null;
 /** "Find similar": answers to superseded (slider drags) or cancelled requests are dropped; re-asked as analysis goes on. */
 const similarAsk = latestRequest<{ id: number; max: number }>(2000);
-/** Ends "Find similar", including a request still on its way. */
+/** Ends "Find similar", including a request still on its way, and an agent's `show`. */
 const noSimilar = () => {
   similarAsk.cancel();
-  return { similar: null };
+  return { similar: null, shown: null };
 };
 
 export const useStore = create<State>((set, get, store) => {
@@ -293,6 +297,7 @@ export const useStore = create<State>((set, get, store) => {
     palettes: null,
     analysis: { done: 0, total: 0, running: false, paused: false, keep: false },
     similar: null,
+    shown: null,
     colSel: null,
     dups: null,
     dupSel: null,
@@ -552,7 +557,7 @@ export const useStore = create<State>((set, get, store) => {
         if (!current()) return;
         // A new image opens the library on its results; a new slider position or a refresh keeps the view as it is.
         const nav = get().similar?.id === id ? {} : { view: "library" as const, full: false, palette: false, query: "", kinds: [], folder: null };
-        set({ ...nav, similar: { id, name: nameOf(id), max, ids } });
+        set({ ...nav, similar: { id, name: nameOf(id), max, ids }, shown: null });
       } catch (e) {
         if (!current()) return;
         similarAsk.cancel(); // or every analysis batch would ask again and show the same error
@@ -560,6 +565,8 @@ export const useStore = create<State>((set, get, store) => {
       }
     },
     clearSimilar: () => set(noSimilar()),
+    showAssets: (ids, by) =>
+      set({ ...noSimilar(), view: "library", full: false, palette: false, query: "", kinds: [], folder: null, filters: noFilters, shown: { ids, by } }),
 
     select: (id, mode = "replace", order = []) =>
       set((s) => {

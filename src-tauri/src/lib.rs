@@ -1,9 +1,11 @@
 mod analysis;
 mod audio;
 mod backup;
+mod bridge;
 mod db;
 mod dupes;
 mod kind;
+mod mcp;
 mod scan;
 mod thumbs;
 mod watch;
@@ -926,9 +928,29 @@ fn open_link(app: AppHandle, link: String) -> Result<(), String> {
     app.opener().open_url(url, None::<&str>).map_err(err)
 }
 
+/// The app's config and embedded window files, built once for `run` and `mcp`.
+fn context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
+/// `mimikit mcp`: serves an agent app on stdio, relaying its tool calls to the running Mimikit (mcp.rs).
+pub fn mcp() {
+    // The folder Tauri's app_data_dir() is, which the relay can't ask Tauri for without starting an app.
+    let Some(dir) = dirs::data_dir().map(|d| d.join(&context().config().identifier)) else {
+        eprintln!("mimikit mcp: no data folder");
+        std::process::exit(1);
+    };
+    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build();
+    if let Err(e) = runtime.map_err(Into::into).and_then(|r| r.block_on(mcp::serve(dir))) {
+        eprintln!("mimikit mcp: {e}");
+        std::process::exit(1);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(bridge::Bridge::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_drag::init())
@@ -1038,9 +1060,11 @@ pub fn run() {
             backups_folder,
             restore_library,
             restore_result,
-            open_link
+            open_link,
+            bridge::set_agent_bridge,
+            bridge::agent_reply
         ])
-        .run(tauri::generate_context!())
+        .run(context())
         .expect("error while running tauri application");
 }
 
