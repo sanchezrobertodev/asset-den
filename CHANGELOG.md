@@ -5,6 +5,22 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+### Added
+
+- Each asset type has an icon, on the type filters and on every type label: thumbnails, the list, the side panel,
+  full screen and search. **Settings → Appearance → Type labels** shows the icon and name, the icon only or the name
+  only.
+
+### Changed
+
+- The row of subfolder chips under the type filters is gone. The folder path's menus and the sidebar still list
+  subfolders.
+
+### Fixed
+
+- Clicking an asset while the side panel is closed no longer scrolls it out of view when the panel opens, which was
+  worst with large thumbnails. Closing the panel keeps it in place too.
+
 ## [0.5.0] - 2026-11-03
 
 ### Added

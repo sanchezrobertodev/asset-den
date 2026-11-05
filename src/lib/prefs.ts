@@ -6,6 +6,8 @@ import { ACCENTS, THEMES, accentById, themeById, type AccentId, type Scheme, typ
 export type Theme = "system" | ThemeId;
 export type SortKey = "name" | "kind" | "size" | "mtime" | "folder";
 export type Layout = "grid" | "list";
+/** How a type shows on its filter chip and label: icon and name, icon only, or name only. */
+export type KindLabels = "both" | "icon" | "name";
 
 export interface Prefs {
   theme: Theme;
@@ -16,6 +18,7 @@ export interface Prefs {
   layout: Layout;
   thumbSize: number;
   pixelated: boolean;
+  kindLabels: KindLabels;
   /** Group the library by folder, as in the design. */
   grouped: boolean;
   /** With a folder open, also show its subfolders' files. */
@@ -34,6 +37,7 @@ const defaults: Prefs = {
   layout: "grid",
   thumbSize: 160,
   pixelated: false,
+  kindLabels: "both",
   grouped: true,
   subfolders: true,
   checkUpdates: true,
@@ -50,6 +54,7 @@ export function loadPrefs(): Prefs {
     // A theme or accent from a newer or older version falls back rather than leaving the page without colours.
     if (p.theme !== "system" && !THEMES.some((t) => t.id === p.theme)) p.theme = defaults.theme;
     if (!ACCENTS.some((a) => a.id === p.accent)) p.accent = defaults.accent;
+    if (!["both", "icon", "name"].includes(p.kindLabels)) p.kindLabels = defaults.kindLabels;
     return p;
   } catch {
     return defaults;

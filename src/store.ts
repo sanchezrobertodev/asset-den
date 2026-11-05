@@ -6,7 +6,7 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { t, type TKey, type Vars } from "./lib/i18n";
 import { latestRequest } from "./lib/latest";
-import { applyTheme, loadPrefs, savePrefs, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
+import { applyTheme, loadPrefs, savePrefs, type KindLabels, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
 import type { AccentId } from "./lib/themes";
 import { forgetThumbnails } from "./lib/thumbs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
@@ -91,6 +91,7 @@ interface State extends Prefs {
   /** Saves the UI language and reloads the window in it. */
   setLanguage: (language: string) => void;
   setPixelated: (p: boolean) => void;
+  setKindLabels: (l: KindLabels) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
@@ -149,8 +150,8 @@ const noSimilar = () => {
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
-    const { theme, accent, language, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop } = get();
-    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, grouped, subfolders, checkUpdates, audioLoop });
+    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, grouped, subfolders, checkUpdates, audioLoop } = get();
+    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, grouped, subfolders, checkUpdates, audioLoop });
   };
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
@@ -461,6 +462,10 @@ export const useStore = create<State>((set, get) => {
     },
     setPixelated: (pixelated) => {
       set({ pixelated });
+      persist();
+    },
+    setKindLabels: (kindLabels) => {
+      set({ kindLabels });
       persist();
     },
     setCheckUpdates: (checkUpdates) => {

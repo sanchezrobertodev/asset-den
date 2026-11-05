@@ -13,7 +13,7 @@ import { forgetThumbnails } from "../lib/thumbs";
 import { languageName, systemLanguage } from "../locales";
 import { useStore } from "../store";
 import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
-import { Button, Label, Modal, T } from "./ui";
+import { Button, Label, Modal, Segmented, T } from "./ui";
 
 const close = () => useStore.getState().setModal(null);
 
@@ -220,6 +220,18 @@ export function SettingsDialog() {
         </div>
         <Row label={t("settings.appearance.accent")} hint={t("settings.appearance.accentHint")}>
           <AccentPicker />
+        </Row>
+        <Row label={t("settings.appearance.kindLabels")} hint={t("settings.appearance.kindLabelsHint")}>
+          <Segmented
+            label={t("settings.appearance.kindLabels")}
+            value={s.kindLabels}
+            onChange={s.setKindLabels}
+            options={[
+              { value: "both", label: t("settings.appearance.kindLabelsBoth") },
+              { value: "icon", label: t("settings.appearance.kindLabelsIcon") },
+              { value: "name", label: t("settings.appearance.kindLabelsName") },
+            ]}
+          />
         </Row>
         <Row label={t("settings.appearance.thumbSize")} hint={t("settings.appearance.thumbSizeHint")}>
           <div className="flex flex-none items-center gap-2.5">
