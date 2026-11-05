@@ -182,13 +182,20 @@ mod tests {
                 "list_collections",
                 "read_text",
                 "show",
+                "tag",
+                "rate",
+                "favorite",
+                "note",
+                "collect",
+                "copy_to_folder",
+                "batch",
             ];
             assert_eq!(names, all);
-            assert!(
-                tools
-                    .iter()
-                    .all(|t| t.annotations.as_ref().is_some_and(|a| a.read_only_hint == Some(true)))
-            );
+            // The agent app hears which tools only read (the first nine) and which change the library.
+            for (i, t) in tools.iter().enumerate() {
+                let read_only = t.annotations.as_ref().and_then(|a| a.read_only_hint);
+                assert_eq!(read_only, Some(i < 9), "{}", t.name);
+            }
 
             let r = agent
                 .call_tool(CallToolRequestParams::new("search").with_arguments(args(json!({ "query": "coin" }))))

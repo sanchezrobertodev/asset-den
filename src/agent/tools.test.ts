@@ -3,7 +3,7 @@
 // After changing a tool, rewrite it with: UPDATE_TOOLS=1 node --experimental-strip-types src/agent/tools.test.ts
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
-import { TOOLS } from "./tools.ts";
+import { isChange, TOOLS } from "./tools.ts";
 
 const file = new URL("../../src-tauri/agent-tools.json", import.meta.url);
 const current = `${JSON.stringify(TOOLS, null, 2)}\n`;
@@ -14,15 +14,25 @@ assert.equal(
   "src-tauri/agent-tools.json is out of date: run UPDATE_TOOLS=1 node --experimental-strip-types src/agent/tools.test.ts",
 );
 
+const READS = ["overview", "search", "get_assets", "similar", "view", "list_tags", "list_collections", "read_text", "show"];
+const CHANGES = ["tag", "rate", "favorite", "note", "collect", "copy_to_folder", "batch"];
 assert.deepEqual(
   TOOLS.map((t) => t.name),
-  ["overview", "search", "get_assets", "similar", "view", "list_tags", "list_collections", "read_text", "show"],
+  [...READS, ...CHANGES],
 );
 for (const t of TOOLS) {
   assert.ok(t.description.length > 40, `${t.name} has a description`);
   assert.equal(t.inputSchema.type, "object", `${t.name} takes an object`);
   assert.equal(t.inputSchema.additionalProperties, false, `${t.name} refuses unknown fields`);
-  // M1 only reads: a tool that changes the library needs "Allow changes" first (M2).
-  assert.equal(t.annotations.readOnlyHint, true, `${t.name} only reads`);
+  // A tool that changes the library needs "Allow changes" first (run.ts gate), and says so to the agent app.
+  assert.equal(t.annotations.readOnlyHint, READS.includes(t.name), `${t.name} says whether it changes anything`);
+  assert.equal(isChange(t.name), CHANGES.includes(t.name));
+  if (isChange(t.name)) assert.match(t.description, /Allow changes/, `${t.name} says it needs Allow changes`);
 }
+// Only copy_to_folder adds without replacing anything; batch takes the changes Undo can take back, so not copies.
+assert.deepEqual(
+  TOOLS.filter((t) => t.annotations.destructiveHint === false).map((t) => t.name),
+  ["copy_to_folder"],
+);
+assert.deepEqual(TOOLS.find((t) => t.name === "batch")!.inputSchema.properties!.changes.items!.properties!.tool.enum, ["tag", "rate", "favorite", "note", "collect"]);
 console.log(`tools: ${TOOLS.length} tools, agent-tools.json up to date`);

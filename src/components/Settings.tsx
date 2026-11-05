@@ -14,6 +14,7 @@ import { ACCENTS, THEMES, accentName, themeById, themeName, type ThemeId } from 
 import { forgetThumbnails } from "../lib/thumbs";
 import { languageName, systemLanguage } from "../locales";
 import { useStore } from "../store";
+import { AgentActivity } from "./Agents";
 import { analyse, cancelAnalysis, pauseAnalysis } from "./Analysis";
 import { Button, Label, Modal, Segmented, T } from "./ui";
 
@@ -619,14 +620,20 @@ function Agents() {
             <p className="py-2 text-xs text-muted">{t("agents.none")}</p>
           )}
           {a.allowed.map((name) => (
-            <Row key={name} label={`${t("agents.allowed")}: ${agentName(name)}`} hint={t("agents.allowedHint")}>
-              <Button size="sm" onClick={() => a.forget(name)}>
-                {t("agents.forget")}
-              </Button>
-            </Row>
+            <div key={name}>
+              <Row label={`${t("agents.allowed")}: ${agentName(name)}`} hint={t("agents.allowedHint")}>
+                <Button size="sm" onClick={() => a.forget(name)}>
+                  {t("agents.forget")}
+                </Button>
+              </Row>
+              <Row label={t("agents.allowChanges", { name: agentName(name) })} hint={t("agents.allowChangesHint")}>
+                <Switch label={t("agents.allowChanges", { name: agentName(name) })} on={a.writers.includes(name)} onChange={(on) => a.setWriter(name, on)} />
+              </Row>
+            </div>
           ))}
         </>
       )}
+      <AgentActivity />
     </>
   );
 }

@@ -1,5 +1,6 @@
-// What the agent tools do (tools.ts lists them): they read the library the window already holds, through `Io`, and
-// answer as an MCP tool result. No Tauri imports, so the Node tests (agent.test.ts) run them on a fixture library.
+// What the agent tools do (tools.ts lists them): they read the library the window already holds, and change it, through
+// `Io`, and answer as an MCP tool result. No Tauri imports, so the Node tests (agent.test.ts) run them on a fixture
+// library. A change keeps the values it replaced (`Step`), so the activity list shows them and Undo puts them back.
 //
 // Safety: names, folders, tags, notes and file contents come from the user's files and downloaded packs, so they are
 // untrusted text to a model. Every answer carries them inside <mimikit-data>, with a sentence saying it is data, and
@@ -8,8 +9,8 @@
 import { NAMED_COLORS } from "../lib/colors.ts";
 import { folderOf } from "../lib/format.ts";
 import { noFilters, parseQuery, rulesWantColors, smartMembers, visibleAssets, type Filters, type Palettes } from "../lib/filter.ts";
-import type { AnalysisStatus, Asset, Collection, Notes, Root, SpriteSheet, TextPreview } from "../types";
-import { LIMITS, TOOLS, type Schema } from "./tools.ts";
+import type { AnalysisStatus, Asset, Collection, CollectionRule, Notes, Root, SpriteSheet, TextPreview } from "../types";
+import { isChange, LIMITS, TOOLS, type Schema } from "./tools.ts";
 
 export type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
 /** An MCP tool result, as the relay hands it to the agent app. */
@@ -37,7 +38,33 @@ export interface Io {
   /** Base64 PNGs: one numbered contact sheet, or one picture per asset. */
   pictures: (assets: Asset[], layout: "sheet" | "thumbnails") => Promise<string[]>;
   show: (ids: number[]) => void;
+  /** Changes, saved like the user's own; each throws if it couldn't be saved. */
+  write: {
+    /** Returns the tag as saved (lowercase). */
+    tag: (ids: number[], tag: string, add: boolean) => Promise<string>;
+    rate: (ids: number[], rating: number) => Promise<void>;
+    favorite: (ids: number[], favorite: boolean) => Promise<void>;
+    /** Returns the note as saved, "" once cleared. */
+    note: (id: number, note: string) => Promise<string>;
+    create: (name: string, rule: CollectionRule | null) => Promise<number>;
+    member: (collection: number, ids: number[], member: boolean) => Promise<void>;
+    /** Deletes a collection: only Undo does, for one the agent made. */
+    remove: (collection: number) => Promise<void>;
+    copy: (ids: number[], folder: string) => Promise<{ copied: number; failed: number }>;
+  };
+  /** Keeps what one call changed, for the activity list and Undo. */
+  record: (steps: Step[]) => void;
 }
+
+/** One thing a change did, with what it replaced: only the assets it really changed are listed. */
+export type Step =
+  | { do: "tag"; tag: string; add: boolean; ids: number[] }
+  | { do: "rate"; rating: number; before: [id: number, rating: number][] }
+  | { do: "favorite"; favorite: boolean; ids: number[] }
+  | { do: "note"; id: number; before: string; after: string }
+  | { do: "create"; collection: number; name: string; smart: boolean }
+  | { do: "member"; collection: number; name: string; add: boolean; ids: number[] }
+  | { do: "copy"; folder: string; copied: number; failed: number };
 
 /** Most characters of text, and of pictures in base64, one answer hands to the model. */
 export const MAX_TEXT = 60_000;
@@ -145,6 +172,275 @@ function pick(lib: Library, ids: number[]) {
 }
 
 const noAssets = () => errorResult("not_found", "None of those ids is an asset in the library.", "Use search to find assets and their ids.");
+
+// ---------- changes ----------
+
+interface Problem {
+  code: string;
+  message: string;
+  hint: string;
+}
+const problem = (code: string, message: string, hint: string): Problem => ({ code, message, hint });
+const isProblem = (e: unknown): e is Problem => !!e && typeof e === "object" && "code" in e && "hint" in e;
+
+/** A tag as the backend saves it (db::clean_tag): without #, trimmed, lowercase. Null if it can't be a tag. */
+const cleanTag = (raw: string) => {
+  const tag = raw.trim().replace(/^#/, "").trim().toLowerCase();
+  return tag && [...tag].length <= 64 && !/\p{Cc}/u.test(tag) ? tag : null;
+};
+
+/** Files that run when opened. copy_to_folder leaves them, so a pack can't use an agent to put a script in a startup folder. */
+const RUNS = new Set(["exe", "com", "bat", "cmd", "ps1", "psm1", "vbs", "vbe", "js", "jse", "mjs", "wsf", "wsh", "msi", "msp", "scr", "pif", "hta", "cpl", "lnk", "url", "reg", "jar", "dll", "sys", "scf", "msc", "sh", "command", "app", "py", "pyw"]);
+const ABSOLUTE = /^([A-Za-z]:[\\/]|\\\\|\/)/;
+
+const noneFound = (ids: number[], lib: Library) => {
+  const known = new Set(lib.assets.map((a) => a.id));
+  return ids.some((id) => known.has(id)) ? null : problem("not_found", "None of those ids is an asset in the library.", "Use search to find assets and their ids.");
+};
+/** The assets with `ids` as they are now, once each. */
+const live = (io: Io, ids: number[]) => {
+  const byId = new Map(io.library().assets.map((a) => [a.id, a]));
+  return [...new Set(ids)].flatMap((id) => byId.get(id) ?? []);
+};
+
+interface ChangeTool {
+  /** The assets the call names. */
+  ids: (a: Args) => number[];
+  /** What's wrong with the call for this library, checked before anything changes. */
+  check: (a: Args, lib: Library) => Problem | null;
+  /** Makes the change, adding what it did to `steps` as it goes; may return more for the answer. */
+  apply: (a: Args, io: Io, steps: Step[]) => Promise<Record<string, unknown> | void>;
+}
+
+const CHANGE: Record<string, ChangeTool> = {
+  tag: {
+    ids: (a) => a.ids as number[],
+    check: (a, lib) => {
+      const tags = [...((a.add as string[]) ?? []), ...((a.remove as string[]) ?? [])];
+      if (!tags.length) return problem("invalid_input", "Pass add, remove or both.", "Name the tags to add or remove.");
+      if (tags.some((x) => cleanTag(x) === null)) return problem("invalid_input", "Tags must be 1 to 64 characters, without control characters.", "Fix the tag and call again.");
+      return noneFound(a.ids as number[], lib);
+    },
+    apply: async (a, io, steps) => {
+      for (const [list, add] of [[a.add, true], [a.remove, false]] as const) {
+        for (const raw of (list as string[] | undefined) ?? []) {
+          const want = cleanTag(raw)!;
+          const ids = live(io, a.ids as number[]).filter((x) => x.tags.includes(want) !== add).map((x) => x.id);
+          if (ids.length) steps.push({ do: "tag", tag: await io.write.tag(ids, want, add), add, ids });
+        }
+      }
+    },
+  },
+  rate: {
+    ids: (a) => a.ids as number[],
+    check: (a, lib) => noneFound(a.ids as number[], lib),
+    apply: async (a, io, steps) => {
+      const rating = a.rating as number;
+      const before = live(io, a.ids as number[]).filter((x) => x.rating !== rating).map((x): [number, number] => [x.id, x.rating]);
+      if (!before.length) return;
+      await io.write.rate(before.map(([id]) => id), rating);
+      steps.push({ do: "rate", rating, before });
+    },
+  },
+  favorite: {
+    ids: (a) => a.ids as number[],
+    check: (a, lib) => noneFound(a.ids as number[], lib),
+    apply: async (a, io, steps) => {
+      const favorite = a.favorite as boolean;
+      const ids = live(io, a.ids as number[]).filter((x) => x.favorite !== favorite).map((x) => x.id);
+      if (!ids.length) return;
+      await io.write.favorite(ids, favorite);
+      steps.push({ do: "favorite", favorite, ids });
+    },
+  },
+  note: {
+    ids: (a) => [a.id as number],
+    check: (a, lib) => noneFound([a.id as number], lib),
+    apply: async (a, io, steps) => {
+      const id = a.id as number;
+      const before = io.library().notes[id] ?? "";
+      if (before === (a.note as string).trim()) return;
+      steps.push({ do: "note", id, before, after: await io.write.note(id, a.note as string) });
+    },
+  },
+  collect: {
+    ids: (a) => [...((a.add as number[]) ?? []), ...((a.remove as number[]) ?? [])],
+    check: (a, lib) => {
+      const add = a.add as number[] | undefined;
+      const remove = a.remove as number[] | undefined;
+      if ((a.name === undefined) === (a.collection === undefined))
+        return problem("invalid_input", "Pass name for a new collection, or collection to change one, not both.", "See collect's description.");
+      if (a.name !== undefined) {
+        const name = (a.name as string).trim();
+        if (!name) return problem("invalid_input", "A collection's name can't be empty.", "Pass a name.");
+        const taken = lib.collections.find((c) => c.name === name);
+        if (taken) return problem("name_taken", `There already is a collection by that name: id ${taken.id}.`, "Pass collection with that id to change it, or pick another name.");
+        if (remove) return problem("invalid_input", "A new collection has nothing to remove.", "Leave remove out.");
+        if (a.search && add) return problem("invalid_input", "A smart collection's assets come from its search, so add doesn't apply.", "Leave add out, or make a plain collection.");
+        return add ? noneFound(add, lib) : null;
+      }
+      const c = lib.collections.find((x) => x.id === a.collection);
+      if (!c) return problem("not_found", "There is no collection with that id.", "Use list_collections for the ids.");
+      if (c.rule) return problem("smart_collection", "That is a smart collection: its assets follow its saved search.", "Change the assets so they match its search, or make a plain collection.");
+      if (a.search) return problem("invalid_input", "search only makes a new collection smart.", "Leave search out.");
+      if (!add && !remove) return problem("invalid_input", "Pass add, remove or both.", "Name the assets to put in or take out.");
+      return noneFound([...(add ?? []), ...(remove ?? [])], lib);
+    },
+    apply: async (a, io, steps) => {
+      let id = a.collection as number | undefined;
+      let name: string;
+      if (id === undefined) {
+        name = (a.name as string).trim();
+        const search = a.search as { query?: string; filters?: Partial<Filters> } | undefined;
+        const rule = search ? { query: search.query ?? "", filters: { ...noFilters, ...search.filters } } : null;
+        id = await io.write.create(name, rule);
+        steps.push({ do: "create", collection: id, name, smart: !!rule });
+      } else name = io.library().collections.find((c) => c.id === id)!.name;
+      const members = new Set(io.library().collections.find((c) => c.id === id)?.assetIds ?? []);
+      for (const [list, add] of [[a.add, true], [a.remove, false]] as const) {
+        const ids = live(io, (list as number[] | undefined) ?? [])
+          .map((x) => x.id)
+          .filter((x) => members.has(x) !== add);
+        if (!ids.length) continue;
+        await io.write.member(id, ids, add);
+        steps.push({ do: "member", collection: id, name, add, ids });
+      }
+    },
+  },
+  copy_to_folder: {
+    ids: (a) => a.ids as number[],
+    check: (a, lib) => {
+      if (!ABSOLUTE.test(a.folder as string)) return problem("invalid_input", "folder must be an absolute path.", "Pass the full path of an existing folder.");
+      const files = lib.assets.filter((x) => (a.ids as number[]).includes(x.id));
+      if (files.length && files.every((x) => RUNS.has(x.ext)))
+        return problem("not_copied", "Those are programs or scripts that run when opened, which copy_to_folder doesn't copy.", "Tell the user; they can copy such files themselves.");
+      return noneFound(a.ids as number[], lib);
+    },
+    apply: async (a, io, steps) => {
+      const folder = a.folder as string;
+      const files = live(io, a.ids as number[]);
+      const runs = files.filter((x) => RUNS.has(x.ext)).map((x) => x.id);
+      let done;
+      try {
+        done = await io.write.copy(
+          files.filter((x) => !RUNS.has(x.ext)).map((x) => x.id),
+          folder,
+        );
+      } catch {
+        throw problem("not_a_folder", "Mimikit couldn't copy into that folder: it doesn't exist or isn't a folder.", "Pass the absolute path of an existing folder.");
+      }
+      steps.push({ do: "copy", folder, ...done });
+      return runs.length ? { notCopied: runs, why: "Programs and scripts that run when opened aren't copied." } : undefined;
+    },
+  },
+};
+
+/** What a step did, for the agent: counts rather than the values it replaced. */
+function summary(s: Step) {
+  switch (s.do) {
+    case "tag":
+      return { tag: s.tag, [s.add ? "addedTo" : "removedFrom"]: s.ids.length };
+    case "rate":
+      return { rating: s.rating, assets: s.before.length };
+    case "favorite":
+      return { favorite: s.favorite, assets: s.ids.length };
+    case "note":
+      return { id: s.id, note: s.after ? "set" : "cleared" };
+    case "create":
+      return { made: s.smart ? "smart collection" : "collection", collection: s.collection, name: s.name };
+    case "member":
+      return { collection: s.collection, [s.add ? "added" : "removed"]: s.ids.length };
+    case "copy":
+      return { folder: s.folder, copied: s.copied, ...(s.failed ? { failed: s.failed } : {}) };
+  }
+}
+
+/** Checks every change, then makes them in order and records them as one step of the activity list. */
+async function change(list: { tool: string; args: Args }[], io: Io): Promise<ToolResult> {
+  const lib = io.library();
+  const many = list.length > 1;
+  for (const [i, c] of list.entries()) {
+    const p = CHANGE[c.tool].check(c.args, lib);
+    if (p) return errorResult(p.code, many ? `changes[${i}]: ${p.message}` : p.message, many ? `${p.hint} Nothing was changed.` : p.hint);
+  }
+  const named = [...new Set(list.flatMap((c) => CHANGE[c.tool].ids(c.args)))];
+  if (named.length > LIMITS.change)
+    return errorResult("too_many", `This names ${named.length} assets, and one call changes at most ${LIMITS.change}.`, "Split it over several calls.");
+  const steps: Step[] = [];
+  const extra: Record<string, unknown> = {};
+  try {
+    for (const c of list) Object.assign(extra, await CHANGE[c.tool].apply(c.args, io, steps));
+  } catch (e) {
+    if (steps.length) io.record(steps);
+    const p = isProblem(e) ? e : problem("internal", "Mimikit couldn't save a change.", "Try again. If it keeps failing, tell the user.");
+    const made = steps.length ? ` ${steps.length} part(s) were made before it stopped; the user can undo them in Mimikit.` : " Nothing was changed.";
+    return errorResult(p.code, p.message + made, p.hint);
+  }
+  if (steps.length) io.record(steps);
+  const known = new Set(lib.assets.map((a) => a.id));
+  const notFound = named.filter((id) => !known.has(id));
+  return data({
+    changed: steps.map(summary),
+    ...(steps.length ? {} : { note: "Nothing needed changing: the assets were already that way." }),
+    ...(notFound.length ? { notFound } : {}),
+    ...extra,
+  });
+}
+
+const one = (tool: string) => (args: Args, io: Io) => change([{ tool, args }], io);
+
+/**
+ * Takes a change back. Each value goes back to what it was before the change's first step, but only while it still
+ * holds what the change's last step left: a value the user changed since stays as they left it, even one a batch set
+ * twice. A collection the change made is removed; copies stay.
+ */
+export async function undoSteps(steps: Step[], io: Pick<Io, "library" | "write">) {
+  const lib = io.library();
+  const byId = new Map(lib.assets.map((a) => [a.id, a]));
+  const made = new Set(steps.flatMap((s) => (s.do === "create" ? [s.collection] : [])));
+  // Each value the steps set, by what it is (`group`, e.g. the tag) and asset: before the first step, after the last.
+  const values = new Map<string, { group: string; s: Step; id: number; before: unknown; after: unknown }>();
+  const set = (group: string, s: Step, id: number, before: unknown, after: unknown) => {
+    const v = values.get(`${group} ${id}`);
+    if (v) v.after = after;
+    else values.set(`${group} ${id}`, { group, s, id, before, after });
+  };
+  for (const s of steps) {
+    if (s.do === "tag") for (const id of s.ids) set(`tag ${s.tag}`, s, id, !s.add, s.add);
+    else if (s.do === "rate") for (const [id, r] of s.before) set("rate", s, id, r, s.rating);
+    else if (s.do === "favorite") for (const id of s.ids) set("favorite", s, id, !s.favorite, s.favorite);
+    else if (s.do === "note") set(`note ${s.id}`, s, s.id, s.before, s.after);
+    // A collection the change made goes as a whole.
+    else if (s.do === "member" && !made.has(s.collection)) for (const id of s.ids) set(`member ${s.collection}`, s, id, !s.add, s.add);
+  }
+  const now = (s: Step, a: Asset) => {
+    if (s.do === "tag") return a.tags.includes(s.tag);
+    if (s.do === "rate") return a.rating;
+    if (s.do === "favorite") return a.favorite;
+    if (s.do === "note") return lib.notes[a.id] ?? "";
+    if (s.do === "member") return lib.collections.find((c) => c.id === s.collection)?.assetIds.includes(a.id);
+  };
+  // The values to put back, grouped into one write per group and old value.
+  const back = new Map<string, { s: Step; to: unknown; ids: number[] }>();
+  for (const v of values.values()) {
+    const a = byId.get(v.id);
+    if (v.before === v.after || !a || now(v.s, a) !== v.after) continue;
+    const key = `${v.group} ${String(v.before)}`;
+    const b = back.get(key) ?? back.set(key, { s: v.s, to: v.before, ids: [] }).get(key)!;
+    b.ids.push(v.id);
+  }
+  for (const { s, to, ids } of back.values()) {
+    if (s.do === "tag") await io.write.tag(ids, s.tag, to as boolean);
+    else if (s.do === "rate") await io.write.rate(ids, to as number);
+    else if (s.do === "favorite") await io.write.favorite(ids, to as boolean);
+    else if (s.do === "note") await io.write.note(s.id, to as string);
+    else if (s.do === "member") await io.write.member(s.collection, ids, to as boolean);
+  }
+  for (const c of [...made].reverse()) if (lib.collections.some((x) => x.id === c)) await io.write.remove(c);
+}
+
+/** Whether Undo can take anything back: copies stay, since Mimikit never deletes files. */
+export const undoable = (steps: Step[]) => steps.some((s) => s.do !== "copy");
 
 const run: Record<string, (args: Args, io: Io) => ToolResult | Promise<ToolResult>> = {
   overview: async (_, io) => {
@@ -304,6 +600,21 @@ const run: Record<string, (args: Args, io: Io) => ToolResult | Promise<ToolResul
     io.show(found.map((x) => x.id));
     return data({ shown: found.length, ...extra });
   },
+
+  tag: one("tag"),
+  rate: one("rate"),
+  favorite: one("favorite"),
+  note: one("note"),
+  collect: one("collect"),
+  copy_to_folder: one("copy_to_folder"),
+  batch: (a, io) => {
+    const list = a.changes as { tool: string; args: Args }[];
+    for (const [i, c] of list.entries()) {
+      const wrong = problems(TOOLS.find((t) => t.name === c.tool)!.inputSchema, c.args, `input.changes[${i}].args`);
+      if (wrong.length) return errorResult("invalid_input", wrong.slice(0, 5).join("; "), "Fix the input and call again. Nothing was changed.");
+    }
+    return change(list, io);
+  },
 };
 
 /** Runs one tool call. Never throws: anything that goes wrong is an error result. */
@@ -348,15 +659,36 @@ export function cleanAgent(raw: unknown): Agent {
   return { pid: Number.isInteger(o.pid) ? (o.pid as number) : 0, name: str(o.name, 100) || "unknown", version: str(o.version, 40) };
 }
 
+/** A change as far as the per-minute limit needs it: which app made it, and when. */
+export interface Made {
+  by: string;
+  at: number;
+}
+
 /**
- * Whether a call from `agent` runs, waits for the user's "Allow?", or is refused. `allowed` holds the agent apps the
- * user let in (by name, kept across launches); `blocked` the relays the user disconnected or said no to.
+ * Whether a call of `tool` from `agent` runs, waits for the user's "Allow?", or is refused. `allowed` holds the agent
+ * apps the user let in and `writers` those it lets change the library (by name, kept across launches); `blocked` the
+ * relays the user disconnected or said no to; `made` every app's changes of the last minute. Pause and the per-minute
+ * limit only hold back changes.
  */
-export function gate(agent: Agent, s: { allowed: string[]; blocked: number[]; sessions: Session[] }): "run" | "ask" | ToolResult {
+export function gate(
+  agent: Agent,
+  s: { allowed: string[]; writers: string[]; blocked: number[]; sessions: Session[]; made: Made[] },
+  tool: string,
+  now = Date.now(),
+): "run" | "ask" | ToolResult {
   if (s.blocked.includes(agent.pid))
     return errorResult("not_allowed", "The user disconnected this agent, or didn't allow it to see their library.", "Don't retry. A new session of your app can connect again if the user allows it.");
   if (!s.allowed.includes(agent.name)) return "ask";
+  if (!isChange(tool)) return "run";
   if (s.sessions.find((x) => x.pid === agent.pid)?.paused)
-    return errorResult("paused", "The user paused this agent in Mimikit.", "Wait, or ask the user to press Resume in Mimikit (Settings › AI agents). Don't retry in a loop.");
+    return errorResult("paused", "The user paused this agent's changes in Mimikit.", "Searching and looking still work. For changes, wait or ask the user to press Resume in Mimikit (Settings › AI agents). Don't retry in a loop.");
+  if (!s.writers.includes(agent.name))
+    return errorResult("read_only", "The user hasn't let your app change their Mimikit library.", "Ask the user to turn on Allow changes for your app in Mimikit (Settings › AI agents), then call again. Searching and looking still work.");
+  const recent = s.made.filter((c) => c.by === agent.name && now - c.at < 60_000);
+  if (recent.length >= LIMITS.perMinute) {
+    const wait = Math.ceil((60_000 - (now - Math.min(...recent.map((c) => c.at)))) / 1000);
+    return errorResult("rate_limited", `Your app made ${LIMITS.perMinute} changes in the last minute, the most Mimikit takes.`, `Wait ${wait} s. batch makes several changes in one.`);
+  }
   return "run";
 }
