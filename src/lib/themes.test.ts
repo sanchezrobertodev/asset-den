@@ -134,6 +134,15 @@ for (const theme of THEMES) {
       const pill = (n: string) => parse(`oklch(${sub(t[n])} ${h})`).rgb;
       check(`${label} pill text`, pill(fgT), "its pill", pill(bgT), text);
     }
+    // The type label (11 px text) on a placeholder tile's stripes.
+    for (const [label, h, token] of [...KIND_HUES.map((h) => [`kind ${h}`, String(h), "--k-text"]), ["kind other", "0", "--ko-text"]]) {
+      const ext = parse(`oklch(${sub(t[token])} ${h})`).rgb;
+      for (const s of ["--stripe-a", "--stripe-b"]) check(`${label} tile label`, ext, s, col(s).rgb, text);
+    }
+    // The audio waveform's unplayed bars, in the side panel (--bg) and in full screen (--sunken) (WCAG 1.4.11).
+    for (const s of ["--bg", "--sunken"]) check("--faint waveform", col("--faint").rgb, s, col(s).rgb, 3);
+    // A toggle chip that's on is inverted, so its fill stands apart from an off chip's by more than colour (WCAG 1.4.1).
+    check("--invert-bg toggle on", col("--invert-bg").rgb, "--active toggle off", col("--active").rgb, 3);
     for (const line of ["--line", "--line-x"]) assert.match(t[line], /^#[0-9a-f]{6}$/i, `${theme.id}: ${line} must be hex (three.js reads it)`);
   }
 }

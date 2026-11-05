@@ -11,5 +11,6 @@
   "clips_other": "{{count}} animações",
   "wireframe": "Wireframe",
   "animate": "Animar",
+  "autoRotate": "Girar automaticamente",
   "resetView": "Redefinir visão"
 }

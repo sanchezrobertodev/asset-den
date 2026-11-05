@@ -1,6 +1,6 @@
 import type { Asset, Collection, CollectionRule, FolderFilter, Kind, Notes, Root, ViewName } from "../types";
 import { hasColor, parseColor, type LabSwatch } from "./colors.ts";
-import { baseName, folderOf } from "./format.ts";
+import { folderOf, rootLabel } from "./format.ts";
 import type { SortKey } from "./prefs";
 
 /** Extra filters from the Filters panel. null / empty means "any". */
@@ -257,7 +257,7 @@ export interface Group {
  * folder), labels start at that folder's name, like "hero/idle" inside characters/hero.
  */
 export function groupByFolder(list: Asset[], roots: Root[], base: FolderFilter | null = null): Group[] {
-  const rootName = new Map(roots.map((r) => [r.id, baseName(r.path)]));
+  const rootName = new Map(roots.map((r) => [r.id, rootLabel(roots, r.id)]));
   const multi = roots.length > 1 && !base;
   const trim = base?.path ? folderOf(base.path) : "";
   const groups = new Map<string, Group>();

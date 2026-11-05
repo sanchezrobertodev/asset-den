@@ -17,11 +17,13 @@ import { SettingsDialog } from "./components/Settings";
 import { ShortcutsDialog } from "./components/Shortcuts";
 import { Sidebar } from "./components/Sidebar";
 import { Button, focusAssets, Kbd, modalOpen } from "./components/ui";
+import { viewerKey } from "./components/Viewers";
 import { Welcome } from "./components/Welcome";
 import { activeFilterCount, groupByFolder, parseQuery, rulesWantColors, visibleAssets } from "./lib/filter";
 import { parentOf } from "./lib/folders";
 import { list } from "./lib/fmt";
-import { baseName, folderOf } from "./lib/format";
+import { baseName, folderOf, rootLabel } from "./lib/format";
+import { rowStep } from "./lib/grid";
 import { t } from "./lib/i18n";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
 import { shortcut } from "./lib/shortcuts";
@@ -100,7 +102,7 @@ function Toast() {
 /** Tells screen readers when a scan starts and ends, without reading every count update. */
 function ScanStatus() {
   const { scanning, roots } = useStore();
-  const names = list(Object.keys(scanning).map((id) => baseName(roots.find((r) => r.id === Number(id))?.path ?? "")));
+  const names = list(Object.keys(scanning).map((id) => rootLabel(roots, Number(id))));
   const [message, setMessage] = useState("");
   useEffect(
     () =>
@@ -172,6 +174,8 @@ export default function App() {
   }, [s.view, s.dups, s.dupSel, s.assets]);
   const order = useMemo(() => copies ?? (groups ? groups.flatMap((g) => g.items) : visible), [copies, groups, visible]);
   const active = s.assets.find((a) => a.id === s.activeId) ?? null;
+  // Where a Shift+arrow selection started, so each press extends the same range.
+  const anchor = useRef<number | null>(null);
   const peekOn = s.peek && !!active && (navigable || s.full);
 
   // A link to another view (Insights rows, the duplicate banner, search actions) goes away with the old view: land on the new one.
@@ -223,13 +227,21 @@ export default function App() {
         else st.setSelected([]);
         return;
       }
+      if (viewerKey(e, letter(e))) {
+        e.preventDefault();
+        return;
+      }
       if ((!navigable && !st.full) || ownsKey(e.target, e.key)) return;
       const i = order.findIndex((a) => a.id === st.activeId);
       const ensureActive = () => {
         if (st.activeId === null && order.length) st.select(order[0].id);
         return st.activeId !== null || order.length > 0;
       };
-      if (e.key === " ") {
+      if (e.key === " " && (e.ctrlKey || e.metaKey) && !st.full) {
+        e.preventDefault();
+        if (st.activeId === null) ensureActive();
+        else st.select(st.activeId, "toggle");
+      } else if (e.key === " ") {
         e.preventDefault();
         if (st.full) st.setFull(false);
         else if (ensureActive()) st.setPeek(!st.peek);
@@ -239,7 +251,24 @@ export default function App() {
       } else if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key) && order.length) {
         e.preventDefault();
         const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-        st.select(order[((i < 0 ? 0 : i + d) + order.length) % order.length].id);
+        // ↑ ↓ go a row in the grid (the list has one column); full screen steps through one at a time.
+        const cols = Number(document.querySelector<HTMLElement>("[data-assets]")?.dataset.cols ?? 1);
+        const sizes = groups ? groups.map((g) => g.items.length) : [order.length];
+        const to = i < 0 ? 0 : (e.key === "ArrowDown" || e.key === "ArrowUp") && !st.full ? rowStep(sizes, cols, i, d) : (i + d + order.length) % order.length;
+        const next = order[to].id;
+        if (e.shiftKey && !st.full) {
+          // Shift selects everything from where it started to here; the active asset moves along.
+          if (anchor.current === null || !st.selected.has(anchor.current)) anchor.current = st.activeId ?? next;
+          const from = order.findIndex((a) => a.id === anchor.current);
+          const [lo, hi] = from < 0 ? [to, to] : from < to ? [from, to] : [to, from];
+          useStore.setState({ selected: new Set(order.slice(lo, hi + 1).map((a) => a.id)), activeId: next });
+        } else if ((e.ctrlKey || e.metaKey) && !st.full) {
+          // Moves without changing the selection, to pick assets one by one with Ctrl+Space.
+          useStore.setState({ activeId: next });
+        } else {
+          anchor.current = null;
+          st.select(next);
+        }
       } else if (letter(e) === "f" && !e.ctrlKey && !e.metaKey) {
         const ids = st.selected.size ? [...st.selected] : st.activeId !== null ? [st.activeId] : [];
         const want = new Set(ids);
@@ -255,7 +284,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [order, navigable]);
+  }, [order, groups, navigable]);
 
   const scanning = Object.keys(s.scanning).length > 0;
   const filtered = s.query || s.kinds.length > 0 || s.folder !== null || activeFilterCount(s.filters) > 0 || !!similar;
@@ -278,7 +307,7 @@ export default function App() {
       <div className="grid min-h-0 min-w-0" style={{ gridTemplateColumns: `minmax(0,1fr) ${peekOn ? "clamp(300px,30vw,400px)" : "0px"}` }}>
         <main tabIndex={-1} className="flex min-h-0 min-w-0 flex-col focus-visible:outline-none">
           <Header />
-          {(browse || s.view === "home") && !s.roots.length && (
+          {(browse || s.view === "home" || s.view === "insights" || s.view === "duplicates") && !s.roots.length && (
             <div className="min-h-0 flex-1">
               <Welcome />
             </div>
@@ -316,19 +345,20 @@ export default function App() {
             </>
           )}
           {s.view === "collections" && <CollectionsView items={order} groups={groups} scopeAssets={scopeAssets} />}
-          {s.view === "duplicates" && <DuplicatesView visible={visible} scopeAssets={scopeAssets} />}
+          {s.view === "duplicates" && s.roots.length > 0 && <DuplicatesView visible={visible} scopeAssets={scopeAssets} />}
           {s.view === "home" && s.roots.length > 0 && <HomeView />}
-          {s.view === "insights" && <InsightsView />}
+          {s.view === "insights" && s.roots.length > 0 && <InsightsView />}
           {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
-            <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex items-center gap-3.5 rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
+            // One line: hints that don't fit drop out whole, and the way to the full list comes first so it never does.
+            <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex h-[30px] max-w-[calc(100%-252px)] flex-wrap content-start items-center gap-x-3.5 gap-y-4 overflow-hidden rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
+              <span>
+                <Kbd>{shortcut("help").keys}</Kbd> {t("app.allShortcuts")}
+              </span>
               {HINTS.map((h) => (
                 <span key={h.id}>
                   <Kbd>{h.keys}</Kbd> {h.hint}
                 </span>
               ))}
-              <span>
-                <Kbd>{shortcut("help").keys}</Kbd> {t("app.allShortcuts")}
-              </span>
             </div>
           )}
           <ScanStatus />

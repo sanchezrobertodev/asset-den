@@ -1,5 +1,5 @@
 import type { Asset, FolderFilter, Root } from "../types";
-import { baseName, folderOf } from "./format.ts";
+import { baseName, folderOf, rootLabel } from "./format.ts";
 
 /** A folder in the library, with totals that include everything below it. */
 export interface FolderNode {
@@ -34,7 +34,7 @@ export function buildTree(assets: Asset[], roots: Root[]): FolderNode[] {
     }
     return n;
   };
-  const tops = roots.map((r) => node(r.id, "", baseName(r.path)));
+  const tops = roots.map((r) => node(r.id, "", rootLabel(roots, r.id)));
   for (const a of assets) {
     let path = folderOf(a.relPath);
     // Count the file in its folder and every folder above it.

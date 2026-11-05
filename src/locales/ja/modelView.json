@@ -5,5 +5,6 @@
   "clips_other": "アニメーション {{count}}",
   "wireframe": "ワイヤーフレーム",
   "animate": "アニメーション",
+  "autoRotate": "自動回転",
   "resetView": "表示をリセット"
 }

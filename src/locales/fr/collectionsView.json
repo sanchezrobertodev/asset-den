@@ -10,6 +10,13 @@
   "useSearchFirst": "Recherchez ou filtrez d'abord dans la bibliothèque",
   "useSearch": "Utiliser la recherche actuelle",
   "delete": "Supprimer",
+  "deleteConfirm": {
+    "title": "Supprimer {{name}} ?",
+    "body_one": "Sa ressource reste dans la bibliothèque et sur le disque. Seule la collection est supprimée.",
+    "body_other": "Ses {{count}} ressources restent dans la bibliothèque et sur le disque. Seule la collection est supprimée.",
+    "confirm": "Supprimer la collection",
+    "cancel": "Annuler"
+  },
   "copyToFolder": "Copier dans un dossier…",
   "noMatch": {
     "title": "Aucune ressource de cette collection ne correspond à ces filtres",

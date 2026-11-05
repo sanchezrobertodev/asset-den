@@ -6,7 +6,7 @@
     "cantDisplay": "WebView 无法显示此图片。",
     "zoom": "{{percent}}%",
     "zoomShown": "以 {{percent}}% 显示",
-    "zoomHint": "滚轮缩放，拖动平移"
+    "zoomHint": "滚轮或 + − 缩放，拖动平移"
   },
   "export": {
     "pickFolder": "将 {{name}} 的帧导出到…",

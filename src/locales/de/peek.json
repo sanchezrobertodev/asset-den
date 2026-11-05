@@ -1,7 +1,8 @@
 {
   "previewFailed": {
     "title": "Vorschau nicht möglich",
-    "body": "Die Datei ist vielleicht beschädigt oder nutzt eine Formatvariante, die Mimikit nicht lesen kann."
+    "body": "Die Datei ist vielleicht beschädigt oder nutzt eine Formatvariante, die Mimikit nicht lesen kann.",
+    "details": "Technische Details"
   },
   "open": "Öffnen",
   "showInFolder": "Im Ordner anzeigen",

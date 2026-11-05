@@ -32,7 +32,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { rulesWantColors, smartMembers } from "../lib/filter";
 import { treeFor, type FolderNode } from "../lib/folders";
-import { baseName } from "../lib/format";
+import { baseName, rootLabel } from "../lib/format";
 import { bytes, kindLabel, num } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import type { Theme } from "../lib/prefs";
@@ -257,7 +257,7 @@ function FolderTree() {
     if (s.expanded.has(n.key)) n.children.forEach((c) => walk(c, depth + 1));
   };
   // Roots with nothing indexed yet still get a row (e.g. while their first scan runs).
-  s.roots.forEach((r) => walk(tree.find((node) => node.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: baseName(r.path), count: 0, bytes: 0, children: [] }, 0));
+  s.roots.forEach((r) => walk(tree.find((node) => node.rootId === r.id) ?? { key: `${r.id}:`, rootId: r.id, path: "", name: rootLabel(s.roots, r.id), count: 0, bytes: 0, children: [] }, 0));
   // A relink whose new folder lacks some of the files, waiting for the user to confirm.
   const [relink, setRelink] = useState<{ id: number; name: string; path: string; found: number; checked: number } | null>(null);
   // A library folder whose X was clicked, waiting for the user to confirm.

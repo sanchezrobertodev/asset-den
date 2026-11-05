@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useMemo } from "react";
-import { baseName, folderOf } from "../lib/format";
+import { folderOf, rootLabel } from "../lib/format";
 import { bytes, kindLabel, num } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import { useStore } from "../store";
@@ -35,7 +35,7 @@ export function InsightsView() {
     return { total, kinds, largest, topFolders, untagged };
   }, [s.assets]);
   const dupCount = s.dups?.length ?? 0;
-  const rootName = (id: number) => baseName(s.roots.find((r) => r.id === id)?.path ?? "");
+  const rootName = (id: number) => rootLabel(s.roots, id);
   const multi = s.roots.length > 1;
   // A link shows what its card counts, so it starts from a clear search and Filters panel.
   const show = (extra?: Parameters<typeof s.go>[1]) => {

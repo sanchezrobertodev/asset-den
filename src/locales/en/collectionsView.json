@@ -10,6 +10,13 @@
   "useSearchFirst": "Search or filter the library first",
   "useSearch": "Use current search",
   "delete": "Delete",
+  "deleteConfirm": {
+    "title": "Delete {{name}}?",
+    "body_one": "Its asset stays in your library and on disk. Only the collection is deleted.",
+    "body_other": "Its {{count}} assets stay in your library and on disk. Only the collection is deleted.",
+    "confirm": "Delete collection",
+    "cancel": "Cancel"
+  },
   "copyToFolder": "Copy to folder…",
   "noMatch": {
     "title": "No assets in this collection match these filters",

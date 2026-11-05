@@ -1,7 +1,8 @@
 {
   "previewFailed": {
     "title": "Não foi possível visualizar este arquivo",
-    "body": "Ele pode estar danificado ou usar uma variante de formato que o Mimikit não lê."
+    "body": "Ele pode estar danificado ou usar uma variante de formato que o Mimikit não lê.",
+    "details": "Detalhes técnicos"
   },
   "open": "Abrir",
   "showInFolder": "Mostrar na pasta",
