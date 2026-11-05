@@ -100,6 +100,7 @@ export function Sidebar() {
   const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, palettes), [s.collections, s.assets, s.notes, palettes]);
 
   const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
+    { view: "home", label: t("sidebar.home") },
     { view: "library", label: t("sidebar.library"), count: s.assets.length },
     { view: "favorites", label: t("sidebar.favorites"), count: favorites },
     { view: "collections", label: t("sidebar.collections"), count: s.collections.length },

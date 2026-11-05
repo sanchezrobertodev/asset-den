@@ -1,0 +1,37 @@
+{
+  "news": {
+    "updated": "<0>Mimikit se actualizó a la versión {{version}}.</0>",
+    "show": "Ver novedades",
+    "title": "Novedades de Mimikit {{version}}",
+    "dismiss": "Descartar"
+  },
+  "search_one": "Buscar en {{count}} recurso, {{hash}}etiquetas, {{type}}",
+  "search_other": "Buscar en {{count}} recursos, {{hash}}etiquetas, {{type}}",
+  "examples": "Búsquedas de ejemplo",
+  "jumpBack": "Continúa donde te quedaste",
+  "allCollections": "Todas las colecciones",
+  "collection": "Colección",
+  "smartCollection": "Colección inteligente",
+  "library": "Tu biblioteca",
+  "total_one": "{{count}} recurso · {{size}}",
+  "total_other": "{{count}} recursos · {{size}}",
+  "insights": "Estadísticas",
+  "recent": "Cambios recientes",
+  "favorites": "Favoritos y mejor calificados",
+  "allFavorites": "Todos los favoritos",
+  "noFavorites": "Aquí aparecen los recursos que marques como favoritos (<0>{{keys}}</0>) o califiques con 4 estrellas o más.",
+  "attention": {
+    "title": "Requiere atención",
+    "duplicates_one": "{{count}} grupo de duplicados",
+    "duplicates_other": "{{count}} grupos de duplicados",
+    "review": "Revisar",
+    "offline": "No se puede acceder a {{name}}",
+    "show": "Ver",
+    "unanalysed_one": "{{count}} imagen sin analizar: la búsqueda por color y Buscar similares la omiten",
+    "unanalysed_other": "{{count}} imágenes sin analizar: la búsqueda por color y Buscar similares las omiten",
+    "analyse": "Analizar",
+    "untagged_one": "{{count}} recurso no tiene etiquetas",
+    "untagged_other": "{{count}} recursos no tienen etiquetas",
+    "allClear": "Nada requiere atención."
+  }
+}

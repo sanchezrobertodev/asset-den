@@ -21,6 +21,7 @@
   "files_other": "{{count}} files",
   "actions": {
     "title": "Actions",
+    "home": "Go to Home",
     "duplicates": "Review duplicates",
     "insights": "Open Insights",
     "newCollection": "New collection",

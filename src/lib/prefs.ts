@@ -1,6 +1,7 @@
 // Per-viewer UI preferences. Storage can be unavailable, so every access is guarded.
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { FolderFilter } from "../types";
 import { ACCENTS, THEMES, accentById, themeById, type AccentId, type Scheme, type ThemeId } from "./themes";
 
 export type Theme = "system" | ThemeId;
@@ -8,6 +9,8 @@ export type SortKey = "name" | "kind" | "size" | "mtime" | "folder";
 export type Layout = "grid" | "list";
 /** How a type shows on its filter chip and label: icon and name, icon only, or name only. */
 export type KindLabels = "both" | "icon" | "name";
+/** The view Mimikit opens on. */
+export type StartView = "home" | "library";
 
 export interface Prefs {
   theme: Theme;
@@ -19,6 +22,9 @@ export interface Prefs {
   thumbSize: number;
   pixelated: boolean;
   kindLabels: KindLabels;
+  startView: StartView;
+  /** The folders opened last, newest first, for Home and the folder menu. */
+  recentFolders: FolderFilter[];
   /** Group the library by folder, as in the design. */
   grouped: boolean;
   /** With a folder open, also show its subfolders' files. */
@@ -38,6 +44,8 @@ const defaults: Prefs = {
   thumbSize: 160,
   pixelated: false,
   kindLabels: "both",
+  startView: "home",
+  recentFolders: [],
   grouped: true,
   subfolders: true,
   checkUpdates: true,
@@ -55,6 +63,8 @@ export function loadPrefs(): Prefs {
     if (p.theme !== "system" && !THEMES.some((t) => t.id === p.theme)) p.theme = defaults.theme;
     if (!ACCENTS.some((a) => a.id === p.accent)) p.accent = defaults.accent;
     if (!["both", "icon", "name"].includes(p.kindLabels)) p.kindLabels = defaults.kindLabels;
+    if (!["home", "library"].includes(p.startView)) p.startView = defaults.startView;
+    if (!Array.isArray(p.recentFolders)) p.recentFolders = defaults.recentFolders;
     return p;
   } catch {
     return defaults;

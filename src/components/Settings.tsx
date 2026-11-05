@@ -233,6 +233,17 @@ export function SettingsDialog() {
             ]}
           />
         </Row>
+        <Row label={t("settings.appearance.startView")} hint={t("settings.appearance.startViewHint")}>
+          <Segmented
+            label={t("settings.appearance.startView")}
+            value={s.startView}
+            onChange={s.setStartView}
+            options={[
+              { value: "home", label: t("settings.appearance.startViewHome") },
+              { value: "library", label: t("settings.appearance.startViewLibrary") },
+            ]}
+          />
+        </Row>
         <Row label={t("settings.appearance.thumbSize")} hint={t("settings.appearance.thumbSizeHint")}>
           <div className="flex flex-none items-center gap-2.5">
             <input

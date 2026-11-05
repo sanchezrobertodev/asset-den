@@ -1,0 +1,37 @@
+{
+  "news": {
+    "updated": "<0>Mimikit was updated to {{version}}.</0>",
+    "show": "See what's new",
+    "title": "What's new in Mimikit {{version}}",
+    "dismiss": "Dismiss"
+  },
+  "search_one": "Search {{count}} asset, {{hash}}tags, {{type}}",
+  "search_other": "Search {{count}} assets, {{hash}}tags, {{type}}",
+  "examples": "Example searches",
+  "jumpBack": "Jump back in",
+  "allCollections": "All collections",
+  "collection": "Collection",
+  "smartCollection": "Smart collection",
+  "library": "Your library",
+  "total_one": "{{count}} asset · {{size}}",
+  "total_other": "{{count}} assets · {{size}}",
+  "insights": "Insights",
+  "recent": "Recently changed",
+  "favorites": "Favorites and top rated",
+  "allFavorites": "All favorites",
+  "noFavorites": "Assets you mark as favorites (<0>{{keys}}</0>) or rate 4 stars or more show up here.",
+  "attention": {
+    "title": "Needs attention",
+    "duplicates_one": "{{count}} set of duplicates",
+    "duplicates_other": "{{count}} sets of duplicates",
+    "review": "Review",
+    "offline": "Can't reach {{name}}",
+    "show": "Show",
+    "unanalysed_one": "{{count}} image isn't analysed, so colour search and Find similar skip it",
+    "unanalysed_other": "{{count}} images aren't analysed, so colour search and Find similar skip them",
+    "analyse": "Analyse",
+    "untagged_one": "{{count}} asset has no tags",
+    "untagged_other": "{{count}} assets have no tags",
+    "allClear": "Nothing needs attention."
+  }
+}

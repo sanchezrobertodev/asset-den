@@ -140,6 +140,7 @@ export function Palette() {
         });
     }
     const actions: [string, () => void][] = [
+      [t("palette.actions.home"), () => s.go("home")],
       [t("palette.actions.duplicates"), () => s.go("duplicates")],
       [t("palette.actions.insights"), () => s.go("insights")],
       [t("palette.actions.newCollection"), () => void s.newCollection()],

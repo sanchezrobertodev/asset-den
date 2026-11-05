@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { create } from "zustand";
 import { api, errorText } from "./api";
 import { toLab, type LabSwatch, type Swatch } from "./lib/colors";
@@ -6,7 +7,8 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { t, type TKey, type Vars } from "./lib/i18n";
 import { latestRequest } from "./lib/latest";
-import { applyTheme, loadPrefs, savePrefs, type KindLabels, type Layout, type Prefs, type SortKey, type Theme } from "./lib/prefs";
+import { markSeen, seenVersion } from "./lib/news";
+import { applyTheme, loadPrefs, savePrefs, type KindLabels, type Layout, type Prefs, type SortKey, type StartView, type Theme } from "./lib/prefs";
 import type { AccentId } from "./lib/themes";
 import { forgetThumbnails } from "./lib/thumbs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
@@ -92,6 +94,7 @@ interface State extends Prefs {
   setLanguage: (language: string) => void;
   setPixelated: (p: boolean) => void;
   setKindLabels: (l: KindLabels) => void;
+  setStartView: (v: StartView) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
@@ -148,11 +151,13 @@ const noSimilar = () => {
   return { similar: null };
 };
 
-export const useStore = create<State>((set, get) => {
+export const useStore = create<State>((set, get, store) => {
   const persist = () => {
-    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, grouped, subfolders, checkUpdates, audioLoop } = get();
-    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, grouped, subfolders, checkUpdates, audioLoop });
+    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop } = get();
+    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop });
   };
+  // Every way of opening a folder updates the recent list, so it is saved here rather than by each one.
+  store.subscribe((s, prev) => s.recentFolders !== prev.recentFolders && persist());
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
     const s = new Set(ids);
     set((st) => ({ assets: st.assets.map((a) => (s.has(a.id) ? f(a) : a)) }));
@@ -262,7 +267,7 @@ export const useStore = create<State>((set, get) => {
     collections: [],
     scanning: {},
     missing: {},
-    view: "library",
+    view: prefs.startView,
     kinds: [],
     folder: null,
     query: "",
@@ -283,7 +288,6 @@ export const useStore = create<State>((set, get) => {
     dups: null,
     dupSel: null,
     expanded: new Set(),
-    recentFolders: [],
 
     init: async () => {
       await api.onAssetsDelta((d) => {
@@ -329,6 +333,8 @@ export const useStore = create<State>((set, get) => {
         }, 150);
       });
       await get().reload();
+      // A first run has nothing new to announce: Home's "updated" note starts from this version.
+      if (seq >= 0 && !get().roots.length && seenVersion() === null) getVersion().then(markSeen, () => {});
       void get().findDuplicates();
     },
 
@@ -340,6 +346,8 @@ export const useStore = create<State>((set, get) => {
         const ids = new Set(list.assets.map((a) => a.id));
         set((s) => ({
           roots,
+          // A backup restore can bring other folders back.
+          recentFolders: s.recentFolders.filter((f) => roots.some((r) => r.id === f.rootId)),
           missing: Object.fromEntries(roots.map((r) => [r.id, r.missing])),
           assets: list.assets,
           collections,
@@ -466,6 +474,10 @@ export const useStore = create<State>((set, get) => {
     },
     setKindLabels: (kindLabels) => {
       set({ kindLabels });
+      persist();
+    },
+    setStartView: (startView) => {
+      set({ startView });
       persist();
     },
     setCheckUpdates: (checkUpdates) => {

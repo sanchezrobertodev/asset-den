@@ -21,6 +21,7 @@
   "files_other": "{{count}} Dateien",
   "actions": {
     "title": "Aktionen",
+    "home": "Zur Startseite",
     "duplicates": "Duplikate prüfen",
     "insights": "Statistiken öffnen",
     "newCollection": "Neue Sammlung",

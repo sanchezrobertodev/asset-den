@@ -1,0 +1,32 @@
+{
+  "news": {
+    "updated": "<0>Mimikit 已更新到 {{version}}。</0>",
+    "show": "查看新功能",
+    "title": "Mimikit {{version}} 的新功能",
+    "dismiss": "关闭"
+  },
+  "search_other": "搜索 {{count}} 个资源、{{hash}}标签、{{type}}",
+  "examples": "搜索示例",
+  "jumpBack": "继续浏览",
+  "allCollections": "所有合集",
+  "collection": "合集",
+  "smartCollection": "智能合集",
+  "library": "资源库概览",
+  "total_other": "{{count}} 个资源 · {{size}}",
+  "insights": "统计",
+  "recent": "最近更改",
+  "favorites": "收藏和高评分",
+  "allFavorites": "所有收藏",
+  "noFavorites": "收藏的资源（<0>{{keys}}</0>）和评为 4 星及以上的资源会显示在这里。",
+  "attention": {
+    "title": "需要处理",
+    "duplicates_other": "{{count}} 组重复项",
+    "review": "检查",
+    "offline": "无法访问 {{name}}",
+    "show": "显示",
+    "unanalysed_other": "{{count}} 张图像尚未分析，颜色搜索和查找相似会跳过它们",
+    "analyse": "分析",
+    "untagged_other": "{{count}} 个资源没有标签",
+    "allClear": "没有需要处理的项目。"
+  }
+}

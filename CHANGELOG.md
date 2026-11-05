@@ -7,6 +7,10 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Added
 
+- A Home page that Mimikit opens on: a big search field with example searches, your recent folders and collections,
+  a tile per asset type, recently changed files, favorites and top-rated assets, and what needs attention (duplicates,
+  folders that can't be reached, images not analysed yet, untagged assets). After an update it says what's new, once.
+  **Settings → Appearance → Start on** goes back to opening on the library.
 - Each asset type has an icon, on the type filters and on every type label: thumbnails, the list, the side panel,
   full screen and search. **Settings → Appearance → Type labels** shows the icon and name, the icon only or the name
   only.
@@ -15,11 +19,14 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 - The row of subfolder chips under the type filters is gone. The folder path's menus and the sidebar still list
   subfolders.
+- Recent folders are remembered when Mimikit restarts, on Home and in the folder path's menu.
 
 ### Fixed
 
 - Clicking an asset while the side panel is closed no longer scrolls it out of view when the panel opens, which was
   worst with large thumbnails. Closing the panel keeps it in place too.
+- Coming back to the grid with an asset selected (from Home, Insights or another view) scrolls that asset fully into
+  view, instead of leaving it cut off at the bottom edge.
 
 ## [0.5.0] - 2026-11-03
 

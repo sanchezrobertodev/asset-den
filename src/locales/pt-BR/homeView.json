@@ -1,0 +1,42 @@
+{
+  "news": {
+    "updated": "<0>O Mimikit foi atualizado para a versão {{version}}.</0>",
+    "show": "Ver novidades",
+    "title": "Novidades do Mimikit {{version}}",
+    "dismiss": "Dispensar"
+  },
+  "search_zero": "Buscar em {{count}} recursos, {{hash}}tags, {{type}}",
+  "search_one": "Buscar em {{count}} recurso, {{hash}}tags, {{type}}",
+  "search_other": "Buscar em {{count}} recursos, {{hash}}tags, {{type}}",
+  "examples": "Exemplos de busca",
+  "jumpBack": "Continue de onde parou",
+  "allCollections": "Todas as coleções",
+  "collection": "Coleção",
+  "smartCollection": "Coleção inteligente",
+  "library": "Sua biblioteca",
+  "total_zero": "{{count}} recursos · {{size}}",
+  "total_one": "{{count}} recurso · {{size}}",
+  "total_other": "{{count}} recursos · {{size}}",
+  "insights": "Estatísticas",
+  "recent": "Alterados recentemente",
+  "favorites": "Favoritos e mais bem avaliados",
+  "allFavorites": "Todos os favoritos",
+  "noFavorites": "Os recursos que você favoritar (<0>{{keys}}</0>) ou avaliar com 4 estrelas ou mais aparecem aqui.",
+  "attention": {
+    "title": "Precisa de atenção",
+    "duplicates_zero": "{{count}} grupos de duplicatas",
+    "duplicates_one": "{{count}} grupo de duplicatas",
+    "duplicates_other": "{{count}} grupos de duplicatas",
+    "review": "Revisar",
+    "offline": "Não foi possível acessar {{name}}",
+    "show": "Mostrar",
+    "unanalysed_zero": "{{count}} imagens não analisadas: a busca por cor e Encontrar semelhantes as ignoram",
+    "unanalysed_one": "{{count}} imagem não analisada: a busca por cor e Encontrar semelhantes a ignoram",
+    "unanalysed_other": "{{count}} imagens não analisadas: a busca por cor e Encontrar semelhantes as ignoram",
+    "analyse": "Analisar",
+    "untagged_zero": "{{count}} recursos sem tags",
+    "untagged_one": "{{count}} recurso sem tags",
+    "untagged_other": "{{count}} recursos sem tags",
+    "allClear": "Nada precisa de atenção."
+  }
+}

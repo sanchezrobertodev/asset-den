@@ -1,0 +1,32 @@
+{
+  "news": {
+    "updated": "<0>Mimikit が {{version}} にアップデートされました。</0>",
+    "show": "新機能を見る",
+    "title": "Mimikit {{version}} の新機能",
+    "dismiss": "閉じる"
+  },
+  "search_other": "{{count}}個のアセット、{{hash}}タグ、{{type}}を検索",
+  "examples": "検索の例",
+  "jumpBack": "最近の場所",
+  "allCollections": "すべてのコレクション",
+  "collection": "コレクション",
+  "smartCollection": "スマートコレクション",
+  "library": "ライブラリの概要",
+  "total_other": "{{count}}個のアセット · {{size}}",
+  "insights": "統計",
+  "recent": "最近の変更",
+  "favorites": "お気に入りと高評価",
+  "allFavorites": "すべてのお気に入り",
+  "noFavorites": "お気に入りに追加した（<0>{{keys}}</0>）アセットや、星4つ以上の評価を付けたアセットがここに表示されます。",
+  "attention": {
+    "title": "要確認",
+    "duplicates_other": "{{count}}組の重複",
+    "review": "確認",
+    "offline": "{{name}} にアクセスできません",
+    "show": "表示",
+    "unanalysed_other": "{{count}}枚の画像が未解析のため、色検索と類似を検索の対象外です",
+    "analyse": "解析",
+    "untagged_other": "{{count}}個のアセットにタグがありません",
+    "allClear": "確認が必要な項目はありません。"
+  }
+}

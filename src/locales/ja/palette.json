@@ -16,6 +16,7 @@
   "files_other": "{{count}}個のファイル",
   "actions": {
     "title": "アクション",
+    "home": "ホームへ移動",
     "duplicates": "重複を確認",
     "insights": "統計を開く",
     "newCollection": "新しいコレクション",
