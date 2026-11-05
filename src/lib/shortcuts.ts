@@ -40,6 +40,7 @@ const ROWS: [id: string, group: Group, keys: string][] = [
   ["select-all", "organize", `${mod}A`],
   ["toggle", "organize", isMac ? "⌘ click" : t("shortcuts.keys.ctrlClick")],
   ["range", "organize", t("shortcuts.keys.shiftClick")],
+  ["undo", "organize", `${mod}Z`],
 
   ["search", "search", `${mod}K`],
   ["search-slash", "search", "/"],

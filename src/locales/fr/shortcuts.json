@@ -34,6 +34,7 @@
     "select-all": "Sélectionner toutes les ressources affichées",
     "toggle": "Ajouter à la sélection ou en retirer",
     "range": "Sélectionner une plage",
+    "undo": "Annuler la dernière modification",
     "search": "Rechercher des ressources, dossiers et actions",
     "search-slash": "Rechercher",
     "results": "Parcourir les résultats",

@@ -341,10 +341,11 @@ export const DuplicatesView = memo(function DuplicatesView({ visible, scopeAsset
           onClose={() => setConfirming(null)}
           footer={
             <>
-              <Button onClick={() => setConfirming(null)}>{t("duplicatesView.trash.cancel")}</Button>
+              <Button data-autofocus onClick={() => setConfirming(null)}>
+                {t("duplicatesView.trash.cancel")}
+              </Button>
               <Button
-                variant="invert"
-                data-autofocus
+                variant="danger"
                 onClick={() => {
                   setConfirming(null);
                   void trashDuplicates(confirming.keep.id, confirming.remove.map((a) => a.id));

@@ -253,7 +253,7 @@ export function Palette() {
                 setQ((cur) => (cur.trim() ? `${cur.trim()} ${token}` : token) + (token.endsWith(":") || token === "#" ? "" : " "));
                 input.current?.focus();
               }}
-              className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:bg-line-strong"
+              className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:inset-ring-1 hover:inset-ring-line-x"
             >
               {tokenLabel[token] ?? token}
             </button>
@@ -276,7 +276,7 @@ export function Palette() {
                     aria-selected={my === pi}
                     onMouseEnter={() => setPi(my)}
                     onClick={() => run(r)}
-                    className={clsx("flex min-h-11 cursor-pointer items-center gap-3 rounded-[9px] px-2.5", my === pi && "bg-line")}
+                    className={clsx("flex min-h-11 cursor-pointer items-center gap-3 rounded-[9px] px-2.5", my === pi && "bg-active inset-ring-1 inset-ring-line-x")}
                   >
                     {r.asset && <Thumb asset={r.asset} size="row" className="size-8 flex-none rounded-[7px]" />}
                     <span className="flex min-w-0 flex-1 flex-col gap-px">
