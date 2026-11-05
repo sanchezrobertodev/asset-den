@@ -369,7 +369,7 @@ function payloadOk(r: ToolResult) {
 {
   const claude = { pid: 41, name: "claude-code", version: "2.1.312" };
   const session = (o: Partial<Session> = {}): Session => ({ ...claude, calls: 1, last: 0, paused: false, ...o });
-  const s = (o: Partial<Parameters<typeof gate>[1]> = {}) => ({ allowed: ["claude-code"], writers: [], blocked: [], sessions: [], activity: [], ...o });
+  const s = (o: Partial<Parameters<typeof gate>[1]> = {}) => ({ allowed: ["claude-code"], writers: [], blocked: [], sessions: [], made: [], ...o });
   const code = (g: ReturnType<typeof gate>) => (typeof g === "object" ? errorCode(g) : g);
   assert.equal(gate(claude, s({ allowed: [] }), "search"), "ask");
   assert.equal(gate(claude, s({ allowed: [], writers: ["claude-code"] }), "tag"), "ask", "changes need the app let in first");
@@ -391,12 +391,14 @@ function payloadOk(r: ToolResult) {
   // At most 30 changes a minute per app; older ones and other apps' don't count.
   const now = 1_000_000;
   const made = (n: number, by = "claude-code", ago = 1000) => Array.from({ length: n }, (_, i) => ({ by, at: now - ago - i }));
-  assert.equal(gate(claude, s({ writers: ["claude-code"], activity: made(29) }), "tag", now), "run");
-  const limited = gate(claude, s({ writers: ["claude-code"], activity: made(30, "claude-code", 20_000) }), "tag", now);
+  assert.equal(gate(claude, s({ writers: ["claude-code"], made: made(29) }), "tag", now), "run");
+  const limited = gate(claude, s({ writers: ["claude-code"], made: made(30, "claude-code", 20_000) }), "tag", now);
   assert.equal(code(limited), "rate_limited");
   assert.match(text(limited as ToolResult), /Wait 40 s/, "until the oldest of them is a minute old");
-  assert.equal(gate(claude, s({ writers: ["claude-code"], activity: [...made(30, "claude-code", 61_000), ...made(30, "cursor")] }), "tag", now), "run");
-  assert.equal(gate(claude, s({ activity: made(30) }), "search", now), "run", "reads aren't limited");
+  assert.equal(gate(claude, s({ writers: ["claude-code"], made: [...made(30, "claude-code", 61_000), ...made(30, "cursor")] }), "tag", now), "run");
+  // Another app's changes don't push this one's out: the limit counts the whole minute, not the activity list's 50.
+  assert.equal(code(gate(claude, s({ writers: ["claude-code"], made: [...made(30, "cursor", 500), ...made(30)] }), "tag", now)), "rate_limited");
+  assert.equal(gate(claude, s({ made: made(30) }), "search", now), "run", "reads aren't limited");
 
   assert.equal(agentName("claude-code"), "Claude Code");
   assert.equal(agentName("claude-ai"), "Claude Desktop");
@@ -626,6 +628,24 @@ const byId = (lib: Library, id: number) => lib.assets.find((a) => a.id === id)!;
   assert.equal(byId(lib, 3).rating, 0);
   assert.equal(lib.notes[2], "mine");
   assert.deepEqual([byId(lib, 2).tags, byId(lib, 3).tags], [["player"], ["pickup"]]);
+}
+
+// ---------- ... even a value one batch set twice ----------
+{
+  const twice = { changes: [{ tool: "rate", args: { ids: [2], rating: 2 } }, { tool: "rate", args: { ids: [2], rating: 3 } }, { tool: "note", args: { id: 2, note: "a" } }, { tool: "note", args: { id: 2, note: "b" } }, { tool: "tag", args: { ids: [2], add: ["x"] } }, { tool: "tag", args: { ids: [2], remove: ["x"] } }] };
+  const { lib, w, call, recorded } = writable();
+  payload(await call("batch", twice));
+  byId(lib, 2).rating = 2; // the user set it back to the batch's first value
+  lib.notes[2] = "a";
+  byId(lib, 2).tags = [...byId(lib, 2).tags, "x"];
+  await undoSteps(recorded[0], w);
+  assert.deepEqual([byId(lib, 2).rating, lib.notes[2], byId(lib, 2).tags], [2, "a", ["player", "x"]]);
+  // Untouched since, it all goes back to before the batch.
+  const fresh = writable();
+  const before = fresh.snapshot();
+  payload(await fresh.call("batch", twice));
+  await undoSteps(fresh.recorded[0], fresh.w);
+  assert.deepEqual(fresh.snapshot(), before);
 }
 
 // ---------- names in the library stay data in changes too ----------

@@ -389,32 +389,54 @@ async function change(list: { tool: string; args: Args }[], io: Io): Promise<Too
 
 const one = (tool: string) => (args: Args, io: Io) => change([{ tool, args }], io);
 
-/** Takes a change back, newest step first. A value the user changed since stays as they left it; copies stay. */
+/**
+ * Takes a change back. Each value goes back to what it was before the change's first step, but only while it still
+ * holds what the change's last step left: a value the user changed since stays as they left it, even one a batch set
+ * twice. A collection the change made is removed; copies stay.
+ */
 export async function undoSteps(steps: Step[], io: Pick<Io, "library" | "write">) {
-  for (const s of [...steps].reverse()) {
-    const lib = io.library();
-    const byId = new Map(lib.assets.map((a) => [a.id, a]));
-    const still = (ids: number[], ok: (a: Asset) => boolean) => ids.filter((id) => byId.has(id) && ok(byId.get(id)!));
-    if (s.do === "tag") {
-      const ids = still(s.ids, (a) => a.tags.includes(s.tag) === s.add);
-      if (ids.length) await io.write.tag(ids, s.tag, !s.add);
-    } else if (s.do === "rate") {
-      const back = new Map<number, number[]>();
-      for (const [id, r] of s.before) if (byId.get(id)?.rating === s.rating) back.set(r, [...(back.get(r) ?? []), id]);
-      for (const [r, ids] of back) await io.write.rate(ids, r);
-    } else if (s.do === "favorite") {
-      const ids = still(s.ids, (a) => a.favorite === s.favorite);
-      if (ids.length) await io.write.favorite(ids, !s.favorite);
-    } else if (s.do === "note") {
-      if (byId.has(s.id) && (lib.notes[s.id] ?? "") === s.after) await io.write.note(s.id, s.before);
-    } else if (s.do === "member") {
-      const c = lib.collections.find((x) => x.id === s.collection);
-      const ids = c ? still(s.ids, (a) => c.assetIds.includes(a.id) === s.add) : [];
-      if (ids.length) await io.write.member(s.collection, ids, !s.add);
-    } else if (s.do === "create") {
-      if (lib.collections.some((x) => x.id === s.collection)) await io.write.remove(s.collection);
-    }
+  const lib = io.library();
+  const byId = new Map(lib.assets.map((a) => [a.id, a]));
+  const made = new Set(steps.flatMap((s) => (s.do === "create" ? [s.collection] : [])));
+  // Each value the steps set, by what it is (`group`, e.g. the tag) and asset: before the first step, after the last.
+  const values = new Map<string, { group: string; s: Step; id: number; before: unknown; after: unknown }>();
+  const set = (group: string, s: Step, id: number, before: unknown, after: unknown) => {
+    const v = values.get(`${group} ${id}`);
+    if (v) v.after = after;
+    else values.set(`${group} ${id}`, { group, s, id, before, after });
+  };
+  for (const s of steps) {
+    if (s.do === "tag") for (const id of s.ids) set(`tag ${s.tag}`, s, id, !s.add, s.add);
+    else if (s.do === "rate") for (const [id, r] of s.before) set("rate", s, id, r, s.rating);
+    else if (s.do === "favorite") for (const id of s.ids) set("favorite", s, id, !s.favorite, s.favorite);
+    else if (s.do === "note") set(`note ${s.id}`, s, s.id, s.before, s.after);
+    // A collection the change made goes as a whole.
+    else if (s.do === "member" && !made.has(s.collection)) for (const id of s.ids) set(`member ${s.collection}`, s, id, !s.add, s.add);
   }
+  const now = (s: Step, a: Asset) => {
+    if (s.do === "tag") return a.tags.includes(s.tag);
+    if (s.do === "rate") return a.rating;
+    if (s.do === "favorite") return a.favorite;
+    if (s.do === "note") return lib.notes[a.id] ?? "";
+    if (s.do === "member") return lib.collections.find((c) => c.id === s.collection)?.assetIds.includes(a.id);
+  };
+  // The values to put back, grouped into one write per group and old value.
+  const back = new Map<string, { s: Step; to: unknown; ids: number[] }>();
+  for (const v of values.values()) {
+    const a = byId.get(v.id);
+    if (v.before === v.after || !a || now(v.s, a) !== v.after) continue;
+    const key = `${v.group} ${String(v.before)}`;
+    const b = back.get(key) ?? back.set(key, { s: v.s, to: v.before, ids: [] }).get(key)!;
+    b.ids.push(v.id);
+  }
+  for (const { s, to, ids } of back.values()) {
+    if (s.do === "tag") await io.write.tag(ids, s.tag, to as boolean);
+    else if (s.do === "rate") await io.write.rate(ids, to as number);
+    else if (s.do === "favorite") await io.write.favorite(ids, to as boolean);
+    else if (s.do === "note") await io.write.note(s.id, to as string);
+    else if (s.do === "member") await io.write.member(s.collection, ids, to as boolean);
+  }
+  for (const c of [...made].reverse()) if (lib.collections.some((x) => x.id === c)) await io.write.remove(c);
 }
 
 /** Whether Undo can take anything back: copies stay, since Mimikit never deletes files. */
@@ -637,7 +659,7 @@ export function cleanAgent(raw: unknown): Agent {
   return { pid: Number.isInteger(o.pid) ? (o.pid as number) : 0, name: str(o.name, 100) || "unknown", version: str(o.version, 40) };
 }
 
-/** A change in the activity list, as far as the gate needs it: which app made it, and when. */
+/** A change as far as the per-minute limit needs it: which app made it, and when. */
 export interface Made {
   by: string;
   at: number;
@@ -646,11 +668,12 @@ export interface Made {
 /**
  * Whether a call of `tool` from `agent` runs, waits for the user's "Allow?", or is refused. `allowed` holds the agent
  * apps the user let in and `writers` those it lets change the library (by name, kept across launches); `blocked` the
- * relays the user disconnected or said no to. Pause and the per-minute limit only hold back changes.
+ * relays the user disconnected or said no to; `made` every app's changes of the last minute. Pause and the per-minute
+ * limit only hold back changes.
  */
 export function gate(
   agent: Agent,
-  s: { allowed: string[]; writers: string[]; blocked: number[]; sessions: Session[]; activity: Made[] },
+  s: { allowed: string[]; writers: string[]; blocked: number[]; sessions: Session[]; made: Made[] },
   tool: string,
   now = Date.now(),
 ): "run" | "ask" | ToolResult {
@@ -662,7 +685,7 @@ export function gate(
     return errorResult("paused", "The user paused this agent's changes in Mimikit.", "Searching and looking still work. For changes, wait or ask the user to press Resume in Mimikit (Settings › AI agents). Don't retry in a loop.");
   if (!s.writers.includes(agent.name))
     return errorResult("read_only", "The user hasn't let your app change their Mimikit library.", "Ask the user to turn on Allow changes for your app in Mimikit (Settings › AI agents), then call again. Searching and looking still work.");
-  const recent = s.activity.filter((c) => c.by === agent.name && now - c.at < 60_000);
+  const recent = s.made.filter((c) => c.by === agent.name && now - c.at < 60_000);
   if (recent.length >= LIMITS.perMinute) {
     const wait = Math.ceil((60_000 - (now - Math.min(...recent.map((c) => c.at)))) / 1000);
     return errorResult("rate_limited", `Your app made ${LIMITS.perMinute} changes in the last minute, the most Mimikit takes.`, `Wait ${wait} s. batch makes several changes in one.`);

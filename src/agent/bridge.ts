@@ -136,6 +136,8 @@ export const useAgents = create<AgentsState>((set, get) => ({
 }));
 
 let changeSeq = 0;
+/** Every app's changes of the last minute, for the per-minute limit: the activity list keeps only the last KEEP. */
+let made: Made[] = [];
 
 /** Undoes change `id`, once: marked undone first so a second Undo meanwhile does nothing, and unmarked if it fails. */
 async function undoChange(id: number) {
@@ -155,7 +157,9 @@ async function undoChange(id: number) {
 function record(agent: Agent, steps: Step[]) {
   const id = ++changeSeq;
   const undo = undoable(steps) ? () => undoChange(id) : undefined;
-  useAgents.setState((s) => ({ activity: [{ id, by: agent.name, at: Date.now(), steps, undone: false, undo }, ...s.activity].slice(0, KEEP) }));
+  const at = Date.now();
+  made = [...made.filter((c) => at - c.at < 60_000), { by: agent.name, at }];
+  useAgents.setState((s) => ({ activity: [{ id, by: agent.name, at, steps, undone: false, undo }, ...s.activity].slice(0, KEEP) }));
   const name = agentName(agent.name);
   useStore
     .getState()
@@ -217,11 +221,11 @@ function ask(agent: Agent): Promise<boolean> {
 }
 
 async function decide(agent: Agent, tool: string, args: unknown): Promise<ToolResult> {
-  let g = gate(agent, useAgents.getState(), tool);
+  let g = gate(agent, { ...useAgents.getState(), made }, tool);
   if (g === "ask") {
     if (!(await ask(agent)))
       return errorResult("no_answer", "The user hasn't answered Mimikit's question yet: whether to let your app see their library.", "Ask the user to answer it in Mimikit's window, then try again.");
-    g = gate(agent, useAgents.getState(), tool);
+    g = gate(agent, { ...useAgents.getState(), made }, tool);
     if (g === "ask") return errorResult("not_running", "The user turned AI agents off in Mimikit.", "Don't retry unless the user turns them on again.");
   }
   if (g !== "run") return g;
