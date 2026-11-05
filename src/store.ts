@@ -139,6 +139,8 @@ let toastMs = 0;
 let toastSeq = 0;
 /** The newest Undo a toast offered, until it runs. */
 let lastUndo: Toast["undo"];
+/** Undos still running. */
+let undoing = 0;
 /** Number of the last delta `assets` includes; -1 until the first full load. */
 let seq = -1;
 /** Full loads in flight. Deltas wait in `incoming` meanwhile, and the load's `seq` says which of them it already has. */
@@ -421,7 +423,9 @@ export const useStore = create<State>((set, get, store) => {
     },
     showToast: (message, undo, action) => {
       set({ toast: { id: ++toastSeq, message, undo, action } });
-      if (undo && !action) lastUndo = undo;
+      // An undo's own toast offers to redo it, and Ctrl+Z mustn't pick that up.
+      // shortcut: a change saved while an undo is still running isn't offered to Ctrl+Z either; fine while undos take milliseconds.
+      if (undo && !action && !undoing) lastUndo = undo;
       toastMs = 4500;
       get().holdToast(false);
     },
@@ -435,7 +439,8 @@ export const useStore = create<State>((set, get, store) => {
       if (run === lastUndo) lastUndo = undefined;
       if (!run) return;
       get().dismissToast();
-      Promise.resolve().then(run).catch(get().setError);
+      undoing++;
+      Promise.resolve().then(run).catch(get().setError).finally(() => undoing--);
     },
 
     go: (view, extra = {}) => set({ view, full: false, palette: false, ...noSimilar(), ...extra, ...folderState(extra.folder) }),
