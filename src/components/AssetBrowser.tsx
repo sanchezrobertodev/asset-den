@@ -158,23 +158,30 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
   const [width, setWidth] = useState(0);
   const { thumbSize, selected, activeId, peek, pixelated } = useStore();
   const handlers = useHandlers(assets);
-  // Where the active asset sat on screen before a resize (the side panel opening, say), so the reflow keeps it there.
+  // Where the active asset sat on screen before a reflow (the side panel opening, the size slider), so it stays there.
   const anchor = useRef<{ id: number; top: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      // The cards still sit where the old width put them.
+    // Runs before React re-renders, so the cards still sit where the old layout put them.
+    const capture = () => {
       const id = useStore.getState().activeId;
       const card = id === null ? null : document.getElementById(`asset-${id}`);
       const box = card?.getBoundingClientRect();
       const top = box ? box.top - el.getBoundingClientRect().top : 0;
       anchor.current = box && top < el.clientHeight && top + box.height > 0 ? { id: id!, top } : null;
+    };
+    const ro = new ResizeObserver(() => {
+      capture();
       setWidth(el.clientWidth);
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    const unsub = useStore.subscribe((s, prev) => s.thumbSize !== prev.thumbSize && capture());
+    return () => {
+      ro.disconnect();
+      unsub();
+    };
   }, []);
 
   const inner = Math.max(0, width - PAD * 2);
@@ -204,7 +211,7 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     v.measure();
     v.getTotalSize(); // recomputes measurementsCache for the new column count
     v.scrollToOffset(v.measurementsCache[line].start - a!.top);
-  }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [width, thumbSize]); // eslint-disable-line react-hooks/exhaustive-deps
   useActiveScroll(
     order,
     (i) => {
