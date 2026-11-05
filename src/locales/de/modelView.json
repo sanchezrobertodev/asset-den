@@ -8,5 +8,6 @@
   "clips_other": "{{count}} Anim.",
   "wireframe": "Drahtgitter",
   "animate": "Animieren",
+  "autoRotate": "Automatisch drehen",
   "resetView": "Ansicht zurücksetzen"
 }

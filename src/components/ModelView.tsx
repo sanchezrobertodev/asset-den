@@ -13,6 +13,8 @@ import { chip, Note, toggleChip, usePreviewFailure } from "./Viewers";
 export default function ModelView({ asset, full }: { asset: Asset; full: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const [wireframe, setWireframe] = useState(false);
+  // Turning the model without dragging it (WCAG 2.5.7).
+  const [spin, setSpin] = useState(false);
   // Animated models play their first clip unless the OS asks for reduced motion; full screen can toggle it.
   const [playClip, setPlayClip] = useState(() => !reducedMotion());
   const playing = useRef(playClip);
@@ -21,6 +23,7 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
   const fail = usePreviewFailure();
   const wire = useRef<(on: boolean) => void>(() => {});
   const reset = useRef<() => void>(() => {});
+  const rotate = useRef<(on: boolean) => void>(() => {});
 
   useEffect(() => {
     const el = box.current;
@@ -34,6 +37,9 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
     const camera = new THREE.PerspectiveCamera(40, 1);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    rotate.current = (on) => {
+      controls.autoRotate = on;
+    };
     const clock = new THREE.Clock();
     let mixer: THREE.AnimationMixer | null = null;
     let object: THREE.Object3D | null = null;
@@ -111,6 +117,7 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
   }, [asset.id, asset.path, asset.mtime, fail]);
 
   useEffect(() => wire.current(wireframe), [wireframe, info]);
+  useEffect(() => rotate.current(spin), [spin, info]);
 
   return (
     <div className={clsx("stripes relative w-full overflow-hidden rounded-xl", full ? "h-full" : "h-[200px]")}>
@@ -136,6 +143,9 @@ export default function ModelView({ asset, full }: { asset: Asset; full: boolean
                   {t("modelView.animate")}
                 </button>
               )}
+              <button type="button" aria-pressed={spin} onClick={() => setSpin((on) => !on)} className={toggleChip(spin)}>
+                {t("modelView.autoRotate")}
+              </button>
               <button type="button" onClick={() => reset.current()} className={clsx(chip, "font-sans")}>
                 {t("modelView.resetView")}
               </button>

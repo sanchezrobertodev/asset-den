@@ -1,7 +1,8 @@
 {
   "previewFailed": {
     "title": "Couldn't preview this file",
-    "body": "It may be damaged or use a format variant Mimikit can't read."
+    "body": "It may be damaged or use a format variant Mimikit can't read.",
+    "details": "Technical details"
   },
   "open": "Open",
   "showInFolder": "Show in folder",

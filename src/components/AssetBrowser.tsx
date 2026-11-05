@@ -94,13 +94,15 @@ export function assetLabel(a: Asset) {
  * The asset listbox takes focus itself and points at the active asset (aria-activedescendant); the app's arrow keys
  * move it. Only an asset that is rendered (virtualized lists skip the rest) can be pointed at.
  */
-function listboxProps(lines: Line[], rendered: number[], activeId: number | null) {
+function listboxProps(lines: Line[], rendered: number[], activeId: number | null, cols = 1) {
   const shown = activeId !== null && rendered.some((i) => lines[i].type === "items" && lines[i].items.some((a) => a.id === activeId));
   return {
     role: "listbox",
     "aria-multiselectable": true,
     "aria-label": t("assetBrowser.assets"),
     "data-assets": "",
+    // The app's ↑ ↓ keys move by this many cards.
+    "data-cols": cols,
     tabIndex: 0,
     "aria-activedescendant": shown ? `asset-${activeId}` : undefined,
     // The ring goes on the active asset; with none, around the whole list.
@@ -202,6 +204,8 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     overscan: 3,
     paddingStart: 4,
     paddingEnd: 60,
+    // Keeps the active card clear of the shortcut hint bar along the bottom.
+    scrollPaddingEnd: 56,
   });
   useEffect(() => v.measure(), [rowH, items, v]);
   useLayoutEffect(() => {
@@ -223,7 +227,7 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     // Until the first measure the grid has one column of zero width, so a line number would land elsewhere.
     width > 0,
   );
-  const lb = listboxProps(items, v.getVirtualItems().map((r) => r.index), activeId);
+  const lb = listboxProps(items, v.getVirtualItems().map((r) => r.index), activeId, cols);
 
   return (
     <div ref={scrollRef} {...lb} className={clsx("h-full overflow-y-auto", lb.className)}>
@@ -300,6 +304,7 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
     },
     overscan: 12,
     paddingEnd: 60,
+    scrollPaddingEnd: 56,
   });
   useEffect(() => v.measure(), [items, v]);
   useActiveScroll(

@@ -7,6 +7,12 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Added
 
+- Keyboard multi-select: **Shift+arrows** select a range, **Ctrl+arrows** (⌘ on macOS) move without changing the
+  selection, and **Ctrl+Space** adds the current asset to the selection or takes it out.
+- In full screen, **+** and **−** zoom an image and **Ctrl+0** fits it back. **J** and **L** go back and forward
+  5 seconds in a sound. 3D models in full screen have an **Auto-rotate** button, so you can look around one without
+  dragging.
+- Deleting a collection that holds assets asks first, with Cancel focused. The assets themselves are never touched.
 - AI agents can organize your library once you allow it: turn on **Let Claude Code change your library** under the
   app in **Settings → AI agents**. The agent can then tag and rate assets, mark favorites, write notes, make
   collections (smart ones too) and copy files into a folder, so you can ask it to "tag this pack and make a collection
@@ -18,7 +24,27 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Changed
 
+- In the grid, **↑** and **↓** go up and down a row instead of to the previous and next card. Grouped by folder, they
+  keep to the same column in the next row.
+- The Loop, Pixel, Animate, Wireframe and Auto-rotate buttons are filled while on, so they no longer differ by text
+  colour alone.
+- The waveform's unplayed part has more contrast.
+- When a preview fails, it says why in plain words; the viewer's own message is under **Technical details**.
+- Two library folders with the same name are told apart by their parent folder, for example "files · assets" and
+  "files · audio", in the sidebar, folder groups, search, Insights, Home and the side panel.
+- The Delete collection button is red.
+- Insights and Duplicates show the welcome screen until you import a folder, instead of empty numbers and "All
+  clear".
 - Pausing an agent now holds back only its changes: it can still search your library and look at assets.
+
+### Fixed
+
+- The shortcut bar along the bottom of the library no longer covers the card or row you're on.
+- In a narrow window, the shortcut bar drops the hints that don't fit instead of running off the window, and "? all
+  shortcuts" always stays. The search field shrinks to its icon, and in the side panel the rating and favorite drop
+  under the file name instead of squeezing it.
+- The file-type labels on placeholder tiles (OGG, TXT, …) are readable in the light, sepia and high-contrast light
+  themes.
 
 ## [0.7.0] - 2026-11-05
 

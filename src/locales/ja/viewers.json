@@ -6,7 +6,7 @@
     "cantDisplay": "WebViewではこの画像を表示できません。",
     "zoom": "{{percent}}%",
     "zoomShown": "{{percent}}%で表示",
-    "zoomHint": "ホイールでズーム、ドラッグで移動"
+    "zoomHint": "ホイールまたは + − でズーム、ドラッグで移動"
   },
   "export": {
     "pickFolder": "「{{name}}」のフレームのエクスポート先…",

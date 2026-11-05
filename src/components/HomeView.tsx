@@ -4,7 +4,7 @@ import { ArrowRight, Copy, Folder, ImageOff, LayoutGrid, Search, Sparkles, Tag, 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import changelog from "../../CHANGELOG.md?raw";
 import { rulesWantColors, smartMembers } from "../lib/filter";
-import { baseName } from "../lib/format";
+import { baseName, rootLabel } from "../lib/format";
 import { ago, bytes, kindLabel, num } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import { markSeen, notesSince, seenVersion } from "../lib/news";
@@ -94,7 +94,7 @@ function News() {
 /** The start page: search, where you were, what the library holds, what changed and what needs a look. */
 export function HomeView() {
   const s = useStore();
-  const rootName = (id: number) => baseName(s.roots.find((r) => r.id === id)?.path ?? "");
+  const rootName = (id: number) => rootLabel(s.roots, id);
 
   const d = useMemo(() => {
     const total = s.assets.reduce((n, a) => n + a.size, 0);
@@ -149,7 +149,7 @@ export function HomeView() {
       .filter((r) => s.missing[r.id])
       .map((r) => ({
         icon: Unplug,
-        text: t("homeView.attention.offline", { name: baseName(r.path) }),
+        text: t("homeView.attention.offline", { name: rootName(r.id) }),
         action: t("homeView.attention.show"),
         run: () => show({ folder: { rootId: r.id, path: "" } }),
       })),

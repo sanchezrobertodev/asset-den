@@ -8,5 +8,6 @@
   "clips_other": "{{count}} anim.",
   "wireframe": "Fil de fer",
   "animate": "Animer",
+  "autoRotate": "Rotation auto",
   "resetView": "Réinitialiser la vue"
 }

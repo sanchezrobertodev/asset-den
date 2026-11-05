@@ -6,7 +6,7 @@
     "cantDisplay": "La vista web no puede mostrar esta imagen.",
     "zoom": "{{percent}}%",
     "zoomShown": "mostrada al {{percent}}%",
-    "zoomHint": "rueda para hacer zoom, arrastra para desplazarte"
+    "zoomHint": "rueda o + − para hacer zoom, arrastra para desplazarte"
   },
   "export": {
     "pickFolder": "Exportar los fotogramas de {{name}} a…",

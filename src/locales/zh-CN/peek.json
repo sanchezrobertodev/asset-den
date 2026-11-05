@@ -1,7 +1,8 @@
 {
   "previewFailed": {
     "title": "无法预览此文件",
-    "body": "文件可能已损坏，或使用了 Mimikit 无法读取的格式变体。"
+    "body": "文件可能已损坏，或使用了 Mimikit 无法读取的格式变体。",
+    "details": "技术详情"
   },
   "open": "打开",
   "showInFolder": "在文件夹中显示",

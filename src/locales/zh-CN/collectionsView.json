@@ -8,6 +8,12 @@
   "useSearchFirst": "请先搜索或筛选资源库",
   "useSearch": "使用当前搜索",
   "delete": "删除",
+  "deleteConfirm": {
+    "title": "删除 {{name}}？",
+    "body_other": "其中的 {{count}} 个资源会保留在资源库和磁盘上，只删除合集本身。",
+    "confirm": "删除合集",
+    "cancel": "取消"
+  },
   "copyToFolder": "复制到文件夹…",
   "noMatch": {
     "title": "此合集中没有符合这些筛选条件的资源",

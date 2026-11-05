@@ -42,10 +42,28 @@ export function usePreviewFailure() {
   );
 }
 
-const chipBox = "rounded-md bg-active px-2 py-1 font-mono text-[11px] whitespace-nowrap";
-export const chip = `${chipBox} text-fg-2`;
-/** A chip that toggles something; accent text while on. */
-export const toggleChip = (on: boolean) => clsx(chipBox, "font-sans", on ? "text-accent" : "text-fg-2");
+const chipBox = "rounded-md px-2 py-1 font-mono text-[11px] whitespace-nowrap";
+export const chip = `${chipBox} bg-active text-fg-2`;
+/** A chip that toggles something: inverted while on, like the app's other active chips, so it's not told by colour alone. */
+export const toggleChip = (on: boolean) => clsx(chipBox, "font-sans", on ? "bg-invert-bg text-invert-fg" : "bg-active text-fg-2");
+
+type ViewerKeys = (e: globalThis.KeyboardEvent, letter: string) => boolean;
+let viewerKeys: ViewerKeys | null = null;
+/** Offers a key to the open viewer (zoom, seek); true if it took it. App's key handler asks after its own checks. */
+export const viewerKey = (e: globalThis.KeyboardEvent, letter: string) => !!viewerKeys?.(e, letter);
+/** The open viewer's own keys. Only one viewer shows at a time: the side panel's goes away under full screen. */
+export function useViewerKeys(on: ViewerKeys, enabled = true) {
+  const latest = useRef(on);
+  latest.current = on;
+  useEffect(() => {
+    if (!enabled) return;
+    const keys: ViewerKeys = (e, letter) => latest.current(e, letter);
+    viewerKeys = keys;
+    return () => {
+      if (viewerKeys === keys) viewerKeys = null;
+    };
+  }, [enabled]);
+}
 
 function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolean; full: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -91,7 +109,21 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
     const el = img.current;
     if (el?.naturalWidth) setFit(el.clientWidth / el.naturalWidth);
   };
-  const onWheel = (e: WheelEvent) => setZoom((z) => Math.min(32, Math.max(0.1, z * (e.deltaY < 0 ? 1.15 : 1 / 1.15))));
+  const zoomBy = (f: number) => setZoom((z) => Math.min(32, Math.max(0.1, z * f)));
+  const fitBack = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+  const onWheel = (e: WheelEvent) => zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  // + and − zoom, Ctrl+0 fits it back (plain 0 clears the rating).
+  useViewerKeys((e) => {
+    if (e.altKey) return false;
+    if (e.key === "+" || e.key === "=") zoomBy(1.25);
+    else if (e.key === "-") zoomBy(1 / 1.25);
+    else if ((e.ctrlKey || e.metaKey) && (e.code === "Digit0" || e.code === "Numpad0")) fitBack();
+    else return false;
+    return true;
+  }, full && !animating);
   const onDown = (e: PointerEvent) => {
     drag.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -136,8 +168,7 @@ function ImageView({ asset, pixelated, full }: { asset: Asset; pixelated: boolea
           full
             ? (e) => {
                 e.stopPropagation();
-                setZoom(1);
-                setPan({ x: 0, y: 0 });
+                fitBack();
               }
             : undefined
         }

@@ -3,7 +3,7 @@ import { Check, ChevronDown, Folder, Grid3x3, LayoutGrid, Search, Sparkles, X } 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
-import { baseName } from "../lib/format";
+import { rootLabel } from "../lib/format";
 import { kindLabel, num } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import type { SortKey } from "../lib/prefs";
@@ -43,13 +43,16 @@ export function Header() {
         <button
           type="button"
           onClick={() => setPalette(true)}
-          className="ml-auto flex h-9 max-w-[380px] min-w-0 flex-[1_1_auto] items-center gap-2.5 overflow-hidden rounded-[9px] border border-line-strong bg-field px-3 text-left whitespace-nowrap text-muted hover:border-line-x"
+          // A container, so a squeezed field drops to just its icon (the text stays for screen readers).
+          className="@container ml-auto flex h-9 max-w-[380px] min-w-0 flex-[1_1_auto] items-center gap-2.5 overflow-hidden rounded-[9px] border border-line-strong bg-field px-3 text-left whitespace-nowrap text-muted hover:border-line-x"
         >
           <Search aria-hidden className="size-3.5 flex-none" />
-          <span className={clsx("min-w-0 flex-1 truncate", query && "text-fg")}>
+          <span className={clsx("min-w-0 flex-1 truncate @max-[200px]:sr-only", query && "text-fg")}>
             {query || t("header.searchPlaceholder", { hash: "#", type: "type:audio" })}
           </span>
-          <Kbd>{shortcut("search").keys}</Kbd>
+          <span className="@max-[200px]:hidden">
+            <Kbd>{shortcut("search").keys}</Kbd>
+          </span>
         </button>
       )}
       <Button variant="accent" className={clsx("h-9 px-4", view === "home" && "ml-auto")} onClick={() => void importFolder()}>
@@ -433,7 +436,7 @@ function Breadcrumbs() {
 function JumpMenu({ node, current, onClose }: { node: FolderNode; current?: string; onClose: () => void }) {
   const s = useStore();
   const box = useRef<HTMLDivElement>(null);
-  const rootName = (id: number) => baseName(s.roots.find((r) => r.id === id)?.path ?? "");
+  const rootName = (id: number) => rootLabel(s.roots, id);
   const recent = s.recentFolders.filter((f) => !(f.rootId === s.folder?.rootId && f.path === s.folder?.path)).slice(0, 4);
 
   useEffect(() => {

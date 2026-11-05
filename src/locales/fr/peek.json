@@ -1,7 +1,8 @@
 {
   "previewFailed": {
     "title": "Impossible d'afficher l'aperçu de ce fichier",
-    "body": "Il est peut-être endommagé ou utilise une variante de format que Mimikit ne sait pas lire."
+    "body": "Il est peut-être endommagé ou utilise une variante de format que Mimikit ne sait pas lire.",
+    "details": "Détails techniques"
   },
   "open": "Ouvrir",
   "showInFolder": "Afficher dans le dossier",

@@ -10,6 +10,13 @@
   "useSearchFirst": "Primero busca o filtra la biblioteca",
   "useSearch": "Usar la búsqueda actual",
   "delete": "Eliminar",
+  "deleteConfirm": {
+    "title": "¿Eliminar {{name}}?",
+    "body_one": "Su recurso se queda en la biblioteca y en el disco. Solo se elimina la colección.",
+    "body_other": "Sus {{count}} recursos se quedan en la biblioteca y en el disco. Solo se elimina la colección.",
+    "confirm": "Eliminar colección",
+    "cancel": "Cancelar"
+  },
   "copyToFolder": "Copiar a una carpeta…",
   "noMatch": {
     "title": "Ningún recurso de esta colección coincide con estos filtros",
