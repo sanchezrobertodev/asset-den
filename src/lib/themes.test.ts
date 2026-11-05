@@ -113,6 +113,14 @@ for (const theme of THEMES) {
     }
     check("--accent-fg", col("--accent-fg").rgb, "--accent", col("--accent").rgb, text);
     check("--fg", col("--fg").rgb, "--sel-row", col("--sel-row").rgb, text);
+    // Chips (tags, ignored folder names) and the Ctrl+K filter buttons fill with --active, under every text colour.
+    for (const f of TEXT) check(f, col(f).rgb, "--active", col("--active").rgb, text);
+    // High contrast only (the other themes keep soft edges): a chip's --line ring sets it apart from the field, and the
+    // --line-x ring marks a hovered remove or filter button on --active (WCAG 1.4.11).
+    if (strict) {
+      check("--line ring", col("--line").rgb, "--card", col("--card").rgb, 3);
+      check("--line-x ring", col("--line-x").rgb, "--active", col("--active").rgb, 3);
+    }
     check("--invert-fg", col("--invert-fg").rgb, "--invert-bg", col("--invert-bg").rgb, text);
     check("--warn-fg", over(col("--warn-fg"), bg), "--warn-bg", over(col("--warn-bg"), bg), text);
     for (const [label, h, fgT, bgT] of [

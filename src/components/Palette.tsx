@@ -253,7 +253,7 @@ export function Palette() {
                 setQ((cur) => (cur.trim() ? `${cur.trim()} ${token}` : token) + (token.endsWith(":") || token === "#" ? "" : " "));
                 input.current?.focus();
               }}
-              className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:bg-line-strong"
+              className="rounded-md bg-active px-2 py-[3px] font-mono text-fg-2 hover:inset-ring-1 hover:inset-ring-line-x"
             >
               {tokenLabel[token] ?? token}
             </button>
