@@ -27,6 +27,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
   worst with large thumbnails. Closing the panel keeps it in place too.
 - Coming back to the grid with an asset selected (from Home, Insights or another view) scrolls that asset fully into
   view, instead of leaving it cut off at the bottom edge.
+- Changing the thumbnail size keeps the selected asset where it was on screen, instead of the grid jumping to other
+  assets.
 
 ## [0.5.0] - 2026-11-03
 
