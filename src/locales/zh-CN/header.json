@@ -34,8 +34,6 @@
   "query": "“{{query}}”",
   "assets_other": "{{count}} 个资源",
   "assetsInFolders_other": "{{count}} 个文件夹中的 {{assets}}",
-  "subfolders": "子文件夹",
-  "moreSubfolders_other": "文件夹菜单中还有 {{count}} 个",
   "grouping": "分组",
   "byFolder": "按文件夹",
   "allTogether": "不分组",

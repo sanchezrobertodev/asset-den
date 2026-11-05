@@ -34,8 +34,6 @@
   "query": "「{{query}}」",
   "assets_other": "{{count}}個のアセット",
   "assetsInFolders_other": "{{count}}個のフォルダーに{{assets}}",
-  "subfolders": "サブフォルダー",
-  "moreSubfolders_other": "フォルダーメニューにあと{{count}}個",
   "grouping": "グループ化",
   "byFolder": "フォルダー別",
   "allTogether": "まとめて",

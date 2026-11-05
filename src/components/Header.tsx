@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Check, ChevronDown, Folder, Grid3x3, Search, Sparkles, X } from "lucide-react";
+import { Check, ChevronDown, Folder, Grid3x3, LayoutGrid, Search, Sparkles, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
@@ -12,7 +12,7 @@ import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
 import { AnalysisNote } from "./Analysis";
 import { FilterButton } from "./FilterPanel";
-import { Button, focusAssets, IconButton, KindDot, Kbd, Segmented, T } from "./ui";
+import { Button, focusAssets, IconButton, KindDot, KindName, Kbd, Segmented, T } from "./ui";
 
 const titles = {
   library: t("header.titles.library"),
@@ -119,17 +119,33 @@ export function ScopeChips({ counts, total, className }: { counts: Map<string, n
   const s = useStore();
   // Only the library and favorites are narrowed by the open folder, and only they save searches.
   const browse = s.view === "library" || s.view === "favorites";
+  const iconOnly = s.kindLabels === "icon";
   return (
     <div className={clsx("flex flex-none flex-wrap items-center gap-1.5", className)}>
-      <button type="button" aria-pressed={!s.kinds.length} className={chip(!s.kinds.length)} onClick={() => s.toggleKind("all")}>
-        <span aria-hidden className="size-[7px] rounded-full bg-muted" />
-        {t("header.all")}
+      <button
+        type="button"
+        aria-pressed={!s.kinds.length}
+        title={iconOnly ? t("header.all") : undefined}
+        className={chip(!s.kinds.length)}
+        onClick={() => s.toggleKind("all")}
+      >
+        {s.kindLabels === "name" ? <span aria-hidden className="size-[7px] rounded-full bg-muted" /> : <LayoutGrid aria-hidden className={clsx("size-3.5 flex-none", s.kinds.length > 0 && "text-muted")} />}
+        {iconOnly ? <span className="sr-only">{t("header.all")}</span> : t("header.all")}
         <span className="font-mono text-[11px] opacity-80">{num(total)}</span>
       </button>
       {KINDS.filter((k) => counts.get(k)).map((k) => (
-        <button key={k} type="button" aria-pressed={s.kinds.includes(k)} className={chip(s.kinds.includes(k))} onClick={() => s.toggleKind(k)}>
-          <KindDot kind={k} />
-          {kindLabel[k]}
+        <button
+          key={k}
+          type="button"
+          data-kind={k}
+          aria-pressed={s.kinds.includes(k)}
+          title={iconOnly ? kindLabel[k] : undefined}
+          className={chip(s.kinds.includes(k))}
+          onClick={() => s.toggleKind(k)}
+        >
+          {s.kindLabels === "name" && <KindDot kind={k} />}
+          {/* The icon takes the type's colour, except on the inverted chip of a chosen type. */}
+          <KindName kind={k} icon={clsx("size-3.5", !s.kinds.includes(k) && "k-text")} />
           <span className="font-mono text-[11px] opacity-80">{num(counts.get(k)!)}</span>
         </button>
       ))}
@@ -186,10 +202,6 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
     for (const a of scopeAssets) m.set(a.kind, (m.get(a.kind) ?? 0) + 1);
     return m;
   }, [scopeAssets]);
-  // A collection isn't narrowed by the library's folder, so it gets no folder controls.
-  const folder = s.view === "collections" ? null : s.folder;
-  const node = useMemo(() => (folder ? (pathTo(treeFor(s.assets, s.roots), folder).at(-1) ?? null) : null), [s.assets, s.roots, folder]);
-  const exact = node && node.path === folder!.path ? node : null;
   const countText = t("header.assets", { count });
 
   // Screen readers hear the count when the search, chips or filters change, not on every batch a scan adds. During a
@@ -207,24 +219,6 @@ export function BrowseBar({ count, folders, scopeAssets }: { count: number; fold
     <>
       <ScopeChips counts={counts} total={scopeAssets.length} className="px-7 pt-3.5 pb-1" />
       {(s.similar || s.filters.color || parseQuery(s.query).colors.length > 0) && <AnalysisNote className="px-7 pt-2 text-xs" />}
-      {exact && exact.children.length > 0 && (
-        <div className="flex flex-none flex-wrap items-center gap-1.5 px-7 pt-2.5">
-          <span className="mr-1 text-muted">{t("header.subfolders")}</span>
-          {exact.children.slice(0, 12).map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => s.setFolder({ rootId: c.rootId, path: c.path })}
-              className="flex h-[30px] flex-none items-center gap-[7px] rounded-[15px] border border-line-strong px-3 text-[12.5px] font-medium whitespace-nowrap text-fg-2 hover:border-line-x hover:text-fg"
-            >
-              <Folder aria-hidden className="size-3.5 text-muted" />
-              {c.name}
-              <span className="font-mono text-[11px] opacity-80">{num(c.count)}</span>
-            </button>
-          ))}
-          {exact.children.length > 12 && <span className="text-faint">{t("header.moreSubfolders", { count: exact.children.length - 12 })}</span>}
-        </div>
-      )}
       <div className="flex flex-none flex-wrap items-center gap-2 px-7 pt-2.5 pb-3 whitespace-nowrap">
         <span className="mr-auto text-muted">{s.grouped && folders > 1 ? t("header.assetsInFolders", { assets: countText, count: folders }) : countText}</span>
         <span role="status" className="sr-only">
