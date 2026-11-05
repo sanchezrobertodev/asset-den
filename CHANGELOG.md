@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-05
+
 ### Added
 
 - AI agents: Claude Code, Claude Desktop and other MCP apps can search your library and look at your assets, so you
