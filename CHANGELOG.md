@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-05
+
 ### Added
 
 - A Home page that Mimikit opens on: a big search field with example searches, your recent folders and collections,
