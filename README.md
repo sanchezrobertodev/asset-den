@@ -151,8 +151,9 @@ The workflow needs two repository secrets (Settings → Secrets and variables �
 
 Mimikit can let an AI agent app on your computer search your library and look at your assets: Claude Code, Claude
 Desktop, or any app that runs [MCP](https://modelcontextprotocol.io) servers. Ask it things like "find a coin sprite
-and tell me its path" or "which of my packs has a pixel font?". In this version agents **only read**: they can't tag,
-rate, move or delete anything, and your files are never touched.
+and tell me its path" or "which of my packs has a pixel font?". Agents only read until you turn on **Allow changes**
+for an app. Then it can also tag and rate assets, mark favorites, write notes, make collections and copy files into a
+folder, and each change can be undone. Agents can never move, rename or delete your files.
 
 Nothing goes online through Mimikit. The agent app starts `mimikit mcp`, the same program with no window, which talks
 to the Mimikit you have open on the same computer. What the tools return goes to your agent app and from there to its
@@ -192,6 +193,8 @@ model: that part is up to the agent app.
 3. Ask the agent about your assets. The first time an app calls, Mimikit asks **Allow Claude Code to see your
    library?** in the corner of its window (and in Settings → AI agents). Until you answer, or when Mimikit is closed or
    AI agents are off, the agent is told so and can say it to you; it still sees the list of tools.
+4. To let it organize too, turn on **Let Claude Code change your library** under the app in Settings → AI agents.
+   Until then a change fails with `read_only`, and the agent can ask you to turn it on.
 
 ### Things to try
 
@@ -201,8 +204,16 @@ model: that part is up to the agent app.
 - "Which sounds would work for a jump? Under a second." `search` with `type:audio dur:<1s`.
 - "What's the license of the Kenney pack?" `read_text` on its LICENSE or readme.
 - "Find more tiles like this one." `similar`, Mimikit's Find similar.
-- "Copy the five best explosion sprites into my Godot project." The agent picks them with Mimikit and copies the files
-  with its own tools: Mimikit's tools never write anything.
+- "Copy the five best explosion sprites into my Godot project." The agent picks them with Mimikit, then copies them with
+  `copy_to_folder` (Claude Code can also copy by path with its own tools).
+
+With **Allow changes** on:
+
+- "Tag the pack I just added, and make a collection of the UI parts." The agent looks at the pack with `view`, then
+  makes one `batch` of `tag` and `collect` changes: one entry in **What agents did**, taken back by one **Undo**.
+- "Merge the tags `tree` and `trees`." `search` for `#trees`, then `tag` to add `tree` and remove `trees`.
+- "Note the license on every asset of the Kenney pack." `read_text` on its LICENSE, then `note`.
+- "Make a smart collection of short UI sounds." `collect` with a name and a search such as `type:audio dur:<1s ui`.
 
 ### Tools
 
@@ -218,16 +229,37 @@ model: that part is up to the agent app.
 | `read_text` | The text of a text or data file, or of a LICENSE or README without an extension: the first 20,000 characters. |
 | `show` | Switches Mimikit's window to exactly these assets, so you see what the agent means. |
 
+These need **Allow changes** for the app. Each call changes at most 500 assets, and an app makes at most 30 changes a
+minute.
+
+| Tool | What it does |
+|---|---|
+| `tag` | Adds and removes tags on up to 500 assets. |
+| `rate` | Sets the rating, 1 to 5 stars, or clears it. |
+| `favorite` | Adds assets to Favorites or takes them out. |
+| `note` | Sets or clears one asset's note. |
+| `collect` | Makes a collection (or a smart one from a search), or adds assets to one and takes them out. |
+| `copy_to_folder` | Copies up to 200 files into a folder: it never replaces a file, and a name that's taken gets a number. Programs and scripts that run when opened (`.exe`, `.bat`, `.ps1`, `.js`…) aren't copied. |
+| `batch` | Up to 20 `tag`, `rate`, `favorite`, `note` and `collect` changes as one step, all checked before any is made. |
+
 An error says what happened and what to do, with a code: `not_running`, `not_allowed`, `no_answer`, `paused`,
-`not_found`, `not_an_image`, `not_text`, `unreadable`, `too_many`, `too_large`, `invalid_input`, `unknown_tool`,
-`refused`, `busy`, `timeout`, `lost`, `internal`.
+`read_only`, `rate_limited`, `not_found`, `not_an_image`, `not_text`, `unreadable`, `name_taken`, `smart_collection`,
+`not_copied`, `not_a_folder`, `too_many`, `too_large`, `invalid_input`, `unknown_tool`, `refused`, `busy`, `timeout`,
+`lost`, `internal`.
 
 ### What you control
 
 - **The switch**, off at first. Off stops listening and forgets the apps you allowed, so each one asks again.
 - **The first call of each app** asks you. **Don't allow** refuses that agent session; a new session asks again.
-- **Connected agents** in Settings → AI agents lists each agent session with its calls. **Pause** refuses its calls
-  until you press **Resume**; **Disconnect** refuses that session from then on. **Allowed apps** has **Forget**.
+- **Allow changes**, off at first for each allowed app, and kept until you turn it off or **Forget** the app.
+- **Connected agents** in Settings → AI agents lists each agent session with its calls. **Pause** refuses its changes
+  until you press **Resume**, while it can still search and look; **Disconnect** refuses that session from then on.
+  **Allowed apps** has **Forget**.
+- **What agents did** lists the last 50 changes since Mimikit started, newest first, with the values they replaced.
+  **Undo last agent change** takes back the newest one still standing, all of a `batch` at once. Each change also shows
+  a message with **Undo**, and **Ctrl+Z** (⌘Z) undoes it like your own changes. Undo leaves a value you changed
+  yourself since as you left it, and removes a collection the agent made. Copied files stay: Mimikit never deletes
+  files.
 
 ### Security
 
@@ -238,8 +270,10 @@ An error says what happened and what to do, with a code: `not_running`, `not_all
   its own name at 127.0.0.1 sends that name) and have no `Origin` (browsers send one). Anything else is refused.
 - **An app's name is the one it gives.** Any program running as you could read the token file and claim any name, so
   the Allow question guards against surprises, not against software that already runs on your computer.
-- **Read only.** The tools run in Mimikit's window on the library it already shows, and none of them can change the
-  library or your files.
+- **Your files stay as they are.** The tools run in Mimikit's window on the library it already shows. Changes touch
+  only Mimikit's own records (tags, ratings, favorites, notes, collections), through the same actions as your own
+  edits. No tool moves, renames or deletes a file, removes a library folder, or changes settings or backups.
+  `copy_to_folder` only reads the originals and never replaces a file in the folder it copies to.
 - **Library text is data.** Names, folders, tags, notes and file contents can come from packs you downloaded, and can
   be written to steer a model. Everything a tool returns from your library sits inside `<mimikit-data>` tags with a
   sentence saying it is content to read, never instructions to follow, and the JSON inside can't close the tags

@@ -5,6 +5,21 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+### Added
+
+- AI agents can organize your library once you allow it: turn on **Let Claude Code change your library** under the
+  app in **Settings → AI agents**. The agent can then tag and rate assets, mark favorites, write notes, make
+  collections (smart ones too) and copy files into a folder, so you can ask it to "tag this pack and make a collection
+  of the UI parts". It still can't move, rename or delete files, and copies never replace a file or include programs
+  and scripts.
+- **What agents did** in Settings → AI agents lists the last 50 changes agents made, with the values they replaced,
+  and **Undo last agent change** takes back the newest one. Each change also shows a message with Undo, and Ctrl+Z
+  undoes it. An agent can make at most 30 changes a minute, of up to 500 assets each.
+
+### Changed
+
+- Pausing an agent now holds back only its changes: it can still search your library and look at assets.
+
 ## [0.7.0] - 2026-11-05
 
 ### Added
