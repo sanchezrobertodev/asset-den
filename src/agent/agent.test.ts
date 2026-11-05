@@ -182,6 +182,18 @@ assert.ok(dataBlock(tricky).endsWith("\n</mimikit-data>"));
   );
   assert.equal(payload(await call("search", { folder: 1, query: "type:audio" })).total, 1);
   assert.equal(errorCode(await call("search", { folder: 99 })), "not_found");
+  // A collection can hold assets of several library folders, and folder narrows it too.
+  const mixed = { library: () => ({ ...library, collections: [...collections, { id: 3, name: "Mixed", assetIds: [1, 10], rule: null }] }) };
+  assert.deepEqual(
+    payload(await call("search", { collection: 3 }, mixed)).assets.map((a: { id: number }) => a.id),
+    [1, 10],
+  );
+  const narrowed = payload(await call("search", { collection: 3, folder: 2 }, mixed));
+  assert.deepEqual(
+    narrowed.assets.map((a: { id: number }) => a.id),
+    [10],
+  );
+  assert.equal(narrowed.total, 1);
   // Colours come from the analysed images, and the answer says how many that is.
   const yellow = payload(await call("search", { query: "color:yellow" }));
   assert.deepEqual(

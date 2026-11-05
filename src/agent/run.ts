@@ -177,10 +177,11 @@ const run: Record<string, (args: Args, io: Io) => ToolResult | Promise<ToolResul
     const colors = !!filters.color || parseQuery(query).colors.length > 0;
     const palettes = colors || (collection && rulesWantColors([collection])) ? await io.palettes() : null;
     const sort = { key: (a.sort as "name") ?? "name", desc: a.desc === true };
-    const folder = a.folder === undefined ? null : { rootId: a.folder as number, path: "" };
-    const scope = { kinds: [], folder, subfolders: true, query, filters, collection, notes: lib.notes, palettes };
+    const scope = { kinds: [], folder: null, subfolders: true, query, filters, collection, notes: lib.notes, palettes };
     let list = visibleAssets(lib.assets, { ...scope, view: collection ? "collections" : a.favorites ? "favorites" : "library" }, sort);
+    // visibleAssets narrows a collection by neither favorites nor a folder.
     if (collection && a.favorites) list = list.filter((x) => x.favorite);
+    if (a.folder !== undefined) list = list.filter((x) => x.rootId === a.folder);
     const offset = (a.offset as number | undefined) ?? 0;
     const limit = (a.limit as number | undefined) ?? 30;
     const names = rootNames(lib.roots);
