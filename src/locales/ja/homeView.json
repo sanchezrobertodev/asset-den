@@ -15,7 +15,6 @@
   "total_other": "{{count}}個のアセット · {{size}}",
   "insights": "統計",
   "recent": "最近の変更",
-  "newestFirst": "ライブラリを新しい順に表示",
   "favorites": "お気に入りと高評価",
   "allFavorites": "すべてのお気に入り",
   "noFavorites": "お気に入りに追加した（<0>{{keys}}</0>）アセットや、星4つ以上の評価を付けたアセットがここに表示されます。",

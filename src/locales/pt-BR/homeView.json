@@ -19,7 +19,6 @@
   "total_other": "{{count}} recursos · {{size}}",
   "insights": "Estatísticas",
   "recent": "Alterados recentemente",
-  "newestFirst": "Biblioteca, mais recentes primeiro",
   "favorites": "Favoritos e mais bem avaliados",
   "allFavorites": "Todos os favoritos",
   "noFavorites": "Os recursos que você favoritar (<0>{{keys}}</0>) ou avaliar com 4 estrelas ou mais aparecem aqui.",

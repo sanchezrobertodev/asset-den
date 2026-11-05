@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { ArrowRight, Copy, Folder, ImageOff, LayoutGrid, Search, Sparkles, Star, Tag, Unplug, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import changelog from "../../CHANGELOG.md?raw";
-import { smartMembers } from "../lib/filter";
+import { rulesWantColors, smartMembers } from "../lib/filter";
 import { baseName } from "../lib/format";
 import { ago, bytes, kindLabel, num } from "../lib/fmt";
 import { t } from "../lib/i18n";
@@ -102,7 +102,10 @@ export function HomeView() {
       return { k, count: list.length, b: list.reduce((n, a) => n + a.size, 0) };
     }).filter((x) => x.count);
     const recent = [...s.assets].sort((x, y) => y.mtime - x.mtime).slice(0, 8);
-    const favorites = s.assets.filter((a) => a.favorite || a.rating >= 4).slice(0, 6);
+    const favorites = s.assets
+      .filter((a) => a.favorite || a.rating >= 4)
+      .sort((x, y) => y.rating - x.rating || +y.favorite - +x.favorite)
+      .slice(0, 6);
     const tags = new Map<string, number>();
     for (const a of s.assets) for (const tag of a.tags) if (!/\s/.test(tag)) tags.set(tag, (tags.get(tag) ?? 0) + 1);
     const topTags = [...tags].sort((x, y) => y[1] - x[1]).slice(0, 3);
@@ -110,7 +113,10 @@ export function HomeView() {
     return { total, kinds, recent, favorites, topTags, untagged };
   }, [s.assets]);
 
-  const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes), [s.collections, s.assets, s.notes]);
+  // Only the four collections shown; colours only when a rule needs them, as in the sidebar.
+  const shown = useMemo(() => s.collections.slice(0, 4), [s.collections]);
+  const palettes = rulesWantColors(shown) ? s.palettes : null;
+  const smart = useMemo(() => smartMembers(shown, s.assets, s.notes, palettes), [shown, s.assets, s.notes, palettes]);
   const byId = useMemo(() => new Map(s.assets.map((a) => [a.id, a])), [s.assets]);
   // A folder emptied or deleted since it was opened isn't worth going back to.
   const folders = s.recentFolders
@@ -122,7 +128,7 @@ export function HomeView() {
     })
     .filter((x) => x.count)
     .slice(0, 3);
-  const collections = s.collections.slice(0, 4).map((c) => ({ c, members: c.rule ? (smart.get(c.id) ?? []) : c.assetIds.flatMap((id) => byId.get(id) ?? []) }));
+  const collections = shown.map((c) => ({ c, members: c.rule ? (smart.get(c.id) ?? []) : c.assetIds.flatMap((id) => byId.get(id) ?? []) }));
 
   // A link shows what it names, so it starts from a clear search and Filters panel.
   const show = (extra?: Parameters<typeof s.go>[1]) => {
@@ -232,15 +238,7 @@ export function HomeView() {
         </div>
       </Section>
 
-      <Section
-        title={t("homeView.recent")}
-        more={t("homeView.newestFirst")}
-        onMore={() => {
-          // setSort flips the direction when the key is already chosen, so only call it to get newest first.
-          if (s.sort.key !== "mtime" || !s.sort.desc) s.setSort("mtime");
-          show();
-        }}
-      >
+      <Section title={t("homeView.recent")}>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
           {d.recent.map((a) => (
             <button key={a.id} type="button" onClick={() => open(a)} className="flex min-w-0 flex-col gap-1.5 text-left">

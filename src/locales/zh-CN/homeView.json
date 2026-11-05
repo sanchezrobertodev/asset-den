@@ -15,7 +15,6 @@
   "total_other": "{{count}} 个资源 · {{size}}",
   "insights": "统计",
   "recent": "最近更改",
-  "newestFirst": "资源库，最新优先",
   "favorites": "收藏和高评分",
   "allFavorites": "所有收藏",
   "noFavorites": "收藏的资源（<0>{{keys}}</0>）和评为 4 星及以上的资源会显示在这里。",

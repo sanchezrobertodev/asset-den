@@ -17,7 +17,6 @@
   "total_other": "{{count}} assets · {{size}}",
   "insights": "Insights",
   "recent": "Recently changed",
-  "newestFirst": "Library, newest first",
   "favorites": "Favorites and top rated",
   "allFavorites": "All favorites",
   "noFavorites": "Assets you mark as favorites (<0>{{keys}}</0>) or rate 4 stars or more show up here.",
