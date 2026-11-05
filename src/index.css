@@ -41,6 +41,7 @@
   --invert-bg: #1a1916;
   --invert-fg: #f7f5f0;
   --star: #a87508;
+  --fav: #c2255c;
   --warn-bg: oklch(0.94 0.05 75);
   --warn-fg: oklch(0.42 0.1 75);
   --danger: #b4321f;
@@ -88,6 +89,7 @@
   --invert-bg: #efede8;
   --invert-fg: #131210;
   --star: #f2c94c;
+  --fav: #f783ac;
   --warn-bg: oklch(0.3 0.06 75 / 0.55);
   --warn-fg: oklch(0.88 0.1 75);
   --danger: #f08a7a;
@@ -218,6 +220,7 @@
   --invert-bg: #ffffff;
   --invert-fg: #000000;
   --star: #ffd23f;
+  --fav: #ffa8c9;
   --warn-bg: oklch(0.3 0.08 75);
   --warn-fg: oklch(0.93 0.1 75);
   --danger: #ff9e8f;
@@ -260,6 +263,7 @@
   --invert-bg: #000000;
   --invert-fg: #ffffff;
   --star: #7a5200;
+  --fav: #9c1046;
   --warn-bg: oklch(0.95 0.05 75);
   --warn-fg: oklch(0.34 0.09 75);
   --danger: #9e1c0a;
@@ -307,6 +311,7 @@
   --color-invert-bg: var(--invert-bg);
   --color-invert-fg: var(--invert-fg);
   --color-star: var(--star);
+  --color-fav: var(--fav);
   --color-warn-bg: var(--warn-bg);
   --color-warn-fg: var(--warn-fg);
   --color-danger: var(--danger);

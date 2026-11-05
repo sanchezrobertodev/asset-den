@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import clsx from "clsx";
-import { ArrowRight, Copy, Folder, ImageOff, LayoutGrid, Search, Sparkles, Star, Tag, Unplug, X } from "lucide-react";
+import { ArrowRight, Copy, Folder, ImageOff, LayoutGrid, Search, Sparkles, Tag, Unplug, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import changelog from "../../CHANGELOG.md?raw";
 import { rulesWantColors, smartMembers } from "../lib/filter";
@@ -13,8 +13,9 @@ import { useStore } from "../store";
 import { KINDS, type Asset } from "../types";
 import { analyse } from "./Analysis";
 import { ReleaseNotes } from "./AppUpdate";
+import { assetLabel } from "./AssetBrowser";
 import { Thumb } from "./Thumb";
-import { IconButton, KIND_ICONS, KindPill, Kbd, Modal, T } from "./ui";
+import { IconButton, KIND_ICONS, KindPill, Kbd, Modal, T, ThumbBadges } from "./ui";
 
 const card = "rounded-xl border border-line bg-card";
 const cardButton = clsx(card, "text-left hover:border-line-x");
@@ -244,6 +245,7 @@ export function HomeView() {
             <button key={a.id} type="button" onClick={() => open(a)} className="flex min-w-0 flex-col gap-1.5 text-left">
               <span className="relative block">
                 <Thumb asset={a} size="strip" className="aspect-square w-full rounded-xl" />
+                <ThumbBadges asset={a} className="top-1.5 right-1.5" />
                 <KindPill kind={a.kind} className="absolute bottom-1.5 left-1.5 px-[6px] py-px text-[10.5px]" />
               </span>
               <span className="truncate text-[12.5px] font-medium">{a.name}</span>
@@ -258,9 +260,9 @@ export function HomeView() {
           {d.favorites.length ? (
             <div className="grid grid-cols-6 gap-2">
               {d.favorites.map((a) => (
-                <button key={a.id} type="button" onClick={() => open(a)} title={a.name} aria-label={a.name} className="relative">
+                <button key={a.id} type="button" onClick={() => open(a)} title={a.name} aria-label={assetLabel(a)} className="relative">
                   <Thumb asset={a} size="strip" className="aspect-square w-full rounded-lg" />
-                  {a.favorite && <Star aria-hidden className="absolute top-1 right-1 size-3 fill-star text-star" />}
+                  <ThumbBadges asset={a} small className="top-1 right-1" />
                 </button>
               ))}
             </div>

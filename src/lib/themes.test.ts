@@ -110,6 +110,7 @@ for (const theme of THEMES) {
       check("--accent", col("--accent").rgb, s, surface, text); // accent is used for text and icons
       check("--danger", col("--danger").rgb, s, surface, text);
       check("--star", col("--star").rgb, s, surface, 3); // an icon, not text
+      check("--fav", col("--fav").rgb, s, surface, 3); // the favorite heart, an icon too
     }
     check("--accent-fg", col("--accent-fg").rgb, "--accent", col("--accent").rgb, text);
     check("--fg", col("--fg").rgb, "--sel-row", col("--sel-row").rgb, text);

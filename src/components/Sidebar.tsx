@@ -1,5 +1,30 @@
 import clsx from "clsx";
-import { ChevronRight, CircleArrowUp, Folder, FolderOpen, FolderSearch, FolderX, Keyboard, LoaderCircle, Monitor, Moon, Palette, Plus, RefreshCw, Settings, Sparkles, Sun, X } from "lucide-react";
+import {
+  ChartNoAxesColumn,
+  ChevronRight,
+  CircleArrowUp,
+  Copy,
+  Folder,
+  FolderOpen,
+  FolderSearch,
+  FolderX,
+  Heart,
+  House,
+  Keyboard,
+  LayoutGrid,
+  LibraryBig,
+  LoaderCircle,
+  Monitor,
+  Moon,
+  Palette,
+  Plus,
+  RefreshCw,
+  Settings,
+  Sparkles,
+  Sun,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { AnalysisProgress } from "./Analysis";
 import { UpdateNotice } from "./AppUpdate";
@@ -29,12 +54,14 @@ const nextTheme = (theme: Theme): Theme => (theme === "system" ? "dark" : theme 
 
 function NavItem({
   label,
+  icon: Icon,
   active,
   onClick,
   count,
   badge,
 }: {
   label: string;
+  icon: LucideIcon;
   active: boolean;
   onClick: () => void;
   count?: number;
@@ -46,11 +73,15 @@ function NavItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "flex items-center justify-between rounded-lg px-3 py-[9px] text-left transition-colors duration-150",
+        "group flex items-center justify-between gap-2 rounded-lg px-3 py-[9px] text-left transition-colors duration-150",
         active ? "bg-active font-medium text-fg" : "text-fg-2 hover:bg-hover hover:text-fg",
       )}
     >
-      <span>{label}</span>
+      <span className="flex min-w-0 items-center gap-2.5">
+        {/* Accent when active, like the open folder's icon in the tree below. */}
+        <Icon aria-hidden className={clsx("size-4 flex-none", active ? "text-accent" : "text-muted group-hover:text-fg-2")} />
+        <span className="truncate">{label}</span>
+      </span>
       {badge ? (
         <span className="rounded-[9px] bg-warn-bg px-[7px] py-px text-[11px] font-semibold text-warn-fg">{badge}</span>
       ) : count !== undefined ? (
@@ -99,13 +130,15 @@ export function Sidebar() {
   const palettes = rulesWantColors(s.collections) ? s.palettes : null;
   const smart = useMemo(() => smartMembers(s.collections, s.assets, s.notes, palettes), [s.collections, s.assets, s.notes, palettes]);
 
-  const nav: { view: ViewName; label: string; count?: number; badge?: number }[] = [
-    { view: "home", label: t("sidebar.home") },
-    { view: "library", label: t("sidebar.library"), count: s.assets.length },
-    { view: "favorites", label: t("sidebar.favorites"), count: favorites },
-    { view: "collections", label: t("sidebar.collections"), count: s.collections.length },
-    { view: "duplicates", label: t("sidebar.duplicates"), badge: s.dups?.length || undefined },
-    { view: "insights", label: t("sidebar.insights") },
+  const nav: { view: ViewName; label: string; icon: LucideIcon; count?: number; badge?: number }[] = [
+    { view: "home", label: t("sidebar.home"), icon: House },
+    { view: "library", label: t("sidebar.library"), icon: LibraryBig, count: s.assets.length },
+    { view: "favorites", label: t("sidebar.favorites"), icon: Heart, count: favorites },
+    // The same icon as a collection's card on Home.
+    { view: "collections", label: t("sidebar.collections"), icon: LayoutGrid, count: s.collections.length },
+    // The same icon as Home's "sets of duplicates" row.
+    { view: "duplicates", label: t("sidebar.duplicates"), icon: Copy, badge: s.dups?.length || undefined },
+    { view: "insights", label: t("sidebar.insights"), icon: ChartNoAxesColumn },
   ];
   const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : s.theme === "system" ? Monitor : Palette;
   const updatesSupported = useAppUpdate((u) => u.supported);
@@ -126,6 +159,7 @@ export function Sidebar() {
           <NavItem
             key={n.view}
             label={n.label}
+            icon={n.icon}
             count={n.count}
             badge={n.badge}
             active={s.view === n.view}
