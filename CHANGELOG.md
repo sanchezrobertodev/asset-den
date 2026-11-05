@@ -23,6 +23,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 - Selected rows in the list view have an accent outline. A faint tint was all that marked them.
 - In the high-contrast themes, the highlighted result in search (Ctrl+K) and the highlighted folder in the folder
   path's menu are readable, and the folder line under a highlighted search result has enough contrast in every theme.
+- In the high-contrast themes, the tags in the side panel and the ignored folder names in Settings are readable, and
+  so is their remove button (×). A filter button in search (Ctrl+K) stays readable under the pointer too.
 
 ## [0.6.0] - 2026-11-05
 

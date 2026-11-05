@@ -113,8 +113,15 @@ for (const theme of THEMES) {
     }
     check("--accent-fg", col("--accent-fg").rgb, "--accent", col("--accent").rgb, text);
     check("--fg", col("--fg").rgb, "--sel-row", col("--sel-row").rgb, text);
-    // The highlighted row in Ctrl+K and the folder menu is --active, under every text colour.
+    // --active fills chips (tags, ignored folder names), the Ctrl+K filter buttons and the highlighted row in Ctrl+K
+    // and the folder menu, under every text colour.
     for (const f of TEXT) check(f, col(f).rgb, "--active", col("--active").rgb, text);
+    // High contrast only (the other themes keep soft edges): a chip's --line ring sets it apart from the field, and the
+    // --line-x ring marks a hovered remove or filter button on --active (WCAG 1.4.11).
+    if (strict) {
+      check("--line ring", col("--line").rgb, "--card", col("--card").rgb, 3);
+      check("--line-x ring", col("--line-x").rgb, "--active", col("--active").rgb, 3);
+    }
     // A selected list row's accent ring, against the row's fill and a hovered neighbour (WCAG 1.4.11; --bg is checked above).
     for (const s of ["--sel-row", "--hover"]) check("--accent ring", col("--accent").rgb, s, col(s).rgb, 3);
     check("--invert-fg", col("--invert-fg").rgb, "--invert-bg", col("--invert-bg").rgb, text);
