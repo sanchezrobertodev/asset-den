@@ -10,8 +10,9 @@ import { reducedMotion } from "../lib/prefs";
 import { thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
+import { Heart, Star } from "lucide-react";
 import { Thumb } from "./Thumb";
-import { KindPill } from "./ui";
+import { KindPill, ThumbBadges } from "./ui";
 
 const GAP = 16;
 const PAD = 28;
@@ -76,7 +77,7 @@ function useHandlers(assets: Asset[]) {
 type Line = { type: "head"; group: Group; first: boolean } | { type: "items"; items: Asset[] };
 
 /** What a screen reader says for a card or row: the name first, then what the card shows. */
-function assetLabel(a: Asset) {
+export function assetLabel(a: Asset) {
   return [
     a.name,
     a.width && a.height ? `${a.width}×${a.height}` : null,
@@ -260,11 +261,7 @@ function Grid({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                           )}
                         >
                           <Thumb asset={a} pixelated={pixelated} className="h-full w-full rounded-xl" />
-                          {a.favorite && (
-                            <span aria-hidden className="absolute top-2 right-2.5 text-sm text-star">
-                              ★
-                            </span>
-                          )}
+                          <ThumbBadges asset={a} className="top-2 right-2" />
                           <KindPill kind={a.kind} className="absolute bottom-2 left-2 px-[7px] py-0.5 text-[11px]" />
                         </div>
                         <span className="truncate font-medium">{a.name}</span>
@@ -362,7 +359,13 @@ function List({ assets, groups }: { assets: Asset[]; groups: Group[] | null }) {
                       #{tag}
                     </span>
                   ))}
-                  {a.favorite && <span className="text-star">★</span>}
+                  {a.rating > 0 && (
+                    <span aria-hidden className="flex flex-none items-center gap-0.5 font-mono text-[11px] text-muted">
+                      <Star className="size-3 fill-current text-star" />
+                      {a.rating}
+                    </span>
+                  )}
+                  {a.favorite && <Heart aria-hidden className="size-3.5 flex-none fill-current text-fav" />}
                 </span>
                 <span>
                   <KindPill kind={a.kind} />

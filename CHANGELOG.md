@@ -7,11 +7,15 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Added
 
+- The sidebar's sections have icons.
+- Thumbnails show their rating (★ 4) next to the favorite heart: in the grid, the list and on Home. On Home this
+  explains why an asset is under "Favorites and top rated".
 - **Ctrl+Z** (⌘Z on macOS) undoes the last change that offered Undo (favorites, ratings, collections, "Not
   duplicates"), even after its message has gone. It's listed with the other keyboard shortcuts (**?**).
 
 ### Changed
 
+- Favorites are hearts, in a colour of their own, so they no longer look like the rating stars beside them.
 - A message with an Undo button stays on screen while the pointer or the keyboard focus is on it.
 - In Duplicates, the Move to Trash confirmation puts the focus on Cancel and shows Move to Trash in red, so pressing
   Enter or Space right after it opens no longer moves files to the Trash.
