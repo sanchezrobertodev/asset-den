@@ -10,6 +10,13 @@
   "useSearchFirst": "Durchsuche oder filtere zuerst die Bibliothek",
   "useSearch": "Aktuelle Suche verwenden",
   "delete": "Löschen",
+  "deleteConfirm": {
+    "title": "{{name}} löschen?",
+    "body_one": "Das Asset darin bleibt in der Bibliothek und auf der Festplatte. Nur die Sammlung wird gelöscht.",
+    "body_other": "Die {{count}} Assets darin bleiben in der Bibliothek und auf der Festplatte. Nur die Sammlung wird gelöscht.",
+    "confirm": "Sammlung löschen",
+    "cancel": "Abbrechen"
+  },
   "copyToFolder": "In Ordner kopieren…",
   "noMatch": {
     "title": "Kein Asset dieser Sammlung passt zu diesen Filtern",

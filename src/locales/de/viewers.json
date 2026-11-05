@@ -6,7 +6,7 @@
     "cantDisplay": "Die Webansicht kann dieses Bild nicht anzeigen.",
     "zoom": "{{percent}} %",
     "zoomShown": "angezeigt mit {{percent}} %",
-    "zoomHint": "Mausrad zum Zoomen, Ziehen zum Verschieben"
+    "zoomHint": "Mausrad oder + − zum Zoomen, Ziehen zum Verschieben"
   },
   "export": {
     "pickFolder": "Frames von {{name}} exportieren nach…",

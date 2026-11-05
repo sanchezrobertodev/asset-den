@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Heart, TriangleAlert, X } from "lucide-react";
 import { Component, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, errorText } from "../api";
-import { baseName, folderOf } from "../lib/format";
+import { folderOf, rootLabel } from "../lib/format";
 import { ago, audioDetails, bytes } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import { shortcut } from "../lib/shortcuts";
@@ -50,11 +50,16 @@ export class PreviewBoundary extends Component<{ asset: Asset; children: ReactNo
     return (
       <div role="alert" className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
         <TriangleAlert aria-hidden className="size-5 text-muted" />
-        <div className="flex flex-col gap-1">
+        <div className="flex max-w-[440px] flex-col gap-1">
           <span className="font-medium text-fg">{t("peek.previewFailed.title")}</span>
-          <span className="max-w-[440px] text-xs text-muted [overflow-wrap:anywhere]">
-            {this.state.message ?? t("peek.previewFailed.body")}
-          </span>
+          <span className="text-xs text-muted">{t("peek.previewFailed.body")}</span>
+          {/* The viewer's own message is for a bug report, not the explanation. */}
+          {this.state.message && (
+            <details className="text-xs text-muted">
+              <summary className="cursor-pointer hover:text-fg">{t("peek.previewFailed.details")}</summary>
+              <p className="mt-1 max-h-16 overflow-auto font-mono text-[11px] select-text [overflow-wrap:anywhere]">{this.state.message}</p>
+            </details>
+          )}
         </div>
         <div className="flex gap-2">
           {a.kind !== "other" && (
@@ -81,8 +86,7 @@ export function copyPath(a: Asset) {
 /** "lib/sprites/" the way the design shows a file's location. */
 export function useLocation(a: Asset) {
   const roots = useStore((s) => s.roots);
-  const root = roots.find((r) => r.id === a.rootId);
-  return [root ? baseName(root.path) : "", folderOf(a.relPath)].filter(Boolean).join("/") + "/";
+  return [rootLabel(roots, a.rootId), folderOf(a.relPath)].filter(Boolean).join("/") + "/";
 }
 
 /** The other copies of `a`, if it's part of a duplicate group, plus that group's position. */
@@ -403,8 +407,9 @@ function PeekBody({ a }: { a: Asset }) {
   const where = useLocation(a);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-auto px-[18px] pt-[18px] pb-5">
-      <div className="flex items-start justify-between gap-2.5">
-        <div className="flex min-w-0 flex-col gap-2">
+      {/* In a narrow panel the rating and favourite drop under the name instead of squeezing it. */}
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
+        <div className="flex min-w-0 grow basis-40 flex-col gap-2">
           <span className="text-lg font-semibold tracking-[-.01em] [overflow-wrap:anywhere]">{a.name}</span>
           <span className="flex min-w-0 items-center gap-2">
             <KindPill kind={a.kind} className="flex-none" />

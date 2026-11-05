@@ -9,7 +9,7 @@ import type { Asset } from "../types";
 import { AssetBrowser } from "./AssetBrowser";
 import { BrowseBar } from "./Header";
 import { Thumb } from "./Thumb";
-import { Button, T, focusAssets } from "./ui";
+import { Button, Modal, T, focusAssets } from "./ui";
 
 /** `items` is the open collection's members after the type chips, search and filters, in display order. */
 export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]; groups: Group[] | null; scopeAssets: Asset[] }) {
@@ -24,6 +24,8 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
   // Selected assets shown in a plain collection, for "Remove". Ones hidden by the search or filters stay put.
   const removable = current && !current.rule ? items.filter((a) => s.selected.has(a.id)).map((a) => a.id) : [];
   const [name, setName] = useState(current?.name ?? "");
+  // Deleting a collection that holds assets asks first.
+  const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => setName(current?.name ?? ""), [current?.id, current?.name]);
 
   // Esc reverts: the blur that follows must not save the typed name it still sees.
@@ -135,13 +137,39 @@ export function CollectionsView({ items, groups, scopeAssets }: { items: Asset[]
                 </Button>
               </>
             )}
-            <Button onClick={() => void s.deleteCollection(current.id)}>{t("collectionsView.delete")}</Button>
+            <Button variant="danger" onClick={() => (all.length ? setConfirmDelete(true) : void s.deleteCollection(current.id))}>
+              {t("collectionsView.delete")}
+            </Button>
             <Button variant="accent" disabled={!all.length} onClick={() => void s.copyCollection(current.id)}>
               {t("collectionsView.copyToFolder")}
             </Button>
           </div>
           {current.rule && <RuleSummary query={current.rule.query} filters={activeFilterCount({ ...noFilters, ...current.rule.filters })} />}
           </div>
+          {confirmDelete && (
+            <Modal
+              title={t("collectionsView.deleteConfirm.title", { name: current.name })}
+              onClose={() => setConfirmDelete(false)}
+              footer={
+                <>
+                  <Button data-autofocus onClick={() => setConfirmDelete(false)}>
+                    {t("collectionsView.deleteConfirm.cancel")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setConfirmDelete(false);
+                      void s.deleteCollection(current.id);
+                    }}
+                  >
+                    {t("collectionsView.deleteConfirm.confirm")}
+                  </Button>
+                </>
+              }
+            >
+              <p className="leading-relaxed">{t("collectionsView.deleteConfirm.body", { count: all.length })}</p>
+            </Modal>
+          )}
           {all.length > 0 && <BrowseBar count={items.length} folders={groups?.length ?? 0} scopeAssets={scopeAssets} />}
           <div className="min-h-0 flex-1">
             {items.length > 0 ? (

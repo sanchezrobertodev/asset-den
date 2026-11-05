@@ -6,7 +6,7 @@
     "cantDisplay": "A webview não consegue exibir esta imagem.",
     "zoom": "{{percent}}%",
     "zoomShown": "exibida em {{percent}}%",
-    "zoomHint": "roda do mouse para zoom, arraste para mover"
+    "zoomHint": "roda do mouse ou + − para zoom, arraste para mover"
   },
   "export": {
     "pickFolder": "Exportar os quadros de {{name}} para…",

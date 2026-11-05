@@ -5,5 +5,6 @@
   "clips_other": "{{count}} 动画",
   "wireframe": "线框",
   "animate": "播放动画",
+  "autoRotate": "自动旋转",
   "resetView": "重置视图"
 }

@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { matchesFilters, matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
-import { baseName, folderOf } from "../lib/format";
+import { folderOf, rootLabel } from "../lib/format";
 import { bytes } from "../lib/fmt";
 import { t } from "../lib/i18n";
 import { shortcut } from "../lib/shortcuts";
@@ -126,7 +126,7 @@ export function Palette() {
         e.n++;
         seen.set(k, e);
       }
-      const rootName = (id: number) => baseName(s.roots.find((r) => r.id === id)?.path ?? "");
+      const rootName = (id: number) => rootLabel(s.roots, id);
       const folders = [...seen.values()].slice(0, 6);
       if (folders.length)
         out.push({

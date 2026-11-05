@@ -6,7 +6,7 @@
     "cantDisplay": "The webview can't display this image.",
     "zoom": "{{percent}}%",
     "zoomShown": "shown at {{percent}}%",
-    "zoomHint": "scroll to zoom, drag to pan"
+    "zoomHint": "scroll or + − to zoom, drag to pan"
   },
   "export": {
     "pickFolder": "Export the frames of {{name}} to…",

@@ -8,5 +8,6 @@
   "clips_other": "{{count}} animaciones",
   "wireframe": "Wireframe",
   "animate": "Animar",
+  "autoRotate": "Rotación automática",
   "resetView": "Restablecer vista"
 }

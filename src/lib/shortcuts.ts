@@ -1,10 +1,12 @@
 // Every keyboard shortcut in one table. The shortcuts dialog (?), the library hint bar and the full-screen legend all
-// read it. The keys themselves are handled in App.tsx (onKey), Palette.tsx, AssetBrowser.tsx, Viewers.tsx and the star
-// rating in Peek.tsx: when adding a binding there, add its row here and its label to locales/en/shortcuts.json.
+// read it. The keys themselves are handled in App.tsx (onKey), Palette.tsx, AssetBrowser.tsx, the viewers (useViewerKeys
+// in Viewers.tsx and AudioView.tsx) and the star rating in Peek.tsx: when adding a binding there, add its row here and its label to locales/en/shortcuts.json.
 import { t, type TKey } from "./i18n";
 
 export const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 const mod = isMac ? "⌘" : `${t("shortcuts.keys.ctrl")} `;
+const shift = isMac ? "⇧" : `${t("shortcuts.keys.shift")} `;
+const arrows = "↑ ↓ ← →";
 
 export const GROUPS = ["navigate", "preview", "organize", "search"] as const;
 export type Group = (typeof GROUPS)[number];
@@ -21,7 +23,7 @@ export interface Shortcut {
 }
 
 const ROWS: [id: string, group: Group, keys: string][] = [
-  ["move", "navigate", "← →"],
+  ["move", "navigate", arrows],
   ["parent", "navigate", isMac ? "⌥↑" : `${t("shortcuts.keys.alt")} ↑`],
   ["back", "navigate", t("shortcuts.keys.esc")],
   ["skip", "navigate", t("shortcuts.keys.tab")],
@@ -30,7 +32,9 @@ const ROWS: [id: string, group: Group, keys: string][] = [
   ["peek", "preview", t("shortcuts.keys.space")],
   ["full", "preview", "↵"],
   ["full-back", "preview", t("shortcuts.keys.esc")],
-  ["zoom", "preview", t("shortcuts.keys.scroll")],
+  ["zoom", "preview", "+ −"],
+  ["zoom-fit", "preview", `${mod}0`],
+  ["seek", "preview", "J L"],
 
   ["favorite", "organize", "F"],
   ["rate", "organize", "1–5"],
@@ -40,6 +44,9 @@ const ROWS: [id: string, group: Group, keys: string][] = [
   ["select-all", "organize", `${mod}A`],
   ["toggle", "organize", isMac ? "⌘ click" : t("shortcuts.keys.ctrlClick")],
   ["range", "organize", t("shortcuts.keys.shiftClick")],
+  ["range-keys", "organize", `${shift}${arrows}`],
+  ["focus-keys", "organize", `${mod}${arrows}`],
+  ["toggle-key", "organize", `${isMac ? "⌃" : mod}${t("shortcuts.keys.space")}`],
   ["undo", "organize", `${mod}Z`],
 
   ["search", "search", `${mod}K`],

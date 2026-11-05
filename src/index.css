@@ -52,10 +52,12 @@
   --stripe-b: #f2efe9;
   /* Asset-kind colors: lightness and chroma per theme, hue per kind (see [data-kind] below); --ko-* is "other". */
   --k-dot: 0.58 0.15;
+  --k-text: 0.47 0.13;
   --k-pill-bg: 0.93 0.045;
   --k-pill-fg: 0.42 0.12;
   --k-bar: 0.62 0.15;
   --ko-dot: 0.65 0;
+  --ko-text: 0.47 0;
   --ko-pill-bg: 0.88 0;
   --ko-pill-fg: 0.4 0;
   --ko-bar: 0.6 0;
@@ -99,10 +101,12 @@
   --stripe-a: #22211d;
   --stripe-b: #1d1c19;
   --k-dot: 0.74 0.13;
+  --k-text: 0.74 0.13;
   --k-pill-bg: 0.31 0.05;
   --k-pill-fg: 0.87 0.1;
   --k-bar: 0.66 0.15;
   --ko-dot: 0.68 0.01;
+  --ko-text: 0.68 0.01;
   --ko-pill-bg: 0.27 0.005;
   --ko-pill-fg: 0.82 0.01;
   --ko-bar: 0.6 0.01;
@@ -195,6 +199,8 @@
   --checker-b: #f1e9d6;
   --stripe-a: #e8ddc4;
   --stripe-b: #f0e7d2;
+  --k-text: 0.45 0.13;
+  --ko-text: 0.45 0;
 }
 
 /* High contrast: strong text, borders and accents for low vision. */
@@ -230,10 +236,12 @@
   --stripe-a: #181818;
   --stripe-b: #0d0d0d;
   --k-dot: 0.82 0.12;
+  --k-text: 0.82 0.12;
   --k-pill-bg: 0.25 0.05;
   --k-pill-fg: 0.93 0.07;
   --k-bar: 0.78 0.13;
   --ko-dot: 0.82 0;
+  --ko-text: 0.82 0;
   --ko-pill-bg: 0.25 0;
   --ko-pill-fg: 0.93 0;
   --ko-bar: 0.78 0;
@@ -273,10 +281,12 @@
   --stripe-a: #e3e3e3;
   --stripe-b: #f5f5f5;
   --k-dot: 0.5 0.13;
+  --k-text: 0.35 0.11;
   --k-pill-bg: 0.93 0.04;
   --k-pill-fg: 0.32 0.1;
   --k-bar: 0.5 0.13;
   --ko-dot: 0.5 0;
+  --ko-text: 0.35 0;
   --ko-pill-bg: 0.92 0;
   --ko-pill-fg: 0.3 0;
   --ko-bar: 0.5 0;
@@ -343,9 +353,10 @@
 [data-kind="font"] { --h: 300; }
 [data-kind="video"] { --h: 25; }
 [data-kind="text"] { --h: 200; }
-[data-kind="other"] { --h: 0; --k-dot: var(--ko-dot); --k-pill-bg: var(--ko-pill-bg); --k-pill-fg: var(--ko-pill-fg); --k-bar: var(--ko-bar); }
+[data-kind="other"] { --h: 0; --k-dot: var(--ko-dot); --k-text: var(--ko-text); --k-pill-bg: var(--ko-pill-bg); --k-pill-fg: var(--ko-pill-fg); --k-bar: var(--ko-bar); }
 .k-dot { background: oklch(var(--k-dot) var(--h)); }
-.k-text { color: oklch(var(--k-dot) var(--h)); }
+/* Type labels and icons: darker than the dots in the light themes, so the labels read on the striped tiles. */
+.k-text { color: oklch(var(--k-text) var(--h)); }
 .k-bar { background: oklch(var(--k-bar) var(--h)); }
 .k-pill { background: oklch(var(--k-pill-bg) var(--h)); color: oklch(var(--k-pill-fg) var(--h)); }
 

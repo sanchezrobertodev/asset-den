@@ -7,7 +7,7 @@ import { t } from "../lib/i18n";
 import { onThemeColors, reducedMotion, themeColor } from "../lib/prefs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
-import { toggleChip, usePreviewFailure } from "./Viewers";
+import { toggleChip, usePreviewFailure, useViewerKeys } from "./Viewers";
 
 // Its own chunk: wavesurfer loads on the first audio preview, not at startup.
 export default function AudioView({ asset, full }: { asset: Asset; full: boolean }) {
@@ -27,7 +27,7 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
       container: box.current,
       url: fileUrl(asset.path),
       height: full ? 180 : 90,
-      waveColor: themeColor("--line-x"),
+      waveColor: themeColor("--faint"),
       progressColor: themeColor("--accent"),
       cursorWidth: 0,
       barWidth: full ? 4 : 3,
@@ -52,7 +52,13 @@ export default function AudioView({ asset, full }: { asset: Asset; full: boolean
   }, [asset.id, asset.path, asset.mtime, full, fail]);
 
   // A theme or accent change repaints the waveform without reloading the audio.
-  useEffect(() => onThemeColors(() => ws.current?.setOptions({ waveColor: themeColor("--line-x"), progressColor: themeColor("--accent") })), []);
+  useEffect(() => onThemeColors(() => ws.current?.setOptions({ waveColor: themeColor("--faint"), progressColor: themeColor("--accent") })), []);
+  // J and L seek 5 s back and forward; ← → stay previous and next asset.
+  useViewerKeys((e, key) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || (key !== "j" && key !== "l")) return false;
+    ws.current?.skip(key === "j" ? -5 : 5);
+    return true;
+  });
 
   const fmt = (s: number) => (s < 10 && s % 1 ? `0:0${s.toFixed(1)}` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`);
   return (

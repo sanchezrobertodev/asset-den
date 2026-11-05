@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { Asset } from "../types";
 import { groupByFolder, noFilters, visibleAssets, type Scope } from "./filter.ts";
 import { ancestorKeys, buildTree, parentOf, pathTo } from "./folders.ts";
+import { rootLabel } from "./format.ts";
 
 const asset = (id: number, relPath: string, size = 10, rootId = 1): Asset => ({
   id,
@@ -63,4 +64,17 @@ assert.deepEqual(ids({ folder: { rootId: 2, path: "" } }), [7]);
 const base = { rootId: 1, path: "characters/hero" };
 const groups = groupByFolder(visibleAssets(all, scope({ folder: base }), { key: "name", desc: false }), roots, base);
 assert.deepEqual(groups.map((g) => g.label), ["hero", "hero/idle", "hero/run"]);
+
+// Two library folders with the same name get the parent that tells them apart
+const twins = [
+  { id: 1, path: "C:\\D&D\\packages\\assets\\files" },
+  { id: 2, path: "C:/D&D/apps/web/src/audio/files" },
+  { id: 3, path: "/home/me/x/files" },
+  { id: 4, path: "/home/you/x/files/" },
+  { id: 5, path: "D:\\sprites" },
+];
+assert.deepEqual(twins.map((r) => rootLabel(twins, r.id)), ["files · assets", "files · audio", "files · me", "files · you", "sprites"]);
+assert.equal(rootLabel(twins, 99), "");
+const twinGroups = groupByFolder([asset(1, "a.png", 1, 1), asset(2, "art/b.png", 1, 1), asset(3, "c.png", 1, 2)], twins.slice(0, 2));
+assert.deepEqual(twinGroups.map((g) => g.label), ["files · assets", "files · assets/art", "files · audio"]);
 console.log("folder tests passed");
