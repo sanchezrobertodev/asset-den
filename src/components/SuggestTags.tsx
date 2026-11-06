@@ -36,6 +36,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [sending, setSending] = useState(false);
   const stop = useRef(false);
+  const uploading = useRef(false); // set before the dialog re-renders, so a click in between can't close it
 
   useEffect(() => {
     stop.current = false; // StrictMode runs this twice
@@ -56,11 +57,18 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   const prompt = useMemo(() => tagPrompt(topTags(assets)), [assets]);
   const price = estimate(chosen, ai.tagModel, prompt);
   const busy = progress !== null || sending;
+  // Previews can stop; once the upload starts it can't, so the dialog stays until it's sent (then the sidebar can cancel).
+  const dismiss = () => {
+    if (uploading.current) return;
+    stop.current = true;
+    close();
+  };
 
   const send = async () => {
     try {
       await preparePreviews(chosen, (done, total) => setProgress({ done, total }), () => stop.current);
       if (stop.current) return;
+      uploading.current = true;
       setProgress(null);
       setSending(true);
       const n = await api.suggestTags(
@@ -72,6 +80,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
       close();
     } catch (e) {
       setError(e);
+      uploading.current = false;
       setProgress(null);
       setSending(false);
     }
@@ -87,13 +96,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
       </>
     ) : (
       <>
-        <Button
-          data-autofocus={chosen.length ? undefined : true}
-          onClick={() => {
-            stop.current = true;
-            close();
-          }}
-        >
+        <Button data-autofocus={chosen.length ? undefined : true} disabled={sending} onClick={dismiss}>
           {t("tagging.cancel")}
         </Button>
         <Button variant="accent" data-autofocus={chosen.length ? true : undefined} disabled={busy || !chosen.length} onClick={() => void send()}>
@@ -105,7 +108,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   // Opens once both are known, so the dialog's default button is the right one and can take focus.
   if (hasKey === null || !asked) return null;
   return (
-    <Modal title={t("tagging.title")} onClose={() => ((stop.current = true), close())} footer={footer}>
+    <Modal title={t("tagging.title")} onClose={dismiss} footer={footer}>
       <div className="flex flex-col gap-3 leading-relaxed">
         <p className="text-base font-medium text-fg">{t("tagging.assets", { count: chosen.length })}</p>
         {already > 0 && (

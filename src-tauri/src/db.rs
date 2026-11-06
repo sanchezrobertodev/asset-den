@@ -98,6 +98,11 @@ END;
 CREATE TRIGGER IF NOT EXISTS suggestion_taken AFTER INSERT ON asset_tags BEGIN
   DELETE FROM tag_suggestions WHERE asset_id = NEW.asset_id AND tag = NEW.tag;
 END;
+/* Suggestions are about the file Claude saw: a changed file drops them (and counts as not asked, see tagging::asked). */
+CREATE TRIGGER IF NOT EXISTS suggestions_stale AFTER UPDATE OF size, mtime ON assets
+WHEN OLD.size IS NOT NEW.size OR OLD.mtime IS NOT NEW.mtime BEGIN
+  DELETE FROM tag_suggestions WHERE asset_id = NEW.id;
+END;
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {

@@ -969,9 +969,12 @@ mod tests {
         let a = db::assets(&conn, Some(&[1])).unwrap().remove(0);
         assert_eq!(a.suggested, vec!["oak"]);
         assert_eq!(asked(&conn, &[1, 2, 3]).unwrap(), vec![1, 2]);
-        // Changing the file makes it new again.
+        // Changing the file makes it new again and drops what was suggested for the old one; a rescan that finds it
+        // unchanged keeps them.
+        conn.execute("UPDATE assets SET seen = 9", []).unwrap();
         conn.execute("UPDATE assets SET size = 11 WHERE id = 2", []).unwrap();
         assert_eq!(asked(&conn, &[1, 2, 3]).unwrap(), vec![1]);
+        assert_eq!(tags(&conn, "tag_suggestions"), vec![pair(1, "oak")]);
         let s = status(&conn).unwrap();
         assert_eq!((s.assets, s.requests), (0, 0));
         assert_eq!(s.last.map(|r| r.usage.input_tokens), Some(5));
