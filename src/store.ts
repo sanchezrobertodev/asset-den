@@ -9,7 +9,7 @@ import { ancestorKeys } from "./lib/folders";
 import { t, type TKey, type Vars } from "./lib/i18n";
 import { latestRequest } from "./lib/latest";
 import { markSeen, seenVersion } from "./lib/news";
-import { applyTheme, loadPrefs, savePrefs, type KindLabels, type Layout, type Prefs, type SortKey, type StartView, type Theme } from "./lib/prefs";
+import { applyTheme, loadPrefs, savePrefs, type AiPrefs, type KindLabels, type Layout, type Prefs, type SortKey, type StartView, type Theme } from "./lib/prefs";
 import type { AccentId } from "./lib/themes";
 import { forgetThumbnails } from "./lib/thumbs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, FolderFilter, Kind, Notes, Root, SpriteSheet, ViewName } from "./types";
@@ -110,6 +110,7 @@ interface State extends Prefs {
   setStartView: (v: StartView) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
+  setAi: (ai: Partial<AiPrefs>) => void;
   /** Collapses or expands the sidebar; in a narrow window only until it widens again. */
   toggleSidebar: () => void;
   setFullscreen: (on: boolean) => void;
@@ -178,8 +179,8 @@ const noSimilar = () => {
 
 export const useStore = create<State>((set, get, store) => {
   const persist = () => {
-    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar } = get();
-    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar });
+    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar, ai } = get();
+    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar, ai });
   };
   narrowQuery?.addEventListener("change", (e) => set({ narrow: e.matches, narrowOpen: false }));
   // Every way of opening a folder updates the recent list, so it is saved here rather than by each one.
@@ -531,6 +532,10 @@ export const useStore = create<State>((set, get, store) => {
     },
     setAudioLoop: (audioLoop) => {
       set({ audioLoop });
+      persist();
+    },
+    setAi: (ai) => {
+      set((s) => ({ ai: { ...s.ai, ...ai } }));
       persist();
     },
     toggleSidebar: () => {

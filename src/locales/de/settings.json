@@ -6,6 +6,7 @@
     "backups": "Sicherungen",
     "storage": "Speicher",
     "updates": "Updates",
+    "ai": "KI-Funktionen",
     "about": "Info"
   },
   "appearance": {
@@ -33,6 +34,30 @@
   "updates": {
     "checkOnLaunch": "Beim Start nach Updates suchen",
     "checkOnLaunchHint": "Sucht unauffällig ein paar Sekunden nach dem Start. Nichts wird ohne Rückfrage installiert."
+  },
+  "ai": {
+    "key": "Anthropic-API-Schlüssel",
+    "keySet": "Gespeichert. Liegt im Anmeldedatenspeicher des Systems, nie in der Bibliothek.",
+    "keyNotSet": "Nicht festgelegt. Claude fragen in der Suche nutzt deinen eigenen Anthropic-Schlüssel, abgerechnet über dein API-Konto.",
+    "add": "Schlüssel hinzufügen",
+    "change": "Ändern",
+    "remove": "Entfernen",
+    "save": "Speichern",
+    "removeTitle": "API-Schlüssel entfernen?",
+    "removeHint": "Claude fragen funktioniert erst wieder, wenn du einen Schlüssel hinzufügst.",
+    "saved": "API-Schlüssel gespeichert",
+    "removed": "API-Schlüssel entfernt",
+    "sent": "Was beim Fragen an Anthropic geht: die Wörter, die du eingibst, Mimikits Suchsyntax und die Namen deiner Tags. Nie Dateinamen, Ordnerpfade, Dateiinhalte oder Vorschaubilder.",
+    "getKey": "Schlüssel holen",
+    "model": "Modell",
+    "modelHint": "Haiku antwortet in etwa einer Sekunde, für einen winzigen Bruchteil eines Cents. Sonnet und Opus kosten etwa 20- und 40-mal so viel und sind langsamer.",
+    "effort": "Aufwand",
+    "effortHint": "Wie viel Claude vor der Antwort nachdenkt. Höher ist langsamer und teurer; Niedrig reicht für Suchen.",
+    "effortLevel": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

@@ -34,6 +34,17 @@
     "updates": "Rechercher les mises à jour",
     "shortcuts": "Raccourcis clavier"
   },
+  "ask": {
+    "title": "Demander",
+    "label": "Demander à Claude d'en faire une recherche",
+    "setup": "Ajoutez une clé d'API Anthropic pour demander à Claude",
+    "asking": "Demande en cours à Claude…",
+    "from": "Recherche de Claude pour « {{words}} »",
+    "back": "Revenir à mes mots",
+    "empty": "Claude n'a rien trouvé dans ces mots qui puisse servir à une recherche. Essayez d'autres mots.",
+    "invalid": "Claude a écrit « {{query}} », mais Mimikit ne comprend pas {{words}} : la recherche n'a pas été lancée.",
+    "openSettings": "Ouvrir les Paramètres"
+  },
   "dialog": "Recherche",
   "input": "Rechercher des ressources, dossiers et actions",
   "placeholder": "Rechercher ressources, dossiers, actions",

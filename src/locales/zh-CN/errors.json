@@ -23,5 +23,17 @@
   "clearCache": "无法清除缩略图缓存：{{error}}",
   "cantReadImage": "Mimikit 无法读取此图片。",
   "notFolder": "{{path}} 不是文件夹。",
-  "gone": "{{path}} 已不存在。"
+  "gone": "{{path}} 已不存在。",
+  "aiNoKey": "尚未设置 Anthropic API 密钥。请在设置中添加。",
+  "aiBadKeyFormat": "这看起来不像 API 密钥。",
+  "aiBadKey": "Anthropic 未接受你的 API 密钥。请在设置中检查。",
+  "aiBilling": "Anthropic 拒绝了请求：请检查你的 API 账户的账单。",
+  "aiRateLimited": "对 Anthropic 的请求过多。请稍候再试。",
+  "aiBusy": "Anthropic 当前繁忙。请稍后再试。",
+  "aiOffline": "无法连接到 Anthropic。请检查网络连接后重试。",
+  "aiDeclined": "Claude 拒绝了回答。请换个说法。",
+  "aiNoAnswer": "Claude 的回答被截断或无法读取。请重试。",
+  "aiTooLong": "询问 Claude 最多 500 个字符。",
+  "aiKeyStore": "无法使用系统的凭据存储：{{error}}",
+  "aiError": "Anthropic 返回了错误：{{error}}"
 }

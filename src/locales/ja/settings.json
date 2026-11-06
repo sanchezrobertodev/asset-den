@@ -6,6 +6,7 @@
     "backups": "バックアップ",
     "storage": "ストレージ",
     "updates": "アップデート",
+    "ai": "AI 機能",
     "about": "情報"
   },
   "appearance": {
@@ -33,6 +34,30 @@
   "updates": {
     "checkOnLaunch": "起動時にアップデートを確認",
     "checkOnLaunchHint": "起動の数秒後にバックグラウンドで確認します。確認なしにインストールされることはありません。"
+  },
+  "ai": {
+    "key": "Anthropic API キー",
+    "keySet": "設定済み。ライブラリではなく、システムの資格情報ストアに保存されています。",
+    "keyNotSet": "未設定。検索ボックスから Claude に尋ねる機能は、あなた自身の Anthropic キーを使い、API アカウントに課金されます。",
+    "add": "キーを追加",
+    "change": "変更",
+    "remove": "削除",
+    "save": "保存",
+    "removeTitle": "API キーを削除しますか？",
+    "removeHint": "キーを再び追加するまで、Claude に尋ねる機能は使えません。",
+    "saved": "API キーを保存しました",
+    "removed": "API キーを削除しました",
+    "sent": "Claude に尋ねるときに Anthropic へ送るもの：入力した言葉、Mimikit の検索構文、タグ名。ファイル名、フォルダーのパス、ファイルの内容、サムネイルは送りません。",
+    "getKey": "キーを取得",
+    "model": "モデル",
+    "modelHint": "Haiku は約 1 秒で答え、費用は 1 セントのごく一部です。Sonnet と Opus は約 20 倍と 40 倍の費用がかかり、応答も遅くなります。",
+    "effort": "思考量",
+    "effortHint": "Claude が答える前にどれだけ考えるか。高いほど遅く、費用も増えます。検索には「低」で十分です。",
+    "effortLevel": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

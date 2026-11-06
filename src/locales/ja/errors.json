@@ -23,5 +23,17 @@
   "clearCache": "サムネイルキャッシュをクリアできませんでした：{{error}}",
   "cantReadImage": "Mimikitはこの画像を読み込めませんでした。",
   "notFolder": "「{{path}}」はフォルダーではありません。",
-  "gone": "「{{path}}」はもう存在しません。"
+  "gone": "「{{path}}」はもう存在しません。",
+  "aiNoKey": "Anthropic API キーが設定されていません。設定で追加してください。",
+  "aiBadKeyFormat": "API キーではないようです。",
+  "aiBadKey": "Anthropic が API キーを受け付けませんでした。設定で確認してください。",
+  "aiBilling": "Anthropic がリクエストを拒否しました。API アカウントの請求設定を確認してください。",
+  "aiRateLimited": "Anthropic へのリクエストが多すぎます。少し待ってからやり直してください。",
+  "aiBusy": "Anthropic が混み合っています。少し経ってからやり直してください。",
+  "aiOffline": "Anthropic に接続できませんでした。インターネット接続を確認してやり直してください。",
+  "aiDeclined": "Claude が回答を断りました。別の言葉で試してください。",
+  "aiNoAnswer": "Claude の回答が途中で切れたか、読み取れませんでした。やり直してください。",
+  "aiTooLong": "Claude に尋ねられるのは 500 文字までです。",
+  "aiKeyStore": "システムの資格情報ストアを使えませんでした：{{error}}",
+  "aiError": "Anthropic がエラーを返しました：{{error}}"
 }

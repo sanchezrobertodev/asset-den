@@ -23,5 +23,17 @@
   "clearCache": "Não foi possível limpar o cache de miniaturas: {{error}}",
   "cantReadImage": "O Mimikit não conseguiu ler esta imagem.",
   "notFolder": "{{path}} não é uma pasta.",
-  "gone": "{{path}} não existe mais."
+  "gone": "{{path}} não existe mais.",
+  "aiNoKey": "Nenhuma chave de API da Anthropic definida. Adicione uma em Configurações.",
+  "aiBadKeyFormat": "Isso não parece uma chave de API.",
+  "aiBadKey": "A Anthropic não aceitou sua chave de API. Verifique-a em Configurações.",
+  "aiBilling": "A Anthropic recusou a solicitação: verifique o faturamento da sua conta da API.",
+  "aiRateLimited": "Muitas solicitações à Anthropic. Aguarde um momento e tente de novo.",
+  "aiBusy": "A Anthropic está ocupada agora. Tente de novo em instantes.",
+  "aiOffline": "Não foi possível conectar à Anthropic. Verifique sua conexão com a internet e tente de novo.",
+  "aiDeclined": "O Claude se recusou a responder. Tente outras palavras.",
+  "aiNoAnswer": "A resposta do Claude veio cortada ou ilegível. Tente de novo.",
+  "aiTooLong": "Perguntar aceita até 500 caracteres.",
+  "aiKeyStore": "Não foi possível usar o armazenamento de credenciais do sistema: {{error}}",
+  "aiError": "A Anthropic retornou um erro: {{error}}"
 }

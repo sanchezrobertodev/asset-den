@@ -9,7 +9,7 @@ import { useAppUpdate } from "../appUpdate";
 import { baseName } from "../lib/format";
 import { ago, bytes } from "../lib/fmt";
 import { locales, t } from "../lib/i18n";
-import type { Theme } from "../lib/prefs";
+import { AI_EFFORTS, AI_MODELS, type AiPrefs, type Theme } from "../lib/prefs";
 import { ACCENTS, THEMES, accentName, themeById, themeName, type ThemeId } from "../lib/themes";
 import { forgetThumbnails } from "../lib/thumbs";
 import { languageName, systemLanguage } from "../locales";
@@ -272,6 +272,9 @@ export function SettingsDialog() {
       </Section>
       <Section title={t("agents.title")}>
         <Agents />
+      </Section>
+      <Section title={t("settings.sections.ai")}>
+        <ApiKey />
       </Section>
       <Section title={t("settings.sections.backups")}>
         <Backups />
@@ -549,6 +552,166 @@ function ThumbnailCache() {
         {clearing ? t("settings.cache.clearing") : t("settings.cache.clear")}
       </Button>
     </Row>
+  );
+}
+
+/** Set by Ask in the search box when no key is stored: Settings then opens on the key field. */
+let wantKey = false;
+export function openKeySetup() {
+  wantKey = true;
+  useStore.getState().setModal("settings");
+}
+
+/** Settings › AI features: the user's own Anthropic API key, which the backend keeps in the OS credential store (ai.rs). */
+/** Product names, the same in every language. */
+const MODEL_NAMES: Record<AiPrefs["model"], string> = {
+  "claude-haiku-5-5": "Haiku 5.5",
+  "claude-sonnet-5-5": "Sonnet 5.5",
+  "claude-opus-5-5": "Opus 5.5",
+};
+
+function ApiKey() {
+  const { setError, showToast, ai, setAi } = useStore();
+  const [stored, setStored] = useState<boolean | null>(null);
+  // The key being typed, or null when not editing. The stored key never comes back to the window.
+  const [draft, setDraft] = useState<string | null>(() => (wantKey ? "" : null));
+  const [removing, setRemoving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // Set when the form or the confirmation closes, so focus goes back to the row's button instead of the page.
+  const refocus = useRef(false);
+  const focusBack = (b: HTMLButtonElement | null) => {
+    if (b && refocus.current) {
+      refocus.current = false;
+      b.focus();
+    }
+  };
+  const closeForm = () => {
+    refocus.current = true;
+    setDraft(null);
+  };
+  const closeConfirm = () => {
+    refocus.current = true;
+    setRemoving(false);
+  };
+  useEffect(() => {
+    wantKey = false;
+    api.apiKeyStatus().then(setStored, setError);
+  }, [setError]);
+
+  const act = async (run: () => Promise<void>, toast: string) => {
+    setBusy(true);
+    try {
+      await run();
+      showToast(toast);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const save = () =>
+    act(async () => {
+      await api.setApiKey(draft ?? "");
+      setStored(true);
+      closeForm();
+    }, t("settings.ai.saved"));
+  const remove = () =>
+    act(async () => {
+      await api.removeApiKey();
+      setStored(false);
+      closeConfirm();
+    }, t("settings.ai.removed"));
+
+  return (
+    <>
+      {draft !== null ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (draft.trim()) void save();
+          }}
+          className="flex flex-col gap-1.5 py-2"
+        >
+          <label htmlFor="api-key" className="text-fg">
+            {t("settings.ai.key")}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="api-key"
+              type="password"
+              data-autofocus
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={256}
+              value={draft}
+              placeholder="sk-ant-…"
+              aria-describedby="api-key-sent"
+              onChange={(e) => setDraft(e.target.value)}
+              className="h-8 min-w-0 flex-1 rounded-lg border border-line-strong bg-field px-2.5 font-mono text-xs text-fg"
+            />
+            <Button size="sm" disabled={busy} onClick={closeForm}>
+              {t("settings.cancel")}
+            </Button>
+            <Button size="sm" type="submit" variant="accent" disabled={busy || !draft.trim()}>
+              {t("settings.ai.save")}
+            </Button>
+          </div>
+        </form>
+      ) : removing ? (
+        <Row label={t("settings.ai.removeTitle")} hint={t("settings.ai.removeHint")}>
+          <div className="flex flex-none gap-2">
+            <Button size="sm" disabled={busy} onClick={closeConfirm}>
+              {t("settings.cancel")}
+            </Button>
+            <Button size="sm" variant="danger" disabled={busy} autoFocus onClick={() => void remove()}>
+              {t("settings.ai.remove")}
+            </Button>
+          </div>
+        </Row>
+      ) : (
+        <Row label={t("settings.ai.key")} hint={stored === null ? "…" : t(stored ? "settings.ai.keySet" : "settings.ai.keyNotSet")}>
+          <div className="flex flex-none gap-2">
+            {stored ? (
+              <>
+                <Button size="sm" ref={focusBack} onClick={() => setDraft("")}>
+                  {t("settings.ai.change")}
+                </Button>
+                <Button size="sm" onClick={() => setRemoving(true)}>
+                  {t("settings.ai.remove")}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="anthropic-keys">{t("settings.ai.getKey")}</Link>
+                <Button size="sm" variant="accent" ref={focusBack} disabled={stored === null} onClick={() => setDraft("")}>
+                  {t("settings.ai.add")}
+                </Button>
+              </>
+            )}
+          </div>
+        </Row>
+      )}
+      <p id="api-key-sent" className="pb-2 text-xs text-muted">
+        {t("settings.ai.sent")}
+      </p>
+      <Row label={t("settings.ai.model")} hint={t("settings.ai.modelHint")}>
+        <Segmented
+          label={t("settings.ai.model")}
+          value={ai.model}
+          onChange={(model) => setAi({ model })}
+          options={AI_MODELS.map((m) => ({ value: m, label: MODEL_NAMES[m] }))}
+        />
+      </Row>
+      <Row label={t("settings.ai.effort")} hint={t("settings.ai.effortHint")}>
+        <Segmented
+          label={t("settings.ai.effort")}
+          value={ai.effort}
+          onChange={(effort) => setAi({ effort })}
+          options={AI_EFFORTS.map((e) => ({ value: e, label: t(`settings.ai.effortLevel.${e}`) }))}
+        />
+      </Row>
+    </>
   );
 }
 

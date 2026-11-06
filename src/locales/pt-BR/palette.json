@@ -36,6 +36,17 @@
     "updates": "Verificar atualizações",
     "shortcuts": "Atalhos de teclado"
   },
+  "ask": {
+    "title": "Perguntar",
+    "label": "Pedir ao Claude para transformar isto em uma busca",
+    "setup": "Adicione uma chave de API da Anthropic para perguntar ao Claude",
+    "asking": "Perguntando ao Claude…",
+    "from": "Busca do Claude para “{{words}}”",
+    "back": "Voltar às minhas palavras",
+    "empty": "O Claude não encontrou nada nessas palavras que sirva para uma busca. Tente outras palavras.",
+    "invalid": "O Claude escreveu “{{query}}”, mas o Mimikit não entende {{words}}, então a busca não foi executada.",
+    "openSettings": "Abrir Configurações"
+  },
   "dialog": "Busca",
   "input": "Buscar recursos, pastas e ações",
   "placeholder": "Buscar recursos, pastas, ações",
