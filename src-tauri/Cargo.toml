@@ -41,6 +41,13 @@ symphonia = { version = "0.6", default-features = false, features = ["wav", "ogg
 # Low OS priority for background passes (image analysis, duplicate hashing, audio headers).
 thread-priority = "3"
 
+# Whether an agent's relay is still running (bridge.rs `relays_alive`). Both were already in the build through Tauri.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tempfile = "3"
 # An MCP client for the relay's tests.
