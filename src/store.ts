@@ -1,4 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { create } from "zustand";
 import { api, errorText } from "./api";
 import { toLab, type LabSwatch, type Swatch } from "./lib/colors";
@@ -41,6 +42,12 @@ interface State extends Prefs {
   peek: boolean;
   /** Full-screen view of the active asset (Enter). */
   full: boolean;
+  /** The app window fills the screen (F11), not to be confused with `full`. */
+  fullscreen: boolean;
+  /** The window is too narrow for the full sidebar, so it shows the rail unless `narrowOpen`. */
+  narrow: boolean;
+  /** The full sidebar opened by hand in a narrow window; not saved. */
+  narrowOpen: boolean;
   palette: boolean;
   /** Open app dialog: keyboard shortcuts (?) or Settings. */
   modal: "shortcuts" | "settings" | null;
@@ -103,6 +110,9 @@ interface State extends Prefs {
   setStartView: (v: StartView) => void;
   setCheckUpdates: (on: boolean) => void;
   setAudioLoop: (on: boolean) => void;
+  /** Collapses or expands the sidebar; in a narrow window only until it widens again. */
+  toggleSidebar: () => void;
+  setFullscreen: (on: boolean) => void;
   /** Click selection: plain replaces, toggle adds/removes, range extends from the active item over `order`. */
   select: (id: number, mode?: "replace" | "toggle" | "range", order?: number[]) => void;
   setSelected: (ids: number[]) => void;
@@ -138,6 +148,8 @@ interface State extends Prefs {
 }
 
 const prefs = loadPrefs();
+/** Below this width the sidebar starts as a rail, whatever the saved setting. */
+const narrowQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 1099px)") : null;
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let toastMs = 0;
 let toastSeq = 0;
@@ -166,9 +178,10 @@ const noSimilar = () => {
 
 export const useStore = create<State>((set, get, store) => {
   const persist = () => {
-    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop } = get();
-    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop });
+    const { theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar } = get();
+    savePrefs({ theme, accent, language, sort, layout, thumbSize, pixelated, kindLabels, startView, recentFolders, grouped, subfolders, checkUpdates, audioLoop, sidebar });
   };
+  narrowQuery?.addEventListener("change", (e) => set({ narrow: e.matches, narrowOpen: false }));
   // Every way of opening a folder updates the recent list, so it is saved here rather than by each one.
   store.subscribe((s, prev) => s.recentFolders !== prev.recentFolders && persist());
   const patchAssets = (ids: number[], f: (a: Asset) => Asset) => {
@@ -289,6 +302,9 @@ export const useStore = create<State>((set, get, store) => {
     activeId: null,
     peek: false,
     full: false,
+    fullscreen: false,
+    narrow: !!narrowQuery?.matches,
+    narrowOpen: false,
     palette: false,
     modal: null,
     toast: null,
@@ -516,6 +532,21 @@ export const useStore = create<State>((set, get, store) => {
     setAudioLoop: (audioLoop) => {
       set({ audioLoop });
       persist();
+    },
+    toggleSidebar: () => {
+      const { narrow, narrowOpen, sidebar } = get();
+      if (narrow) return set({ narrowOpen: !narrowOpen });
+      set({ sidebar: sidebar === "collapsed" ? "expanded" : "collapsed" });
+      persist();
+    },
+    setFullscreen: (fullscreen) => {
+      set({ fullscreen });
+      getCurrentWindow()
+        .setFullscreen(fullscreen)
+        .catch((e) => {
+          set({ fullscreen: !fullscreen });
+          get().setError(e);
+        });
     },
 
     // On a failed read the entry stays unknown, so a guess never overwrites a saved slicing.
@@ -774,3 +805,6 @@ export const useStore = create<State>((set, get, store) => {
     },
   };
 });
+
+/** The sidebar shows as a rail of icons. */
+export const sidebarRail = (s: Pick<State, "narrow" | "narrowOpen" | "sidebar">) => (s.narrow ? !s.narrowOpen : s.sidebar === "collapsed");

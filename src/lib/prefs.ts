@@ -11,6 +11,8 @@ export type Layout = "grid" | "list";
 export type KindLabels = "both" | "icon" | "name";
 /** The view Mimikit opens on. */
 export type StartView = "home" | "library";
+/** The left sidebar: full, or a rail of section icons. */
+export type SidebarMode = "expanded" | "collapsed";
 
 export interface Prefs {
   theme: Theme;
@@ -33,6 +35,7 @@ export interface Prefs {
   checkUpdates: boolean;
   /** Audio previews start again when they end. */
   audioLoop: boolean;
+  sidebar: SidebarMode;
 }
 
 const defaults: Prefs = {
@@ -50,6 +53,7 @@ const defaults: Prefs = {
   subfolders: true,
   checkUpdates: true,
   audioLoop: false,
+  sidebar: "expanded",
 };
 
 const KEY = "assetden.prefs.v2";
@@ -64,6 +68,7 @@ export function loadPrefs(): Prefs {
     if (!ACCENTS.some((a) => a.id === p.accent)) p.accent = defaults.accent;
     if (!["both", "icon", "name"].includes(p.kindLabels)) p.kindLabels = defaults.kindLabels;
     if (!["home", "library"].includes(p.startView)) p.startView = defaults.startView;
+    if (!["expanded", "collapsed"].includes(p.sidebar)) p.sidebar = defaults.sidebar;
     if (!Array.isArray(p.recentFolders)) p.recentFolders = defaults.recentFolders;
     return p;
   } catch {

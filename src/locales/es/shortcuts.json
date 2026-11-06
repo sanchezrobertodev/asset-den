@@ -19,9 +19,11 @@
   "label": {
     "move": "Moverse entre recursos (↑ ↓ cambian de fila en la cuadrícula)",
     "parent": "Subir a la carpeta superior",
-    "back": "Salir de un campo de texto, cerrar la pantalla completa, luego el panel lateral y, por último, quitar la selección",
+    "back": "Salir de un campo de texto, cerrar la pantalla completa, luego el panel lateral, después quitar la selección y, por último, volver a una ventana si Mimikit ocupa toda la pantalla",
     "skip": "Desde arriba de la ventana: saltar a los recursos",
     "help": "Mostrar estos atajos",
+    "sidebar": "Contraer o expandir la barra lateral",
+    "fullscreen": "Mostrar Mimikit en toda la pantalla o volver a una ventana",
     "peek": "Vista rápida en el panel lateral",
     "full": "Pantalla completa",
     "full-back": "Volver al panel lateral desde la pantalla completa (también Espacio)",

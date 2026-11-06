@@ -17,6 +17,8 @@ import {
   Monitor,
   Moon,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   Settings,
@@ -38,7 +40,7 @@ import { t } from "../lib/i18n";
 import type { Theme } from "../lib/prefs";
 import { shortcut } from "../lib/shortcuts";
 import { themeName } from "../lib/themes";
-import { useStore } from "../store";
+import { sidebarRail, useStore } from "../store";
 import { KINDS, type ViewName } from "../types";
 import { api } from "../api";
 import { Button, IconButton, Label, Modal, T } from "./ui";
@@ -59,6 +61,7 @@ function NavItem({
   onClick,
   count,
   badge,
+  rail,
 }: {
   label: string;
   icon: LucideIcon;
@@ -66,26 +69,37 @@ function NavItem({
   onClick: () => void;
   count?: number;
   badge?: number;
+  /** Icon only, with the label as its tooltip; screen readers still get the label and count. */
+  rail: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={rail ? label : undefined}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "group flex items-center justify-between gap-2 rounded-lg px-3 py-[9px] text-left transition-colors duration-150",
+        "group relative flex items-center gap-2 rounded-lg text-left transition-colors duration-150",
+        rail ? "size-9 justify-center" : "justify-between px-3 py-[9px]",
         active ? "bg-active font-medium text-fg" : "text-fg-2 hover:bg-hover hover:text-fg",
       )}
     >
       <span className="flex min-w-0 items-center gap-2.5">
         {/* Accent when active, like the open folder's icon in the tree below. */}
         <Icon aria-hidden className={clsx("size-4 flex-none", active ? "text-accent" : "text-muted group-hover:text-fg-2")} />
-        <span className="truncate">{label}</span>
+        <span className={rail ? "sr-only" : "truncate"}>{label}</span>
       </span>
       {badge ? (
-        <span className="rounded-[9px] bg-warn-bg px-[7px] py-px text-[11px] font-semibold text-warn-fg">{badge}</span>
+        <span
+          className={clsx(
+            "rounded-[9px] bg-warn-bg text-[11px] font-semibold text-warn-fg",
+            rail ? "absolute -top-1 -right-1 min-w-4 px-1 text-center leading-4" : "px-[7px] py-px",
+          )}
+        >
+          {badge}
+        </span>
       ) : count !== undefined ? (
-        <span className="font-mono text-[11px] text-faint">{num(count)}</span>
+        <span className={rail ? "sr-only" : "font-mono text-[11px] text-faint"}>{num(count)}</span>
       ) : null}
     </button>
   );
@@ -142,19 +156,30 @@ export function Sidebar() {
   ];
   const ThemeIcon = s.theme === "dark" ? Moon : s.theme === "light" ? Sun : s.theme === "system" ? Monitor : Palette;
   const updatesSupported = useAppUpdate((u) => u.supported);
+  // The rail has no room for the update notice, so its button says it instead.
+  const updateReady = useAppUpdate((u) => ((u.phase === "available" || u.phase === "installing") && u.update?.version) || null);
+  const rail = sidebarRail(s);
+  const control = rail ? "size-9" : "size-7";
   const [version, setVersion] = useState<string | null>(null);
   useEffect(() => {
     getVersion().then(setVersion, () => {});
   }, []);
 
   return (
-    <aside aria-label={t("sidebar.library")} className="flex min-h-0 flex-col border-r border-line px-2.5">
-      <div className="flex h-[60px] flex-none items-center gap-2.5 px-2">
-        {/* The hand-drawn 24 px frame of the app icon, and the 48 px one on HiDPI screens. */}
-        <img src={logo24} srcSet={`${logo24} 1x, ${logo48} 2x`} alt="" className="size-6 flex-none" />
-        <span className="text-[15px] font-semibold tracking-[-.01em]">Mimikit</span>
+    <aside aria-label={t("sidebar.library")} className={clsx("flex min-h-0 flex-col border-r border-line", rail ? "px-2" : "px-2.5")}>
+      <div className={clsx("flex h-[60px] flex-none items-center gap-2.5", rail ? "justify-center" : "pr-0.5 pl-2")}>
+        {!rail && (
+          <>
+            {/* The hand-drawn 24 px frame of the app icon, and the 48 px one on HiDPI screens. */}
+            <img src={logo24} srcSet={`${logo24} 1x, ${logo48} 2x`} alt="" className="size-6 flex-none" />
+            <span className="mr-auto text-[15px] font-semibold tracking-[-.01em]">Mimikit</span>
+          </>
+        )}
+        <IconButton label={t(rail ? "sidebar.expand" : "sidebar.collapse", { keys: shortcut("sidebar").keys })} className={control} onClick={s.toggleSidebar}>
+          {rail ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+        </IconButton>
       </div>
-      <nav className="flex flex-col gap-0.5">
+      <nav className={clsx("flex flex-col gap-0.5", rail && "items-center")}>
         {nav.map((n) => (
           <NavItem
             key={n.view}
@@ -164,82 +189,99 @@ export function Sidebar() {
             badge={n.badge}
             active={s.view === n.view}
             onClick={() => s.go(n.view)}
+            rail={rail}
           />
         ))}
       </nav>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
-          <Label>{t("sidebar.collections")}</Label>
-          <IconButton label={t("sidebar.newCollection")} className="size-6" onClick={() => void s.newCollection()}>
-            <Plus className="size-4" />
-          </IconButton>
+      {rail ? (
+        <div className="flex flex-1 flex-col items-center justify-end pb-2">
+          <AnalysisProgress compact />
         </div>
-        <div className="flex flex-col gap-px">
-          {s.collections.map((c, i) => (
-            <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
-              <span className="flex min-w-0 items-center gap-2">
-                {c.rule ? (
-                  <Sparkles role="img" aria-label={t("sidebar.smartCollection")} className="keep-color size-3 flex-none" style={{ color: collColor(i) }} />
-                ) : (
-                  <span aria-hidden className="keep-color size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
-                )}
-                <span className="truncate">{c.name}</span>
+      ) : (
+        <>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
+              <Label>{t("sidebar.collections")}</Label>
+              <IconButton label={t("sidebar.newCollection")} className="size-6" onClick={() => void s.newCollection()}>
+                <Plus className="size-4" />
+              </IconButton>
+            </div>
+            <div className="flex flex-col gap-px">
+              {s.collections.map((c, i) => (
+                <Row key={c.id} active={s.view === "collections" && s.colSel === c.id} onClick={() => s.go("collections", { colSel: c.id })}>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {c.rule ? (
+                      <Sparkles role="img" aria-label={t("sidebar.smartCollection")} className="keep-color size-3 flex-none" style={{ color: collColor(i) }} />
+                    ) : (
+                      <span aria-hidden className="keep-color size-2 flex-none rounded-[2px]" style={{ background: collColor(i) }} />
+                    )}
+                    <span className="truncate">{c.name}</span>
+                  </span>
+                  <span className="font-mono text-[11px] text-faint">{num(smart.get(c.id)?.length ?? c.assetIds.length)}</span>
+                </Row>
+              ))}
+              {!s.collections.length && <p className="px-3 py-1 text-xs text-faint">{t("sidebar.noCollections")}</p>}
+            </div>
+
+            <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
+              <Label>{t("sidebar.folders")}</Label>
+              <IconButton label={t("sidebar.importFolder")} className="size-6" onClick={() => void s.importFolder()}>
+                <Plus className="size-4" />
+              </IconButton>
+            </div>
+            <FolderTree />
+            {!s.roots.length && (
+              <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
+                {t("sidebar.importFolderLink")}
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
+            <AnalysisProgress />
+            <UpdateNotice />
+            <div className="flex min-w-0 flex-col gap-0.5 text-xs">
+              <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>
+                {s.roots.length === 1 ? baseName(s.roots[0].path) : t("sidebar.folderCount", { count: s.roots.length })}
               </span>
-              <span className="font-mono text-[11px] text-faint">{num(smart.get(c.id)?.length ?? c.assetIds.length)}</span>
-            </Row>
-          ))}
-          {!s.collections.length && <p className="px-3 py-1 text-xs text-faint">{t("sidebar.noCollections")}</p>}
-        </div>
-
-        <div className="flex items-center justify-between px-3 pt-[22px] pb-1.5">
-          <Label>{t("sidebar.folders")}</Label>
-          <IconButton label={t("sidebar.importFolder")} className="size-6" onClick={() => void s.importFolder()}>
-            <Plus className="size-4" />
-          </IconButton>
-        </div>
-        <FolderTree />
-        {!s.roots.length && (
-          <button type="button" onClick={() => void s.importFolder()} className="px-3 py-1 text-left text-xs text-muted hover:text-fg">
-            {t("sidebar.importFolderLink")}
-          </button>
+              <span className="font-mono text-[11px] whitespace-nowrap text-faint">
+                {t("sidebar.librarySize", { size: bytes(total), count: s.assets.length })}
+              </span>
+            </div>
+            <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label={t("sidebar.sizeByType")}>
+              {KINDS.filter((k) => byKind.get(k)).map((k) => (
+                <div key={k} data-kind={k} title={t("sidebar.kindSize", { kind: kindLabel[k], size: bytes(byKind.get(k)!) })} className="k-bar" style={{ width: `${Math.max(0.6, (byKind.get(k)! / (total || 1)) * 100)}%` }} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      {/* App controls live in their own bar so they never squeeze the library name; the rail stacks them. */}
+      <div className={clsx("flex flex-none items-center gap-0.5 border-t border-line-soft", rail ? "-mx-2 flex-col py-2" : "-mx-2.5 h-11 px-3")}>
+        {!rail && (
+          <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? t("sidebar.version", { version }) : undefined}>
+            {version ? t("sidebar.versionShort", { version }) : ""}
+          </span>
         )}
-      </div>
-
-      <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
-        <AnalysisProgress />
-        <UpdateNotice />
-        <div className="flex min-w-0 flex-col gap-0.5 text-xs">
-          <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>
-            {s.roots.length === 1 ? baseName(s.roots[0].path) : t("sidebar.folderCount", { count: s.roots.length })}
-          </span>
-          <span className="font-mono text-[11px] whitespace-nowrap text-faint">
-            {t("sidebar.librarySize", { size: bytes(total), count: s.assets.length })}
-          </span>
-        </div>
-        <div className="flex h-[5px] gap-0.5 overflow-hidden rounded-[3px] bg-line-soft" role="img" aria-label={t("sidebar.sizeByType")}>
-          {KINDS.filter((k) => byKind.get(k)).map((k) => (
-            <div key={k} data-kind={k} title={t("sidebar.kindSize", { kind: kindLabel[k], size: bytes(byKind.get(k)!) })} className="k-bar" style={{ width: `${Math.max(0.6, (byKind.get(k)! / (total || 1)) * 100)}%` }} />
-          ))}
-        </div>
-      </div>
-      {/* App controls live in their own bar so they never squeeze the library name. */}
-      <div className="-mx-2.5 flex h-11 flex-none items-center gap-0.5 border-t border-line-soft px-3">
-        <span className="mr-auto min-w-0 truncate font-mono text-[11px] text-faint" title={version ? t("sidebar.version", { version }) : undefined}>
-          {version ? t("sidebar.versionShort", { version }) : ""}
-        </span>
         {updatesSupported && (
-          <IconButton label={t("sidebar.checkUpdates")} className="size-7" onClick={openUpdates}>
-            <CircleArrowUp className="size-4" />
+          <IconButton
+            label={rail && updateReady ? t("sidebar.updateReady", { version: updateReady }) : t("sidebar.checkUpdates")}
+            className={clsx(control, "relative")}
+            onClick={openUpdates}
+          >
+            {/* On the icon: IconButton's own text colour wins over a class passed to it. */}
+            <CircleArrowUp className={clsx("size-4", rail && updateReady && "text-accent")} />
+            {rail && updateReady && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent" />}
           </IconButton>
         )}
-        <IconButton label={t("sidebar.theme", { name: themeName(s.theme) })} className="size-7" onClick={() => s.setTheme(nextTheme(s.theme))}>
+        <IconButton label={t("sidebar.theme", { name: themeName(s.theme) })} className={control} onClick={() => s.setTheme(nextTheme(s.theme))}>
           <ThemeIcon className="size-4" />
         </IconButton>
-        <IconButton label={t("sidebar.shortcuts", { keys: shortcut("help").keys })} className="size-7" onClick={() => s.setModal("shortcuts")}>
+        <IconButton label={t("sidebar.shortcuts", { keys: shortcut("help").keys })} className={control} onClick={() => s.setModal("shortcuts")}>
           <Keyboard className="size-4" />
         </IconButton>
-        <IconButton label={t("sidebar.settings")} className="size-7" onClick={() => s.setModal("settings")}>
+        <IconButton label={t("sidebar.settings")} className={control} onClick={() => s.setModal("settings")}>
           <Settings className="size-4" />
         </IconButton>
       </div>

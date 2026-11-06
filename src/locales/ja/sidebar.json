@@ -21,6 +21,9 @@
   "theme": "テーマ：{{name}}（クリックで変更）",
   "shortcuts": "キーボードショートカット（{{keys}}）",
   "settings": "設定",
+  "collapse": "サイドバーを折りたたむ（{{keys}}）",
+  "expand": "サイドバーを展開する（{{keys}}）",
+  "updateReady": "Mimikit {{version}} を利用できます",
   "cancel": "キャンセル",
   "folder": {
     "locateTitle": "「{{name}}」の場所を指定",

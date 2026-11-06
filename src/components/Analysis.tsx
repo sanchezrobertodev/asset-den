@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Pause, Play, X } from "lucide-react";
+import { LoaderCircle, Pause, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { t } from "../lib/i18n";
@@ -16,7 +16,8 @@ export const cancelAnalysis = () => run(api.cancelAnalysis());
  * The running analysis pass under the folder list, with Pause and Cancel. Screen readers hear when it starts, pauses
  * and ends, not every count.
  */
-export function AnalysisProgress() {
+/** `compact`: just a spinner that says what runs, for the sidebar's rail. */
+export function AnalysisProgress({ compact }: { compact?: boolean }) {
   const a = useStore((s) => s.analysis);
   const was = useRef(a);
   const [said, setSaid] = useState("");
@@ -34,7 +35,12 @@ export function AnalysisProgress() {
       <p role="status" className="sr-only">
         {said}
       </p>
-      {a.running && (
+      {a.running && compact && (
+        <span title={a.paused ? t("analysis.pausedTitle") : t("analysis.runningTitle")} className="flex size-9 items-center justify-center text-muted">
+          <LoaderCircle role="img" aria-label={a.paused ? t("analysis.pausedTitle") : t("analysis.runningTitle")} className={clsx("size-4", !a.paused && "animate-spin")} />
+        </span>
+      )}
+      {a.running && !compact && (
         <div className="flex flex-col rounded-lg bg-hover py-1 pr-0.5 pl-2.5 text-xs">
           <div className="flex items-center">
             <span className="min-w-0 flex-1 truncate text-fg">{a.paused ? t("analysis.pausedTitle") : t("analysis.runningTitle")}</span>

@@ -23,6 +23,9 @@
   "theme": "Theme: {{name}} (click to change)",
   "shortcuts": "Keyboard shortcuts ({{keys}})",
   "settings": "Settings",
+  "collapse": "Collapse the sidebar ({{keys}})",
+  "expand": "Expand the sidebar ({{keys}})",
+  "updateReady": "Mimikit {{version}} is available",
   "cancel": "Cancel",
   "folder": {
     "locateTitle": "Locate {{name}}",

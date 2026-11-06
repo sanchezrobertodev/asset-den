@@ -10,6 +10,8 @@
   "favoritesIn": "<2/> <1>中的</1> <0>收藏</0>",
   "searchPlaceholder": "搜索资源、{{hash}}标签、{{type}}",
   "import": "导入",
+  "fullscreen": "占满屏幕（{{keys}}）",
+  "window": "回到窗口（{{keys}}）",
   "similar": {
     "stop": "停止显示与 {{name}} 相似的图片",
     "label": "与 {{name}} 相似",

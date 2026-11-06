@@ -19,9 +19,11 @@
   "label": {
     "move": "Zwischen Assets wechseln (↑ ↓ springen im Raster eine Reihe weiter)",
     "parent": "Zum übergeordneten Ordner",
-    "back": "Textfeld verlassen, Vollbild schließen, dann den Seitenbereich, dann die Auswahl aufheben",
+    "back": "Textfeld verlassen, Vollbild schließen, dann den Seitenbereich, dann die Auswahl aufheben, dann zurück zum Fenster, wenn Mimikit den Bildschirm füllt",
     "skip": "Am Fensteranfang: zu den Assets springen",
     "help": "Diese Tastenkürzel anzeigen",
+    "sidebar": "Seitenleiste ein- oder ausklappen",
+    "fullscreen": "Mimikit bildschirmfüllend anzeigen oder zurück zum Fenster",
     "peek": "Schnellansicht im Seitenbereich",
     "full": "Vollbild",
     "full-back": "Vom Vollbild zurück zum Seitenbereich (auch Leertaste)",

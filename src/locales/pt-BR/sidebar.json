@@ -25,6 +25,9 @@
   "theme": "Tema: {{name}} (clique para mudar)",
   "shortcuts": "Atalhos de teclado ({{keys}})",
   "settings": "Configurações",
+  "collapse": "Recolher a barra lateral ({{keys}})",
+  "expand": "Expandir a barra lateral ({{keys}})",
+  "updateReady": "Mimikit {{version}} está disponível",
   "cancel": "Cancelar",
   "folder": {
     "locateTitle": "Localizar {{name}}",

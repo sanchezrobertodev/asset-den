@@ -28,6 +28,8 @@ const ROWS: [id: string, group: Group, keys: string][] = [
   ["back", "navigate", t("shortcuts.keys.esc")],
   ["skip", "navigate", t("shortcuts.keys.tab")],
   ["help", "navigate", "?"],
+  ["sidebar", "navigate", `${mod}B`],
+  ["fullscreen", "navigate", isMac ? "⌃⌘F" : "F11"],
 
   ["peek", "preview", t("shortcuts.keys.space")],
   ["full", "preview", "↵"],
