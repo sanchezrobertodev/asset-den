@@ -13,6 +13,7 @@ import { BrowseBar, Header } from "./components/Header";
 import { HomeView } from "./components/HomeView";
 import { InsightsView } from "./components/InsightsView";
 import { Palette } from "./components/Palette";
+import { SuggestTags } from "./components/SuggestTags";
 import { Peek } from "./components/Peek";
 import { SettingsDialog } from "./components/Settings";
 import { ShortcutsDialog } from "./components/Shortcuts";
@@ -399,7 +400,8 @@ export default function App() {
       </div>
 
       {s.full && active && <FullView list={order} />}
-      {s.palette && <Palette />}
+      {s.palette && <Palette shown={browse || s.view === "collections" ? visible : undefined} />}
+      {s.suggestFor && <SuggestTags ids={s.suggestFor} />}
       {s.modal === "shortcuts" && <ShortcutsDialog />}
       {s.modal === "settings" && <SettingsDialog />}
       <UpdateDialog />

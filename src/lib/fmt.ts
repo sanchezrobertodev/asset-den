@@ -13,6 +13,9 @@ const rtf = new Intl.RelativeTimeFormat(formatLocale(), { style: t("fmt.time.rel
 
 /** A count with the locale's digit grouping. */
 export const num = (n: number) => nf.format(n);
+const usd = new Intl.NumberFormat(formatLocale(), { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Dollars to the cent; under a cent shows as "< $0.01" rather than nothing. */
+export const money = (n: number) => (n > 0 && n < 0.005 ? `< ${usd.format(0.01)}` : usd.format(n));
 /** "a, b and c" in the UI language. */
 export const list = (items: string[]) => lf.format(items);
 

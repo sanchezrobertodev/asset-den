@@ -8,6 +8,7 @@ import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
 import { t, translateError } from "./lib/i18n";
 import type { AiPrefs } from "./lib/prefs";
+import type { TaggingStatus, TagModel } from "./lib/tagging";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
@@ -112,6 +113,21 @@ export const api = {
   /** Ask: Claude turns `words` into a search, following `prompt` (lib/ask.ts). Check the query before running it. */
   askSearch: (prompt: string, words: string, { model, effort }: AiPrefs) =>
     invoke<{ query: string; inputTokens: number; outputTokens: number }>("ask_search", { prompt, words, model, effort }),
+  /** Suggest tags: sends `ids` to Claude in batches, following `prompt` (lib/tagging.ts); returns how many went. */
+  suggestTags: (prompt: string, ids: number[], model: TagModel) => invoke<number>("suggest_tags", { prompt, ids, model, effort: "low" }),
+  /** Of `ids`, the ones Claude was already asked about (this version of the file) or that wait in a batch. */
+  taggingAsked: (ids: number[]) => invoke<number[]>("tagging_asked", { ids }),
+  taggingStatus: () => invoke<TaggingStatus>("tagging_status"),
+  cancelTagging: () => invoke<void>("cancel_tagging"),
+  /** Makes suggestions of `ids` real tags: those named in `tags`, or all of them. */
+  acceptSuggestions: (ids: number[], tags?: string[]) => invoke<void>("accept_suggestions", { ids, tags: tags ?? null }),
+  rejectSuggestions: (ids: number[], tags?: string[]) => invoke<void>("reject_suggestions", { ids, tags: tags ?? null }),
+  aiTagCount: () => invoke<number>("ai_tag_count"),
+  /** Removes every tag accepted from a suggestion; returns how many. */
+  removeAiTags: () => invoke<number>("remove_ai_tags"),
+  /** Saves the line of text `a` (a font) drew, which Suggest tags sends as its preview. */
+  saveFontSample: (a: Asset, png: Uint8Array) =>
+    invoke<void>("save_font_sample", { id: a.id, size: a.size, mtime: a.mtime, png: Array.from(png) }),
   pickFolder: async (title = t("api.importTitle")) => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;
@@ -123,6 +139,7 @@ export const api = {
   onImageFeatures: (cb: (colors: [number, Swatch[]][]) => void): Promise<UnlistenFn> =>
     listen<[number, Swatch[]][]>("image-features", (e) => cb(e.payload)),
   onAnalysisStatus: (cb: (s: AnalysisStatus) => void): Promise<UnlistenFn> => listen<AnalysisStatus>("analysis-status", (e) => cb(e.payload)),
+  onTaggingStatus: (cb: (s: TaggingStatus) => void): Promise<UnlistenFn> => listen<TaggingStatus>("tagging-status", (e) => cb(e.payload)),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */

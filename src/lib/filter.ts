@@ -16,6 +16,8 @@ export interface Filters {
   /** Modified within this many days. */
   days: number | null;
   untagged: boolean;
+  /** Only assets with tags Claude suggested, waiting for review. */
+  suggested: boolean;
   /** Has at least one of these tags. */
   anyTags: string[];
   /** At least this many stars. */
@@ -41,6 +43,7 @@ export const noFilters: Filters = {
   maxBytes: null,
   days: null,
   untagged: false,
+  suggested: false,
   anyTags: [],
   minRating: null,
   minMs: null,
@@ -53,7 +56,7 @@ export function activeFilterCount(f: Filters): number {
   const dims = f.minW !== null || f.maxW !== null || f.minH !== null || f.maxH !== null || f.square;
   const bytes = f.minBytes !== null || f.maxBytes !== null;
   const dur = f.minMs !== null || f.maxMs !== null;
-  return [f.exts.length > 0, dims, bytes, dur, f.days !== null, f.untagged, f.anyTags.length > 0, f.minRating !== null, f.color !== null].filter(Boolean).length;
+  return [f.exts.length > 0, dims, bytes, dur, f.days !== null, f.untagged, f.suggested, f.anyTags.length > 0, f.minRating !== null, f.color !== null].filter(Boolean).length;
 }
 
 /** True without limits; with any, only a known length within them. */
@@ -76,6 +79,7 @@ export function matchesFilters(a: Asset, f: Filters, now = Date.now(), palettes?
   if (!inRange(a.durationMs, f.minMs, f.maxMs)) return false;
   if (f.days !== null && a.mtime < now - f.days * 86_400_000) return false;
   if (f.untagged && a.tags.length) return false;
+  if (f.suggested && !a.suggested.length) return false;
   if (f.anyTags.length && !a.tags.some((t) => f.anyTags.includes(t))) return false;
   if (f.minRating !== null && a.rating < f.minRating) return false;
   if (f.color && !hasColor(palettes?.get(a.id), f.color)) return false;

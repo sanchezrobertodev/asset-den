@@ -35,5 +35,7 @@
   "aiNoAnswer": "Claude の回答が途中で切れたか、読み取れませんでした。やり直してください。",
   "aiTooLong": "Claude に尋ねられるのは 500 文字までです。",
   "aiKeyStore": "システムの資格情報ストアを使えませんでした：{{error}}",
-  "aiError": "Anthropic がエラーを返しました：{{error}}"
+  "aiError": "Anthropic がエラーを返しました：{{error}}",
+  "tagNothing": "タグを付けるものがありません。",
+  "tagPromptTooLong": "タグ付けの指示が長すぎます。"
 }

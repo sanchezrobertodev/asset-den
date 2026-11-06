@@ -64,6 +64,40 @@ CREATE TABLE IF NOT EXISTS collection_rules (
   filters TEXT NOT NULL /* JSON */
 );
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+/* Suggest tags (tagging.rs): Claude's suggestions waiting for review, the tags accepted from them (for Remove all AI
+   tags), the version of each asset already asked about, and the batches sent. */
+CREATE TABLE IF NOT EXISTS tag_suggestions (
+  asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  tag TEXT NOT NULL,
+  PRIMARY KEY (asset_id, tag)
+);
+CREATE TABLE IF NOT EXISTS ai_tags (
+  asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  tag TEXT NOT NULL,
+  PRIMARY KEY (asset_id, tag)
+);
+CREATE TABLE IF NOT EXISTS ai_asked (
+  asset_id INTEGER PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+  size INTEGER NOT NULL,
+  mtime INTEGER NOT NULL,
+  model TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ai_batches (
+  id TEXT PRIMARY KEY,
+  model TEXT NOT NULL,
+  created INTEGER NOT NULL, /* ms; the same for every batch of one run */
+  items TEXT NOT NULL, /* JSON: custom_id -> [[asset id, size, mtime], ...] */
+  done INTEGER NOT NULL DEFAULT 0,
+  usage TEXT /* JSON token totals */
+);
+/* However a tag goes (removed, a duplicate merged away), it stops counting as Claude's; and a tag the asset gets by any
+   way is no longer a suggestion. */
+CREATE TRIGGER IF NOT EXISTS ai_tag_removed AFTER DELETE ON asset_tags BEGIN
+  DELETE FROM ai_tags WHERE asset_id = OLD.asset_id AND tag = OLD.tag;
+END;
+CREATE TRIGGER IF NOT EXISTS suggestion_taken AFTER INSERT ON asset_tags BEGIN
+  DELETE FROM tag_suggestions WHERE asset_id = NEW.asset_id AND tag = NEW.tag;
+END;
 ";
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -104,6 +138,8 @@ pub struct Asset {
     pub height: Option<i64>,
     pub favorite: bool,
     pub tags: Vec<String>,
+    /// Tags Claude suggested that the user hasn't accepted or rejected yet (tagging.rs).
+    pub suggested: Vec<String>,
     /// 0 (unrated) to 5 stars.
     pub rating: u8,
     /// Audio details, when read from the current version of the file.
@@ -165,7 +201,8 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
     let mut stmt = conn.prepare(
         "SELECT a.id, a.root_id, a.rel_path, a.name, a.ext, a.kind, a.size, a.mtime, a.width, a.height, a.favorite,
                 (SELECT group_concat(tag, char(31)) FROM asset_tags t WHERE t.asset_id = a.id), coalesce(m.rating, 0),
-                i.duration_ms, i.sample_rate, i.channels, i.bits
+                i.duration_ms, i.sample_rate, i.channels, i.bits,
+                (SELECT group_concat(tag, char(31)) FROM tag_suggestions s WHERE s.asset_id = a.id)
          FROM assets a LEFT JOIN asset_meta m ON m.asset_id = a.id
          LEFT JOIN audio_info i ON i.asset_id = a.id AND a.kind = 'audio' AND i.size = a.size AND i.mtime = a.mtime
          WHERE ?1 IS NULL OR a.id IN (SELECT value FROM json_each(?1))",
@@ -174,7 +211,10 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
     stmt.query_map([only], |r| {
         let root_id: i64 = r.get(1)?;
         let rel_path: String = r.get(2)?;
-        let tags: Option<String> = r.get(11)?;
+        let split = |s: Option<String>| {
+            s.map(|t| t.split(TAG_SEP).map(String::from).collect())
+                .unwrap_or_default()
+        };
         Ok(Asset {
             id: r.get(0)?,
             root_id,
@@ -190,9 +230,8 @@ pub fn assets(conn: &Connection, only: Option<&[i64]>) -> Result<Vec<Asset>> {
             width: r.get(8)?,
             height: r.get(9)?,
             favorite: r.get(10)?,
-            tags: tags
-                .map(|t| t.split(TAG_SEP).map(String::from).collect())
-                .unwrap_or_default(),
+            tags: split(r.get(11)?),
+            suggested: split(r.get(17)?),
             rating: r.get(12)?,
             duration_ms: r.get(13)?,
             sample_rate: r.get(14)?,

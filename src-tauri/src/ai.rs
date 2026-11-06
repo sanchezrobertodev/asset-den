@@ -1,4 +1,4 @@
-//! Built-in AI features on the user's own Anthropic API key: "Ask" in the search box now, bulk tagging later. The key
+//! Built-in AI features on the user's own Anthropic API key: "Ask" in the search box, and "Suggest tags" (tagging.rs). The key
 //! lives in the OS credential store under the app's identifier. It never goes to the window, the database, the prefs or
 //! a log; only to api.anthropic.com, from here.
 
@@ -11,7 +11,7 @@ use tauri::AppHandle;
 const API: &str = "https://api.anthropic.com/v1";
 const API_VERSION: &str = "2026-10-21";
 const KEY_USER: &str = "anthropic-api-key";
-const TIMEOUT: Duration = Duration::from_secs(60);
+const ASK_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_WORDS: usize = 500;
 const MAX_PROMPT: usize = 64 * 1024;
 
@@ -22,7 +22,7 @@ const BAD_KEY: &str = "Anthropic didn't accept your API key. Check it in Setting
 const BILLING: &str = "Anthropic refused the request: check the billing of your API account.";
 const RATE_LIMITED: &str = "Too many requests to Anthropic. Wait a moment and try again.";
 const BUSY: &str = "Anthropic is busy right now. Try again in a moment.";
-const OFFLINE: &str = "Couldn't reach Anthropic. Check your internet connection and try again.";
+pub(crate) const OFFLINE: &str = "Couldn't reach Anthropic. Check your internet connection and try again.";
 const DECLINED: &str = "Claude declined to answer. Try other words.";
 const NO_ANSWER: &str = "Claude's answer was cut short or unreadable. Try again.";
 const TOO_LONG: &str = "Ask takes up to 500 characters.";
@@ -59,7 +59,10 @@ pub fn set_api_key(app: AppHandle, key: String) -> Result<(), String> {
     if key.is_empty() || key.len() > 256 || key.chars().any(|c| c.is_whitespace() || c.is_control()) {
         return Err(BAD_KEY_FORMAT.into());
     }
-    entry(&app)?.set_password(key).map_err(store_err)
+    entry(&app)?.set_password(key).map_err(store_err)?;
+    // Batches waiting for a key are collected now.
+    crate::tagging::wake();
+    Ok(())
 }
 
 #[tauri::command(async)]
@@ -80,6 +83,16 @@ pub enum Model {
     Sonnet,
     #[serde(rename = "claude-opus-5-5")]
     Opus,
+}
+
+impl Model {
+    pub fn id(self) -> &'static str {
+        match self {
+            Model::Haiku => "claude-haiku-5-5",
+            Model::Sonnet => "claude-sonnet-5-5",
+            Model::Opus => "claude-opus-5-5",
+        }
+    }
 }
 
 /// How much the model thinks before answering (AI_EFFORTS in src/lib/prefs.ts).
@@ -113,11 +126,25 @@ pub async fn ask_search(
     if words.is_empty() || words.chars().count() > MAX_WORDS || prompt.len() > MAX_PROMPT {
         return Err(TOO_LONG.into());
     }
+    let key = stored_key(&app).await?;
+    parse_ask(
+        &post(
+            &key,
+            "/messages",
+            &ask_body(&prompt, &words, model, effort),
+            ASK_TIMEOUT,
+        )
+        .await?,
+    )
+}
+
+/// The stored key, for a call from here or tagging.rs.
+pub(crate) async fn stored_key(app: &AppHandle) -> Result<String, String> {
     // The credential store can block (Secret Service is a D-Bus call), so not on the async runtime.
-    let key = tauri::async_runtime::spawn_blocking(move || key(&app))
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || key(&app))
         .await
-        .map_err(crate::err)??;
-    parse_ask(&post(&key, "/messages", &ask_body(&prompt, &words, model, effort)).await?)
+        .map_err(crate::err)?
 }
 
 fn ask_body(prompt: &str, words: &str, model: Model, effort: Effort) -> Value {
@@ -164,29 +191,42 @@ fn parse_ask(reply: &Value) -> Result<AskReply, String> {
     })
 }
 
-async fn post(key: &str, path: &str, body: &Value) -> Result<Value, String> {
-    let res = reqwest::Client::builder()
-        .timeout(TIMEOUT)
-        .build()
-        .map_err(crate::err)?
-        .post(format!("{API}{path}"))
-        .header("x-api-key", key)
-        .header("anthropic-version", API_VERSION)
-        .json(body)
-        .send()
-        .await
-        .map_err(|_| OFFLINE.to_string())?;
-    let status = res.status().as_u16();
-    let bytes = res.bytes().await.map_err(|_| OFFLINE.to_string())?;
+/// POSTs JSON and returns the JSON reply, or the error to show for it.
+pub(crate) async fn post(key: &str, path: &str, body: &Value, timeout: Duration) -> Result<Value, String> {
+    let (status, bytes) = call(key, reqwest::Method::POST, path, Some(body), timeout).await?;
     let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
-    if status == 200 {
+    if (200..300).contains(&status) {
         Ok(json)
     } else {
         Err(api_error(status, &json))
     }
 }
 
-fn api_error(status: u16, body: &Value) -> String {
+/// One request to the API: the status and body, whatever the status. Errs only when Anthropic can't be reached.
+pub(crate) async fn call(
+    key: &str,
+    method: reqwest::Method,
+    path: &str,
+    body: Option<&Value>,
+    timeout: Duration,
+) -> Result<(u16, Vec<u8>), String> {
+    let mut req = reqwest::Client::builder()
+        .timeout(timeout)
+        .build()
+        .map_err(crate::err)?
+        .request(method, format!("{API}{path}"))
+        .header("x-api-key", key)
+        .header("anthropic-version", API_VERSION);
+    if let Some(body) = body {
+        req = req.json(body);
+    }
+    let res = req.send().await.map_err(|_| OFFLINE.to_string())?;
+    let status = res.status().as_u16();
+    let bytes = res.bytes().await.map_err(|_| OFFLINE.to_string())?;
+    Ok((status, bytes.to_vec()))
+}
+
+pub(crate) fn api_error(status: u16, body: &Value) -> String {
     match status {
         401 | 403 => BAD_KEY.into(),
         402 => BILLING.into(),

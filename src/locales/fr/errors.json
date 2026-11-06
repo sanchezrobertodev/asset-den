@@ -35,5 +35,7 @@
   "aiNoAnswer": "La réponse de Claude est tronquée ou illisible. Réessayez.",
   "aiTooLong": "La demande est limitée à 500 caractères.",
   "aiKeyStore": "Impossible d'utiliser le gestionnaire d'identifiants du système : {{error}}",
-  "aiError": "Anthropic a renvoyé une erreur : {{error}}"
+  "aiError": "Anthropic a renvoyé une erreur : {{error}}",
+  "tagNothing": "Il n'y a rien à étiqueter.",
+  "tagPromptTooLong": "Les instructions d'étiquetage sont trop longues."
 }

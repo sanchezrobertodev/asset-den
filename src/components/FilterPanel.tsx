@@ -245,12 +245,15 @@ export function FilterButton() {
 
             <Group
               title={t("filterPanel.groups.tags")}
-              active={f.untagged || f.anyTags.length > 0}
-              onClear={() => setFilters({ untagged: false, anyTags: [] })}
+              active={f.untagged || f.suggested || f.anyTags.length > 0}
+              onClear={() => setFilters({ untagged: false, suggested: false, anyTags: [] })}
             >
               <div className="flex flex-wrap gap-1.5">
                 <Chip on={f.untagged} onClick={() => setFilters({ untagged: !f.untagged, anyTags: [] })}>
                   {t("filterPanel.untaggedOnly")}
+                </Chip>
+                <Chip on={f.suggested} onClick={() => setFilters({ suggested: !f.suggested })}>
+                  {t("tagging.filterChip")}
                 </Chip>
                 {tags.map((tag) => (
                   <Chip key={tag} on={f.anyTags.includes(tag)} onClick={() => setFilters({ anyTags: toggle(f.anyTags, tag), untagged: false })}>

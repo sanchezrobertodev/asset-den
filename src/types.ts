@@ -20,6 +20,8 @@ export interface Asset {
   height: number | null;
   favorite: boolean;
   tags: string[];
+  /** Tags Claude suggested that wait for the user to accept or reject them. */
+  suggested: string[];
   /** 0 (unrated) to 5 stars. */
   rating: number;
   /** Audio details from the file header; null when unknown or not audio. */

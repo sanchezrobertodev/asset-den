@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { openUpdates, useAppUpdate } from "../appUpdate";
 import { AnalysisProgress } from "./Analysis";
+import { TaggingProgress } from "./SuggestTags";
 import { UpdateNotice } from "./AppUpdate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
@@ -197,6 +198,7 @@ export function Sidebar() {
       {rail ? (
         <div className="flex flex-1 flex-col items-center justify-end pb-2">
           <AnalysisProgress compact />
+          <TaggingProgress compact />
         </div>
       ) : (
         <>
@@ -240,6 +242,7 @@ export function Sidebar() {
 
           <div className="flex flex-none flex-col gap-2 px-3 pt-4 pb-3">
             <AnalysisProgress />
+            <TaggingProgress />
             <UpdateNotice />
             <div className="flex min-w-0 flex-col gap-0.5 text-xs">
               <span className="truncate text-fg-2" title={s.roots.map((r) => r.path).join("\n")}>

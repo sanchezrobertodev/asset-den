@@ -37,7 +37,8 @@ const tokenLabel: Record<string, string> = {
 /** Words typed before Ask sent the user to Settings for a key: search opens with them again, so they can ask once it's set. */
 let setupWords: string | null = null;
 
-export function Palette() {
+/** `shown`: the assets on screen, which Suggest tags can take. */
+export function Palette({ shown }: { shown?: Asset[] }) {
   const s = useStore();
   const [q, setQ] = useState(() => setupWords ?? s.query);
   useEffect(() => {
@@ -228,6 +229,7 @@ export function Palette() {
       [t("palette.actions.settings"), () => s.setModal("settings")],
       [t("palette.actions.shortcuts"), () => s.setModal("shortcuts")],
     ];
+    if (shown?.length) actions.splice(4, 0, [t("tagging.paletteAction", { count: shown.length }), () => s.setSuggestFor(shown.map((a) => a.id))]);
     if (useAppUpdate.getState().supported) actions.splice(actions.length - 1, 0, [t("palette.actions.updates"), openUpdates]);
     const words = parsed.text;
     const onlyText =
@@ -246,7 +248,7 @@ export function Palette() {
     return out;
     // Only what it reads: the whole store changes on every scan tick, and this searches every asset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, s.assets, s.notes, s.palettes, s.filters, s.view, s.collections, s.colSel, s.dups, s.roots, hasKey, asking, asked]);
+  }, [q, s.assets, s.notes, s.palettes, s.filters, s.view, s.collections, s.colSel, s.dups, s.roots, hasKey, asking, asked, shown]);
 
   const flat = sections.flatMap((sec) => sec.items);
   const run = (item?: Item) => {

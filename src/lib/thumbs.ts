@@ -3,6 +3,7 @@
 import type { WebGLRenderer } from "three";
 import { api, fileUrl } from "../api";
 import type { Asset } from "../types";
+import { holdFont } from "./fonts";
 import { createScheduler } from "./scheduler.ts";
 
 const cachedOr = (render: (a: Asset) => Promise<string | null> | null) => (a: Asset) =>
@@ -105,4 +106,36 @@ function renderVideoThumb(a: Asset): Promise<string | null> {
       v.removeAttribute("src");
       v.load();
     });
+}
+
+/** Draws a line of text in font `a` and saves it as the picture Suggest tags sends; false when the font won't load. */
+export function saveFontSample(a: Asset): Promise<boolean> {
+  return new Promise((resolve) => {
+    const release = holdFont(a, fileUrl(a.path), (family) => {
+      void (async () => {
+        if (!family) return false;
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 96;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, 256, 96);
+        ctx.fillStyle = "#111";
+        ctx.textBaseline = "middle";
+        ctx.font = `28px "${family}"`;
+        ctx.fillText("Aa Bb 123", 12, 30);
+        ctx.font = `20px "${family}"`;
+        ctx.fillText("The quick brown fox", 12, 70);
+        const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
+        if (!blob) return false;
+        await api.saveFontSample(a, new Uint8Array(await blob.arrayBuffer()));
+        return true;
+      })()
+        .catch(() => false)
+        .then((ok) => {
+          release();
+          resolve(ok);
+        });
+    });
+  });
 }

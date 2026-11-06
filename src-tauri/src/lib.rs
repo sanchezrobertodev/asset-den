@@ -8,6 +8,7 @@ mod dupes;
 mod kind;
 mod mcp;
 mod scan;
+mod tagging;
 mod thumbs;
 mod watch;
 
@@ -26,7 +27,7 @@ use db::{Asset, Collection, Root};
 
 pub struct AppState {
     pub db: Mutex<Connection>,
-    thumbs_dir: PathBuf,
+    pub(crate) thumbs_dir: PathBuf,
     previews_dir: PathBuf,
     drag_icon: PathBuf,
     thumb_permits: tokio::sync::Semaphore,
@@ -378,6 +379,14 @@ fn save_thumbnail(state: State<'_, AppState>, id: i64, size: i64, mtime: i64, pn
     Ok(out.display().to_string())
 }
 
+/// Stores a font's sample line the frontend drew from the file version `size`/`mtime`, for Suggest tags to send.
+#[tauri::command]
+fn save_font_sample(state: State<'_, AppState>, id: i64, size: i64, mtime: i64, png: Vec<u8>) -> Result<(), String> {
+    let a = asset(&state, id)?;
+    thumbs::rendered_name(&a.path, (a.size, a.mtime), (size, mtime))?;
+    thumbs::save_png(&png, &state.thumbs_dir.join(thumbs::sample_name(&a.path, size, mtime)))
+}
+
 /// Full-size PNG for image formats the webview can't display (TGA, PSD, TIFF).
 #[tauri::command]
 async fn preview(state: State<'_, AppState>, id: i64) -> Result<String, String> {
@@ -398,14 +407,14 @@ async fn preview(state: State<'_, AppState>, id: i64) -> Result<String, String> 
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct TextPreview {
-    text: String,
+pub(crate) struct TextPreview {
+    pub(crate) text: String,
     truncated: bool,
 }
 
 const TEXT_LIMIT: u64 = 1024 * 1024;
 
-fn read_capped(path: &Path, limit: u64) -> Result<TextPreview, String> {
+pub(crate) fn read_capped(path: &Path, limit: u64) -> Result<TextPreview, String> {
     let file = std::fs::File::open(path).map_err(err)?;
     let mut buf = Vec::new();
     file.take(limit + 1).read_to_end(&mut buf).map_err(err)?;
@@ -1009,6 +1018,8 @@ pub fn run() {
                 activate_root(app.handle(), &root);
                 spawn_scan(app.handle().clone(), root);
             }
+            // Batches sent before Mimikit closed are collected now.
+            tagging::start(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1021,6 +1032,7 @@ pub fn run() {
             list_assets,
             thumbnail,
             save_thumbnail,
+            save_font_sample,
             preview,
             read_text,
             set_favorite,
@@ -1069,7 +1081,15 @@ pub fn run() {
             ai::api_key_status,
             ai::set_api_key,
             ai::remove_api_key,
-            ai::ask_search
+            ai::ask_search,
+            tagging::suggest_tags,
+            tagging::tagging_asked,
+            tagging::tagging_status,
+            tagging::cancel_tagging,
+            tagging::accept_suggestions,
+            tagging::reject_suggestions,
+            tagging::ai_tag_count,
+            tagging::remove_ai_tags
         ])
         .run(context())
         .expect("error while running tauri application");
@@ -1099,6 +1119,7 @@ mod tests {
             height: None,
             favorite: false,
             tags: vec![],
+            suggested: vec![],
             rating: 0,
             duration_ms: None,
             sample_rate: None,

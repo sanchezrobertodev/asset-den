@@ -35,5 +35,7 @@
   "aiNoAnswer": "A resposta do Claude veio cortada ou ilegível. Tente de novo.",
   "aiTooLong": "Perguntar aceita até 500 caracteres.",
   "aiKeyStore": "Não foi possível usar o armazenamento de credenciais do sistema: {{error}}",
-  "aiError": "A Anthropic retornou um erro: {{error}}"
+  "aiError": "A Anthropic retornou um erro: {{error}}",
+  "tagNothing": "Não há nada para etiquetar.",
+  "tagPromptTooLong": "As instruções de etiquetagem são longas demais."
 }

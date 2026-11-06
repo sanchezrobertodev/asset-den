@@ -44,6 +44,8 @@ thread-priority = "3"
 keyring = "4.2"
 # Claude API calls (ai.rs). Already in the build through the updater: the same version and TLS, so no new crates.
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
+# Pictures in Suggest tags' requests (tagging.rs). Already in the build through Tauri.
+base64 = "0.22"
 
 # Whether an agent's relay is still running (bridge.rs `relays_alive`). Both were already in the build through Tauri.
 [target.'cfg(windows)'.dependencies]

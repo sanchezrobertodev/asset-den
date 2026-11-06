@@ -313,6 +313,33 @@ runs it on your computer like one you typed. **Back to my words** puts your word
 - **Limits.** The search syntax has no pixel size, square or date terms, so those parts of a request are left out: use
   **More filters** for them. A search Mimikit can't read in full is shown, not run.
 
+## Suggest tags
+
+Claude can suggest tags for many assets at once. Open the assets you want, such as a folder, a search or a filter,
+press <kbd>Ctrl+K</kbd> (<kbd>⌘K</kbd> on macOS) and pick **Suggest tags for the N assets shown…**, or select some
+and pick **Suggest tags…** in the side panel. The dialog shows how many go, what's sent, the model and the cost before
+anything leaves your computer.
+
+- **In the background.** Mimikit sends them through Anthropic's Message Batches API, at half the usual price. Results
+  usually arrive within an hour, and you can close Mimikit meanwhile: it collects them at the next launch. The sidebar
+  shows the run, with **Cancel**, and then how many assets have suggestions, with **Review** and what the run cost.
+- **You decide.** Suggestions aren't tags until you accept them. In the side panel they're dashed chips under the tag
+  field: click one to add it, or its × to reject it, or **Accept all** / **Reject all**. With several assets
+  selected, a chip covers the ones that have it. **More filters → Has suggested tags** finds what's left to review,
+  and a smart collection can use it too.
+- **What's sent.** For each asset: its name, the name of its folder inside the library folder, its kind and pixel size
+  or length, and a small preview: the 256 px thumbnail of an image, a render of a 3D model, a frame of a video, or a
+  line of text set in a font. Text files send their first 2 KB; audio sends only its name and details. Also the
+  instructions and the names of your 300 most used tags, so suggestions reuse them. Never whole files or full paths.
+  Assets Claude was already asked about are left out unless you tick **Also ask again**; a file that changed since
+  counts as new.
+- **Model.** **Settings → AI features → Tagging model** picks Claude Haiku 5.5 (the default), Sonnet 5.5 or Opus 5.5,
+  always at low effort. See the pull request that added it for how the default was chosen.
+- **Cost.** Billed to your API account, at batch prices: about $0.02 for 1,000 images with Haiku 5.5, about 20 times
+  that with Sonnet and 40 times with Opus. The dialog estimates each run, with the most it could cost.
+- **Undo.** **Settings → AI features → Remove all AI tags** takes off every tag you accepted from a suggestion, after
+  showing how many. Tags you added yourself stay, even ones Claude also suggested. Mimikit never changes your files.
+
 ## Develop
 
 ```bash
@@ -335,9 +362,9 @@ src/agent/tools.test.ts` rewrites it.
 
 | What | Where |
 |---|---|
-| Index, tags, favorites, ratings, notes, collections, ignored folder names, image analysis | `asset-den.db` (SQLite) in the app data folder |
+| Index, tags, favorites, ratings, notes, collections, ignored folder names, image analysis, suggested tags and the batches out with Claude | `asset-den.db` (SQLite) in the app data folder |
 | Automatic backups, and the library saved before each restore | `backups/` in the app data folder (**Settings → Backups → Show folder**) |
-| Thumbnails and decoded previews | `thumbs/` and `previews/` in the app cache folder (safe to delete, or **Settings → Clear thumbnail cache**) |
+| Thumbnails, decoded previews and the font samples Suggest tags sends | `thumbs/` and `previews/` in the app cache folder (safe to delete, or **Settings → Clear thumbnail cache**) |
 | UI preferences, and the AI agents switch and allowed apps | browser storage in the app's webview |
 | Port and token of the AI agents bridge, while it's on | `agent-bridge.json` in the app data folder |
 
