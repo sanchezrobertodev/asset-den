@@ -320,9 +320,12 @@ press <kbd>Ctrl+K</kbd> (<kbd>⌘K</kbd> on macOS) and pick **Suggest tags for t
 and pick **Suggest tags…** in the side panel. The dialog shows how many go, what's sent, the model and the cost before
 anything leaves your computer.
 
-- **In the background.** Mimikit sends them through Anthropic's Message Batches API, at half the usual price. Results
-  usually arrive within an hour, and you can close Mimikit meanwhile: it collects them at the next launch. The sidebar
-  shows the run, with **Cancel**, and then how many assets have suggestions, with **Review** and what the run cost.
+- **Small runs in seconds.** Up to 50 assets go straight to Claude at the normal price, and their tags are back in a
+  few seconds.
+- **Big runs in the background.** More than 50 go through Anthropic's Message Batches API, at half the usual price.
+  Results usually arrive within minutes (Anthropic allows up to a day), and you can close Mimikit meanwhile: it
+  collects them at the next launch. The sidebar shows the run, with **Cancel**, and then how many assets have
+  suggestions, with **Review** and what the run cost.
 - **You decide.** Suggestions aren't tags until you accept them. In the side panel they're dashed chips under the tag
   field: click one to add it, or its × to reject it, or **Accept all** / **Reject all**. With several assets
   selected, a chip covers the ones that have it. **More filters → Has suggested tags** finds what's left to review,
@@ -335,8 +338,9 @@ anything leaves your computer.
   counts as new.
 - **Model.** **Settings → AI features → Tagging model** picks Claude Haiku 5.5 (the default), Sonnet 5.5 or Opus 5.5,
   always at low effort. See the pull request that added it for how the default was chosen.
-- **Cost.** Billed to your API account, at batch prices. Measured on 100 mixed assets: about $0.02 per 1,000 assets with
-  Haiku 5.5, $0.40 with Sonnet 5.5 and $0.80 with Opus 5.5. The dialog estimates each run, with the most it could cost.
+- **Cost.** Billed to your API account. Measured on 100 mixed assets at batch prices: about $0.02 per 1,000 assets with
+  Haiku 5.5, $0.40 with Sonnet 5.5 and $0.80 with Opus 5.5. A small run costs twice as much per asset, which for 50
+  assets is at most a few cents. The dialog estimates each run, with the most it could cost.
 - **Undo.** **Settings → AI features → Remove all AI tags** takes off every tag you accepted from a suggestion, after
   showing how many. Tags you added yourself stay, even ones Claude also suggested. Mimikit never changes your files.
 

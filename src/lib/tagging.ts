@@ -1,5 +1,5 @@
 // "Suggest tags" (SuggestTags.tsx, src-tauri/src/tagging.rs): Claude suggests tags for many assets through the Message
-// Batches API, and they wait for review in the side panel. This file has the instructions and the price sums, with no
+// Batches API (a small run goes straight to the Messages API), and they wait for review in the side panel. This file has the instructions and the price sums, with no
 // Tauri imports, so tagging.test.ts can check them.
 import type { Asset } from "../types";
 import type { AI_MODELS } from "./prefs";
@@ -25,7 +25,7 @@ export interface TaggingStatus {
   /** Why results can't be collected now (no key, offline). */
   error: string | null;
   /** The latest run whose results are all in. */
-  last: { model: TagModel; assets: number; usage: Usage } | null;
+  last: { model: TagModel; assets: number; usage: Usage; direct: boolean } | null;
 }
 
 /** Batch prices in dollars per million tokens: half the normal rate. A cache read costs a tenth of input, a one-hour
@@ -36,14 +36,18 @@ export const PRICES: Record<TagModel, { input: number; output: number }> = {
   "claude-opus-5-5": { input: 2, output: 10 },
 };
 
-/** What a run's tokens cost, in dollars. */
-export function cost(u: Usage, model: TagModel): number {
+/** What a run's tokens cost, in dollars: twice the batch price when it went straight to Claude. */
+export function cost(u: Usage, model: TagModel, direct = false): number {
   const p = PRICES[model];
-  return (u.inputTokens * p.input + u.cacheWriteTokens * p.input * 2 + u.cacheReadTokens * p.input * 0.1 + u.outputTokens * p.output) / 1e6;
+  const batch = (u.inputTokens * p.input + u.cacheWriteTokens * p.input * 2 + u.cacheReadTokens * p.input * 0.1 + u.outputTokens * p.output) / 1e6;
+  return direct ? batch * 2 : batch;
 }
 
 /** Assets per request, as in tagging.rs. */
 export const PER_REQUEST = 10;
+/** Runs this small skip the batch queue, as in tagging.rs: tags in seconds, at the normal price. */
+export const DIRECT_MAX = 50;
+export const isDirect = (assets: number) => assets <= DIRECT_MAX;
 const MAX_TOKENS = 4096;
 /** A 256 px preview is about (256 × 256) / 750 tokens; smaller ones cost less, so this is an upper guess. */
 const PICTURE_TOKENS = 84;
@@ -55,7 +59,7 @@ const TEXT_BYTES = 2048;
 export const sendsPicture = (a: Asset) => a.kind === "image" || a.kind === "model" || a.kind === "video" || a.kind === "font";
 
 /** About what tagging `assets` costs, and the most it can: every request answering with `max_tokens` and writing the
- * prompt to the cache. */
+ * prompt to the cache. A direct run sends its requests at once, so each writes the prompt. */
 export function estimate(assets: Asset[], model: TagModel, prompt: string): { about: number; atMost: number } {
   if (!assets.length) return { about: 0, atMost: 0 };
   let input = 0;
@@ -64,8 +68,10 @@ export function estimate(assets: Asset[], model: TagModel, prompt: string): { ab
   }
   const requests = Math.ceil(assets.length / PER_REQUEST);
   const system = prompt.length / 4;
-  const about = cost({ inputTokens: input, outputTokens: assets.length * OUTPUT_TOKENS, cacheWriteTokens: system, cacheReadTokens: system * Math.max(0, requests - 1) }, model);
-  const atMost = cost({ inputTokens: input, outputTokens: requests * MAX_TOKENS, cacheWriteTokens: system * requests, cacheReadTokens: 0 }, model);
+  const direct = isDirect(assets.length);
+  const writes = direct ? requests : 1;
+  const about = cost({ inputTokens: input, outputTokens: assets.length * OUTPUT_TOKENS, cacheWriteTokens: system * writes, cacheReadTokens: system * (requests - writes) }, model, direct);
+  const atMost = cost({ inputTokens: input, outputTokens: requests * MAX_TOKENS, cacheWriteTokens: system * requests, cacheReadTokens: 0 }, model, direct);
   return { about, atMost };
 }
 

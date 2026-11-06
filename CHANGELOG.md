@@ -10,9 +10,10 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 - **Suggest tags**: Claude suggests tags for many assets at once, from the palette (**Suggest tags for the N assets
   shown…**, so a folder, a search or a filter) or the side panel (the selection). The dialog shows what's sent (a
   small preview, the file and folder names, the first 2 KB of text files; never whole files or full paths), the model
-  and the estimated cost first. It goes through Anthropic's Message Batches API at half price, and results usually
-  arrive within an hour, even if Mimikit was closed meanwhile. The sidebar shows the run with **Cancel**, then the
-  assets with suggestions, **Review** and the real cost.
+  and the estimated cost first. Up to 50 assets go straight to Claude and their tags are back in seconds. More go
+  through Anthropic's Message Batches API at half price, and results usually arrive within minutes, even if Mimikit
+  was closed meanwhile. The sidebar shows the run with **Cancel**, then the assets with suggestions, **Review** and the
+  real cost.
 - Suggested tags wait as dashed chips under the tag field in the side panel: click to add one, × to reject it, or
   **Accept all** / **Reject all**, also for several assets at once. **More filters → Has suggested tags** (and smart
   collections) find what's left to review.

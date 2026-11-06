@@ -1,12 +1,13 @@
 // The Suggest tags dialog: what goes to Anthropic, the model and the cost, then the previews Claude needs and the send.
-// Opened from Peek (the selection) and the palette (the assets shown); results come later (src-tauri/src/tagging.rs).
+// Opened from Peek (the selection) and the palette (the assets shown). A small run's tags are in when the send returns; a
+// big run's come later (src-tauri/src/tagging.rs).
 import { Tags, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, errorText } from "../api";
 import { topTags } from "../lib/ask";
 import { money } from "../lib/fmt";
 import { t } from "../lib/i18n";
-import { cost, estimate, tagPrompt } from "../lib/tagging";
+import { cost, estimate, isDirect, tagPrompt } from "../lib/tagging";
 import { saveFontSample, thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
@@ -56,6 +57,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
 
   const prompt = useMemo(() => tagPrompt(topTags(assets)), [assets]);
   const price = estimate(chosen, ai.tagModel, prompt);
+  const direct = isDirect(chosen.length);
   const busy = progress !== null || sending;
   // Previews can stop; once the upload starts it can't, so the dialog stays until it's sent (then the sidebar can cancel).
   const dismiss = () => {
@@ -76,7 +78,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
         chosen.map((a) => a.id),
         ai.tagModel,
       );
-      showToast(t("tagging.sentToast", { count: n }));
+      showToast(direct ? t("tagging.doneToast", { count: n }) : t("tagging.sentToast", { count: n }));
       close();
     } catch (e) {
       setError(e);
@@ -131,12 +133,12 @@ export function SuggestTags({ ids }: { ids: number[] }) {
           <dt className="text-muted">{t("tagging.cost")}</dt>
           <dd className="text-fg">
             {t("tagging.estimate", { about: money(price.about), atMost: money(price.atMost) })}
-            <span className="block text-xs text-muted">{t("tagging.estimateHint")}</span>
+            <span className="block text-xs text-muted">{t(direct ? "tagging.estimateHintDirect" : "tagging.estimateHint")}</span>
           </dd>
         </dl>
-        <p className="text-muted">{t("tagging.when")}</p>
+        <p className="text-muted">{t(direct ? "tagging.whenDirect" : "tagging.when")}</p>
         <p role="status" className="min-h-5 font-mono text-xs text-muted">
-          {progress ? t("tagging.preparing", { done: progress.done, total: progress.total }) : sending ? t("tagging.sending") : ""}
+          {progress ? t("tagging.preparing", { done: progress.done, total: progress.total }) : sending ? t(direct ? "tagging.asking" : "tagging.sending") : ""}
         </p>
       </div>
     </Modal>
@@ -216,7 +218,7 @@ export function TaggingProgress({ compact }: { compact?: boolean }) {
               {t("tagging.review")}
             </button>
           </div>
-          {st.last && <span className="font-mono text-[11px] text-muted">{t("tagging.lastCost", { cost: money(cost(st.last.usage, st.last.model)) })}</span>}
+          {st.last && <span className="font-mono text-[11px] text-muted">{t("tagging.lastCost", { cost: money(cost(st.last.usage, st.last.model, st.last.direct)) })}</span>}
         </div>
       )}
     </>

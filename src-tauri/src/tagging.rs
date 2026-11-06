@@ -1,6 +1,6 @@
 //! "Suggest tags": previews of many assets go to Claude through the Message Batches API (half the price, results usually
-//! within an hour), and the tags it suggests wait in `tag_suggestions` until the user accepts or rejects them in the side
-//! panel. What an asset sends is in `content`: never a whole file or a full path. Asset files are only read, and the key
+//! within minutes), or straight to the Messages API for a small run, and the tags it suggests wait in `tag_suggestions`
+//! until the user accepts or rejects them in the side panel. What an asset sends is in `content`: never a whole file or a full path. Asset files are only read, and the key
 //! stays in ai.rs.
 
 use std::collections::{HashMap, HashSet};
@@ -29,6 +29,11 @@ const BATCH_REQUESTS: usize = 100_000;
 const TEXT_BYTES: u64 = 2048;
 const MAX_TAGS: usize = 12;
 const MAX_PROMPT: usize = 64 * 1024;
+/// Runs this small skip the batch queue: their tags come back in seconds, at the normal price instead of half.
+const DIRECT_MAX: usize = 50;
+/// The id a direct run gets in `ai_batches`, so its cost is counted at the normal price.
+const DIRECT: &str = "direct_";
+const DIRECT_TIMEOUT: Duration = Duration::from_secs(120);
 /// How often pending batches are checked.
 const TICK: Duration = Duration::from_secs(60);
 const UPLOAD_TIMEOUT: Duration = Duration::from_secs(600);
@@ -92,6 +97,8 @@ pub struct Run {
     model: String,
     assets: usize,
     usage: Usage,
+    /// Sent straight to the Messages API, at the normal price.
+    direct: bool,
 }
 
 /// What the collector learnt since launch, which the database doesn't keep.
@@ -266,8 +273,8 @@ fn build(
     }
 }
 
-/// Sends `ids` to Claude in batches, following `prompt` (src/lib/tagging.ts). Returns how many assets went. Results come
-/// later, through the collector.
+/// Sends `ids` to Claude, following `prompt` (src/lib/tagging.ts). Returns how many assets went. A big run goes in batches
+/// and its results come later, through the collector; a small one is answered and stored before this returns.
 #[tauri::command]
 pub async fn suggest_tags(
     app: AppHandle,
@@ -287,6 +294,21 @@ pub async fn suggest_tags(
     let key = ai::stored_key(&app).await?;
     let created = now_ms();
     let dir = state.thumbs_dir.clone();
+    if assets.len() <= DIRECT_MAX {
+        // Well under the batch limits, so it's one batch.
+        let batch = tauri::async_runtime::spawn_blocking(move || {
+            let mut out = None;
+            build(&dir, &assets, &prompt, model, effort, |b| {
+                out = Some(b);
+                true
+            });
+            out
+        })
+        .await
+        .map_err(err)?
+        .ok_or(NOTHING)?;
+        return direct(&app, &key, model, created, batch).await;
+    }
     // One batch waits while the next is built, so memory stays at about two batches however many assets go.
     let (tx, mut rx) = mpsc::channel::<Batch>(1);
     let building = tauri::async_runtime::spawn_blocking(move || {
@@ -319,6 +341,56 @@ pub async fn suggest_tags(
     }
     building.await.map_err(err)?;
     Ok(sent)
+}
+
+/// Sends a small run's requests straight to the Messages API, all at once, and stores the tags. Returns how many assets
+/// Claude answered. Fails only when no request got through; the assets of one that failed stay un-asked.
+async fn direct(app: &AppHandle, key: &str, model: Model, created: i64, batch: Batch) -> Result<usize, String> {
+    let calls: Vec<_> = batch
+        .requests
+        .into_iter()
+        .map(|r| {
+            let key = key.to_string();
+            tauri::async_runtime::spawn(async move {
+                let reply = ai::post(&key, "/messages", &r["params"], DIRECT_TIMEOUT).await;
+                (r["custom_id"].as_str().unwrap_or_default().to_string(), reply)
+            })
+        })
+        .collect();
+    let (mut answers, mut usage, mut failed, mut ok) = (Vec::new(), Usage::default(), None, false);
+    for call in calls {
+        match call.await.map_err(err)? {
+            (id, Ok(m)) => {
+                ok = true;
+                take(
+                    &m,
+                    batch.items.get(&id).map_or(&[], Vec::as_slice),
+                    &mut answers,
+                    &mut usage,
+                );
+            }
+            (_, Err(e)) => failed = Some(e),
+        }
+    }
+    if let (false, Some(e)) = (ok, failed) {
+        return Err(e);
+    }
+    let id = format!("{DIRECT}{created}");
+    let items = serde_json::to_string(&batch.items).map_err(err)?;
+    let state = app.state::<AppState>();
+    let touched = {
+        let conn = state.db.lock().unwrap();
+        conn.execute(
+            "INSERT INTO ai_batches (id, model, created, items, done) VALUES (?1, ?2, ?3, ?4, 1)",
+            params![id, model.id(), created, items],
+        )
+        .map_err(err)?;
+        let touched = store(&conn, &id, model.id(), &answers, usage).map_err(err)?;
+        crate::emit_delta(app, &conn, &touched);
+        touched
+    };
+    emit_status(app);
+    Ok(touched.len())
 }
 
 // ---------- collecting ----------
@@ -478,15 +550,19 @@ fn read_results(jsonl: &str, items: &Items) -> (Vec<Answer>, Usage) {
         if v["result"]["type"] != "succeeded" {
             continue;
         }
-        let m = &v["result"]["message"];
-        usage.add_reply(&m["usage"]);
-        for (n, tags) in reply(m) {
-            if let Some(&(id, size, mtime)) = n.checked_sub(1).and_then(|i| sent.get(i)) {
-                out.push(Answer { id, size, mtime, tags });
-            }
-        }
+        take(&v["result"]["message"], sent, &mut out, &mut usage);
     }
     (out, usage)
+}
+
+/// Adds one reply's tags, with each asset's number mapped back to the asset `sent`, and the tokens it used.
+fn take(m: &Value, sent: &[(i64, i64, i64)], out: &mut Vec<Answer>, usage: &mut Usage) {
+    usage.add_reply(&m["usage"]);
+    for (n, tags) in reply(m) {
+        if let Some(&(id, size, mtime)) = n.checked_sub(1).and_then(|i| sent.get(i)) {
+            out.push(Answer { id, size, mtime, tags });
+        }
+    }
 }
 
 /// The assets a reply tagged, by number. Empty for a refusal or a reply that was cut short.
@@ -607,6 +683,7 @@ pub fn status(conn: &Connection) -> rusqlite::Result<Status> {
             _ => runs.push((
                 created,
                 Run {
+                    direct: id.starts_with(DIRECT),
                     model,
                     assets: n,
                     usage,
@@ -999,6 +1076,7 @@ mod tests {
         // Run 2 still has a batch out, so the last whole run is run 1.
         let run1 = Run {
             model: "claude-sonnet-5-5".into(),
+            direct: false,
             assets: 1,
             usage: Usage {
                 input_tokens: 7,
@@ -1012,6 +1090,10 @@ mod tests {
             .unwrap();
         let s = status(&conn).unwrap();
         assert_eq!(s.last.map(|r| (r.assets, r.usage.input_tokens)), Some((3, 7)));
+        // A small run sent straight to Claude is counted at the normal price.
+        add("direct_3", 3, r#"{"r0":[[2,10,5]]}"#, true);
+        let s = status(&conn).unwrap();
+        assert_eq!(s.last.map(|r| (r.assets, r.direct)), Some((1, true)));
     }
 
     #[test]
