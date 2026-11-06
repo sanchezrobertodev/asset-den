@@ -6,6 +6,7 @@
     "backups": "バックアップ",
     "storage": "ストレージ",
     "updates": "アップデート",
+    "ai": "AI 機能",
     "about": "情報"
   },
   "appearance": {
@@ -33,6 +34,21 @@
   "updates": {
     "checkOnLaunch": "起動時にアップデートを確認",
     "checkOnLaunchHint": "起動の数秒後にバックグラウンドで確認します。確認なしにインストールされることはありません。"
+  },
+  "ai": {
+    "key": "Anthropic API キー",
+    "keySet": "設定済み。ライブラリではなく、システムの資格情報ストアに保存されています。",
+    "keyNotSet": "未設定。検索ボックスから Claude に尋ねる機能は、あなた自身の Anthropic キーを使い、API アカウントに課金されます。",
+    "add": "キーを追加",
+    "change": "変更",
+    "remove": "削除",
+    "save": "保存",
+    "removeTitle": "API キーを削除しますか？",
+    "removeHint": "キーを再び追加するまで、Claude に尋ねる機能は使えません。",
+    "saved": "API キーを保存しました",
+    "removed": "API キーを削除しました",
+    "sent": "Claude に尋ねるときに Anthropic へ送るもの：入力した言葉、Mimikit の検索構文、タグ名。ファイル名、フォルダーのパス、ファイルの内容、サムネイルは送りません。1 回の検索の費用は 0.1 セントを大きく下回ります。",
+    "getKey": "キーを取得"
   },
   "about": {
     "version": "Mimikit {{version}}",

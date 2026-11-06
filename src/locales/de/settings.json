@@ -6,6 +6,7 @@
     "backups": "Sicherungen",
     "storage": "Speicher",
     "updates": "Updates",
+    "ai": "KI-Funktionen",
     "about": "Info"
   },
   "appearance": {
@@ -33,6 +34,21 @@
   "updates": {
     "checkOnLaunch": "Beim Start nach Updates suchen",
     "checkOnLaunchHint": "Sucht unauffällig ein paar Sekunden nach dem Start. Nichts wird ohne Rückfrage installiert."
+  },
+  "ai": {
+    "key": "Anthropic-API-Schlüssel",
+    "keySet": "Gespeichert. Liegt im Anmeldedatenspeicher des Systems, nie in der Bibliothek.",
+    "keyNotSet": "Nicht festgelegt. Claude fragen in der Suche nutzt deinen eigenen Anthropic-Schlüssel, abgerechnet über dein API-Konto.",
+    "add": "Schlüssel hinzufügen",
+    "change": "Ändern",
+    "remove": "Entfernen",
+    "save": "Speichern",
+    "removeTitle": "API-Schlüssel entfernen?",
+    "removeHint": "Claude fragen funktioniert erst wieder, wenn du einen Schlüssel hinzufügst.",
+    "saved": "API-Schlüssel gespeichert",
+    "removed": "API-Schlüssel entfernt",
+    "sent": "Was beim Fragen an Anthropic geht: die Wörter, die du eingibst, Mimikits Suchsyntax und die Namen deiner Tags. Nie Dateinamen, Ordnerpfade, Dateiinhalte oder Vorschaubilder. Eine Suche kostet deutlich weniger als ein Zehntel Cent.",
+    "getKey": "Schlüssel holen"
   },
   "about": {
     "version": "Mimikit {{version}}",

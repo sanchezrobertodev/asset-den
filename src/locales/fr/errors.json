@@ -23,5 +23,17 @@
   "clearCache": "Impossible de vider le cache des miniatures : {{error}}",
   "cantReadImage": "Mimikit n'a pas pu lire cette image.",
   "notFolder": "{{path}} n'est pas un dossier.",
-  "gone": "{{path}} n'existe plus."
+  "gone": "{{path}} n'existe plus.",
+  "aiNoKey": "Aucune clé d'API Anthropic n'est définie. Ajoutez-en une dans les Paramètres.",
+  "aiBadKeyFormat": "Cela ne ressemble pas à une clé d'API.",
+  "aiBadKey": "Anthropic n'a pas accepté votre clé d'API. Vérifiez-la dans les Paramètres.",
+  "aiBilling": "Anthropic a refusé la requête : vérifiez la facturation de votre compte API.",
+  "aiRateLimited": "Trop de requêtes vers Anthropic. Patientez un instant et réessayez.",
+  "aiBusy": "Anthropic est surchargé pour le moment. Réessayez dans un instant.",
+  "aiOffline": "Impossible de joindre Anthropic. Vérifiez votre connexion Internet et réessayez.",
+  "aiDeclined": "Claude a refusé de répondre. Essayez d'autres mots.",
+  "aiNoAnswer": "La réponse de Claude est tronquée ou illisible. Réessayez.",
+  "aiTooLong": "La demande est limitée à 500 caractères.",
+  "aiKeyStore": "Impossible d'utiliser le gestionnaire d'identifiants du système : {{error}}",
+  "aiError": "Anthropic a renvoyé une erreur : {{error}}"
 }

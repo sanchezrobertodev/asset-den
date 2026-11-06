@@ -1,0 +1,230 @@
+//! Built-in AI features on the user's own Anthropic API key: "Ask" in the search box now, bulk tagging later. The key
+//! lives in the OS credential store under the app's identifier. It never goes to the window, the database, the prefs or
+//! a log; only to api.anthropic.com, from here.
+
+use std::time::Duration;
+
+use serde::Serialize;
+use serde_json::{Value, json};
+use tauri::AppHandle;
+
+const API: &str = "https://api.anthropic.com/v1";
+const API_VERSION: &str = "2026-10-21";
+const KEY_USER: &str = "anthropic-api-key";
+const TIMEOUT: Duration = Duration::from_secs(30);
+/// Ask's model: the small, fast one. A search costs about $0.0003 (see the PR's eval).
+const ASK_MODEL: &str = "claude-haiku-5-5";
+const MAX_WORDS: usize = 500;
+const MAX_PROMPT: usize = 64 * 1024;
+
+// The window translates these by their English text (src/locales/en/errors.json), so keep the two the same.
+pub const NO_KEY: &str = "No Anthropic API key is set. Add one in Settings.";
+const BAD_KEY_FORMAT: &str = "That doesn't look like an API key.";
+const BAD_KEY: &str = "Anthropic didn't accept your API key. Check it in Settings.";
+const BILLING: &str = "Anthropic refused the request: check the billing of your API account.";
+const RATE_LIMITED: &str = "Too many requests to Anthropic. Wait a moment and try again.";
+const BUSY: &str = "Anthropic is busy right now. Try again in a moment.";
+const OFFLINE: &str = "Couldn't reach Anthropic. Check your internet connection and try again.";
+const DECLINED: &str = "Claude declined to answer. Try other words.";
+const NO_ANSWER: &str = "Claude's answer was cut short or unreadable. Try again.";
+const TOO_LONG: &str = "Ask takes up to 500 characters.";
+
+fn entry(app: &AppHandle) -> Result<keyring::Entry, String> {
+    keyring::Entry::new(&app.config().identifier, KEY_USER).map_err(store_err)
+}
+
+fn store_err(e: keyring::Error) -> String {
+    format!("Couldn't use the system's credential store: {e}")
+}
+
+fn key(app: &AppHandle) -> Result<String, String> {
+    match entry(app)?.get_password() {
+        Ok(k) => Ok(k),
+        Err(keyring::Error::NoEntry) => Err(NO_KEY.into()),
+        Err(e) => Err(store_err(e)),
+    }
+}
+
+/// Whether a key is stored. The key itself never leaves the backend.
+#[tauri::command(async)]
+pub fn api_key_status(app: AppHandle) -> Result<bool, String> {
+    match key(&app) {
+        Ok(_) => Ok(true),
+        Err(e) if e == NO_KEY => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+#[tauri::command(async)]
+pub fn set_api_key(app: AppHandle, key: String) -> Result<(), String> {
+    let key = key.trim();
+    if key.is_empty() || key.len() > 256 || key.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err(BAD_KEY_FORMAT.into());
+    }
+    entry(&app)?.set_password(key).map_err(store_err)
+}
+
+#[tauri::command(async)]
+pub fn remove_api_key(app: AppHandle) -> Result<(), String> {
+    match entry(&app)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(store_err(e)),
+    }
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AskReply {
+    query: String,
+    input_tokens: u64,
+    output_tokens: u64,
+}
+
+/// Turns plain words into a search with one small call. `prompt` is the search language and tag names the window
+/// builds (src/lib/ask.ts); the reply is checked there before it runs.
+#[tauri::command]
+pub async fn ask_search(app: AppHandle, prompt: String, words: String) -> Result<AskReply, String> {
+    let words = words.trim().to_string();
+    if words.is_empty() || words.chars().count() > MAX_WORDS || prompt.len() > MAX_PROMPT {
+        return Err(TOO_LONG.into());
+    }
+    // The credential store can block (Secret Service is a D-Bus call), so not on the async runtime.
+    let key = tauri::async_runtime::spawn_blocking(move || key(&app))
+        .await
+        .map_err(crate::err)??;
+    parse_ask(&post(&key, "/messages", &ask_body(&prompt, &words)).await?)
+}
+
+fn ask_body(prompt: &str, words: &str) -> Value {
+    json!({
+        "model": ASK_MODEL,
+        // Room for a little thinking before the short answer.
+        "max_tokens": 1024,
+        "output_config": {
+            "effort": "low",
+            "format": {
+                "type": "json_schema",
+                "schema": {
+                    "type": "object",
+                    "properties": { "query": { "type": "string" } },
+                    "required": ["query"],
+                    "additionalProperties": false,
+                },
+            },
+        },
+        "system": prompt,
+        "messages": [{ "role": "user", "content": words }],
+    })
+}
+
+fn parse_ask(reply: &Value) -> Result<AskReply, String> {
+    if reply["stop_reason"] == "refusal" {
+        return Err(DECLINED.into());
+    }
+    // Thinking blocks may come first: read the answer by type.
+    let text = reply["content"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|b| b["type"] == "text");
+    let query = text
+        .and_then(|b| serde_json::from_str::<Value>(b["text"].as_str()?).ok())
+        .and_then(|v| Some(v["query"].as_str()?.trim().to_string()))
+        .ok_or(NO_ANSWER)?;
+    let usage = &reply["usage"];
+    Ok(AskReply {
+        query,
+        input_tokens: usage["input_tokens"].as_u64().unwrap_or(0),
+        output_tokens: usage["output_tokens"].as_u64().unwrap_or(0),
+    })
+}
+
+async fn post(key: &str, path: &str, body: &Value) -> Result<Value, String> {
+    let res = reqwest::Client::builder()
+        .timeout(TIMEOUT)
+        .build()
+        .map_err(crate::err)?
+        .post(format!("{API}{path}"))
+        .header("x-api-key", key)
+        .header("anthropic-version", API_VERSION)
+        .json(body)
+        .send()
+        .await
+        .map_err(|_| OFFLINE.to_string())?;
+    let status = res.status().as_u16();
+    let bytes = res.bytes().await.map_err(|_| OFFLINE.to_string())?;
+    let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+    if status == 200 {
+        Ok(json)
+    } else {
+        Err(api_error(status, &json))
+    }
+}
+
+fn api_error(status: u16, body: &Value) -> String {
+    match status {
+        401 | 403 => BAD_KEY.into(),
+        402 => BILLING.into(),
+        429 => RATE_LIMITED.into(),
+        500.. => BUSY.into(),
+        _ => {
+            let msg = body["error"]["message"]
+                .as_str()
+                .map_or_else(|| format!("HTTP {status}"), str::to_string);
+            format!("Anthropic returned an error: {msg}")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ask_body_is_small_and_structured() {
+        let b = ask_body("grammar", "dark forest ambience");
+        assert_eq!(b["model"], "claude-haiku-5-5");
+        assert_eq!(b["output_config"]["format"]["schema"]["required"], json!(["query"]));
+        assert_eq!(b["messages"][0]["content"], "dark forest ambience");
+        // Haiku 5.5 refuses sampling parameters and prefills.
+        assert!(b.get("temperature").is_none());
+        assert_eq!(b["messages"].as_array().unwrap().last().unwrap()["role"], "user");
+    }
+
+    #[test]
+    fn reads_the_answer_after_thinking() {
+        let reply = json!({
+            "stop_reason": "end_turn",
+            "content": [{ "type": "thinking", "thinking": "", "signature": "x" }, { "type": "text", "text": "{\"query\":\" type:audio dur:>1m \"}" }],
+            "usage": { "input_tokens": 900, "output_tokens": 30 },
+        });
+        assert_eq!(
+            parse_ask(&reply),
+            Ok(AskReply {
+                query: "type:audio dur:>1m".into(),
+                input_tokens: 900,
+                output_tokens: 30
+            })
+        );
+        assert_eq!(
+            parse_ask(&json!({ "stop_reason": "refusal", "content": [] })),
+            Err(DECLINED.into())
+        );
+        let cut =
+            json!({ "stop_reason": "max_tokens", "content": [{ "type": "text", "text": "{\"query\":\"type:au" }] });
+        assert_eq!(parse_ask(&cut), Err(NO_ANSWER.into()));
+    }
+
+    #[test]
+    fn errors_say_what_to_do() {
+        assert_eq!(api_error(401, &Value::Null), BAD_KEY);
+        assert_eq!(api_error(429, &Value::Null), RATE_LIMITED);
+        assert_eq!(api_error(529, &Value::Null), BUSY);
+        let low = json!({ "type": "error", "error": { "type": "invalid_request_error", "message": "Your credit balance is too low." } });
+        assert_eq!(
+            api_error(400, &low),
+            "Anthropic returned an error: Your credit balance is too low."
+        );
+        assert_eq!(api_error(404, &Value::Null), "Anthropic returned an error: HTTP 404");
+    }
+}

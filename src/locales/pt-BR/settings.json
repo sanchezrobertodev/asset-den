@@ -6,6 +6,7 @@
     "backups": "Backups",
     "storage": "Armazenamento",
     "updates": "Atualizações",
+    "ai": "Funções de IA",
     "about": "Sobre"
   },
   "appearance": {
@@ -33,6 +34,21 @@
   "updates": {
     "checkOnLaunch": "Verificar atualizações ao abrir",
     "checkOnLaunchHint": "Verifica discretamente alguns segundos após a abertura. Nada é instalado sem perguntar."
+  },
+  "ai": {
+    "key": "Chave de API da Anthropic",
+    "keySet": "Definida. Guardada no armazenamento de credenciais do sistema, nunca na biblioteca.",
+    "keyNotSet": "Não definida. Para perguntar ao Claude pela busca, use sua própria chave da Anthropic, cobrada na sua conta da API.",
+    "add": "Adicionar chave",
+    "change": "Alterar",
+    "remove": "Remover",
+    "save": "Salvar",
+    "removeTitle": "Remover a chave de API?",
+    "removeHint": "Perguntar ao Claude para de funcionar até você adicionar uma chave de novo.",
+    "saved": "Chave de API salva",
+    "removed": "Chave de API removida",
+    "sent": "O que vai para a Anthropic ao perguntar: as palavras que você digita, a sintaxe de busca do Mimikit e os nomes das suas tags. Nunca nomes de arquivos, caminhos de pastas, conteúdo de arquivos ou miniaturas. Cada busca custa bem menos de um décimo de centavo de dólar.",
+    "getKey": "Obter uma chave"
   },
   "about": {
     "version": "Mimikit {{version}}",

@@ -46,6 +46,7 @@
     "search-slash": "Rechercher",
     "results": "Parcourir les résultats",
     "run": "Ouvrir le résultat en surbrillance",
+    "ask": "Demander à Claude de transformer vos mots en recherche",
     "close": "Fermer la recherche"
   },
   "hint": {

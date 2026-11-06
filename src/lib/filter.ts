@@ -106,12 +106,12 @@ export interface Query {
 }
 
 /** `type:` takes a kind or the start of its English name, whatever the UI language, so saved searches keep matching. */
-const KIND_NAMES: Record<Kind, string> = { image: "images", audio: "audio", model: "3d models", font: "fonts", video: "video", text: "text & data", other: "other" };
+export const KIND_NAMES: Record<Kind, string> = { image: "images", audio: "audio", model: "3d models", font: "fonts", video: "video", text: "text & data", other: "other" };
 /** Full-width forms of the search operators, as Japanese and Chinese input methods type them. */
 const FULL_WIDTH = /[：＃＞＜＝]/g;
 
-const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
-const TIME_UNITS: Record<string, number> = { ms: 1, s: 1000, m: 60_000 };
+export const UNITS: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 ** 3 };
+export const TIME_UNITS: Record<string, number> = { ms: 1, s: 1000, m: 60_000 };
 
 export function parseQuery(q: string): Query {
   const out: Query = { types: null, folder: null, tags: [], minBytes: 0, maxBytes: Infinity, minMs: null, maxMs: null, minRating: 0, maxRating: 5, notes: [], colors: [], text: [] };

@@ -29,6 +29,17 @@
     "updates": "アップデートを確認",
     "shortcuts": "キーボードショートカット"
   },
+  "ask": {
+    "title": "Claude に尋ねる",
+    "label": "Claude に検索へ変換してもらう",
+    "setup": "Claude に尋ねるには Anthropic API キーを追加してください",
+    "asking": "Claude に問い合わせ中…",
+    "from": "「{{words}}」から Claude が作った検索",
+    "back": "元の言葉に戻す",
+    "empty": "その言葉には検索に使えるものが見つかりませんでした。別の言葉で試してください。",
+    "invalid": "Claude は「{{query}}」と書きましたが、Mimikit は {{words}} を読めないため、検索は実行していません。",
+    "openSettings": "設定を開く"
+  },
   "dialog": "検索",
   "input": "アセット、フォルダー、アクションを検索",
   "placeholder": "アセット、フォルダー、アクションを検索",

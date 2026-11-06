@@ -1,14 +1,17 @@
 import clsx from "clsx";
-import { Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CircleAlert, LoaderCircle, Search, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { api, errorText } from "../api";
 import { openUpdates, useAppUpdate } from "../appUpdate";
+import { askPrompt, badWords, topTags } from "../lib/ask";
 import { matchesFilters, matchesQuery, parseQuery, ruleMatcher } from "../lib/filter";
 import { folderOf, rootLabel } from "../lib/format";
 import { bytes } from "../lib/fmt";
 import { t } from "../lib/i18n";
-import { shortcut } from "../lib/shortcuts";
+import { isMac, shortcut } from "../lib/shortcuts";
 import { useStore } from "../store";
 import type { Asset } from "../types";
+import { openKeySetup } from "./Settings";
 import { Thumb } from "./Thumb";
 import { focusAssets, KindPill, Kbd, trapTab } from "./ui";
 
@@ -18,6 +21,9 @@ interface Item {
   sub?: string;
   right?: string;
   asset?: Asset;
+  icon?: ReactNode;
+  /** Runs without closing search. */
+  keep?: boolean;
   run: () => void;
 }
 
@@ -36,6 +42,42 @@ export function Palette() {
   const listRef = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const ran = useRef(false);
+  // Ask: whether a key is stored, a call in flight, its error, and the words the current search was written from.
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState<{ text: string; settings: boolean } | null>(null);
+  const [asked, setAsked] = useState<{ words: string; query: string } | null>(null);
+  useEffect(() => {
+    api.apiKeyStatus().then(setHasKey, () => setHasKey(null));
+  }, []);
+  const openSetup = () => {
+    useStore.setState({ palette: false });
+    openKeySetup();
+  };
+  const ask = useRef(async () => {});
+  ask.current = async () => {
+    const words = q.trim();
+    if (!words || asking) return;
+    if (hasKey === false) return openSetup();
+    setAsking(true);
+    setAskError(null);
+    try {
+      const { query } = await api.askSearch(askPrompt(topTags(s.assets)), words);
+      const bad = badWords(query);
+      // A search the parser would read differently from what Claude meant is shown, never run.
+      if (!query) setAskError({ text: t("palette.ask.empty"), settings: false });
+      else if (bad.length) setAskError({ text: t("palette.ask.invalid", { query, words: bad.join(" ") }), settings: false });
+      else {
+        setQ(query);
+        setAsked({ words, query });
+      }
+    } catch (e) {
+      const text = errorText(e);
+      setAskError({ text, settings: text === t("errors.aiNoKey") || text === t("errors.aiBadKey") });
+    } finally {
+      setAsking(false);
+    }
+  };
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -115,6 +157,21 @@ export function Palette() {
         })),
       ];
       out.push({ title: t("palette.assets", { count: matches.length }), items });
+      // Plain words can be asked as a search; first when they match nothing, so Enter asks.
+      if (parsed.text.length && q.trim() !== asked?.query) {
+        const askItem: Item = {
+          key: "ask",
+          label: hasKey === false ? t("palette.ask.setup") : asking ? t("palette.ask.asking") : t("palette.ask.label"),
+          sub: q.trim(),
+          right: shortcut("ask").keys,
+          icon: asking ? <LoaderCircle aria-hidden className="size-4 animate-spin text-muted" /> : <Sparkles aria-hidden className="size-4 text-accent" />,
+          keep: true,
+          run: () => void ask.current(),
+        };
+        const section = { title: t("palette.ask.title"), items: [askItem] };
+        if (matches.length) out.push(section);
+        else out.unshift(section);
+      }
     }
     if (parsed.text.length) {
       const seen = new Map<string, { rootId: number; path: string; n: number }>();
@@ -182,17 +239,21 @@ export function Palette() {
     return out;
     // Only what it reads: the whole store changes on every scan tick, and this searches every asset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, s.assets, s.notes, s.palettes, s.filters, s.view, s.collections, s.colSel, s.dups, s.roots]);
+  }, [q, s.assets, s.notes, s.palettes, s.filters, s.view, s.collections, s.colSel, s.dups, s.roots, hasKey, asking, asked]);
 
   const flat = sections.flatMap((sec) => sec.items);
   const run = (item?: Item) => {
     if (!item) return;
+    if (item.keep) return item.run();
     ran.current = true;
     item.run();
     useStore.setState({ palette: false });
   };
 
-  useEffect(() => setPi(0), [q]);
+  useEffect(() => {
+    setPi(0);
+    setAskError(null);
+  }, [q]);
   useEffect(() => {
     listRef.current?.querySelector(`[data-i="${pi}"]`)?.scrollIntoView({ block: "nearest" });
   }, [pi]);
@@ -214,9 +275,14 @@ export function Palette() {
           <input
             ref={input}
             value={q}
+            readOnly={asking}
+            aria-busy={asking}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
+              if (e.key === "Enter" && (isMac ? e.metaKey : e.ctrlKey)) {
+                e.preventDefault();
+                void ask.current();
+              } else if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setPi((p) => Math.min(flat.length - 1, p + 1));
               } else if (e.key === "ArrowUp") {
@@ -240,6 +306,41 @@ export function Palette() {
             className="flex-1 border-0 bg-transparent text-base text-fg outline-none"
           />
           <Kbd>{shortcut("close").keys}</Kbd>
+        </div>
+        <div role="status" className="flex items-center gap-2 border-b border-line px-[18px] py-2 text-xs empty:hidden">
+          {asking ? (
+            <>
+              <LoaderCircle aria-hidden className="size-3.5 flex-none animate-spin text-muted" />
+              <span className="text-muted">{t("palette.ask.asking")}</span>
+            </>
+          ) : askError ? (
+            <>
+              <CircleAlert aria-hidden className="size-3.5 flex-none text-danger" />
+              <span className="min-w-0 flex-1 text-fg">{askError.text}</span>
+              {askError.settings && (
+                <button type="button" onClick={openSetup} className="flex-none rounded-md px-1.5 py-0.5 font-medium text-accent hover:bg-active">
+                  {t("palette.ask.openSettings")}
+                </button>
+              )}
+            </>
+          ) : asked && q === asked.query ? (
+            <>
+              <Sparkles aria-hidden className="size-3.5 flex-none text-accent" />
+              <span className="min-w-0 flex-1 truncate text-muted" title={asked.words}>
+                {t("palette.ask.from", { words: asked.words })}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setQ(asked.words);
+                  input.current?.focus();
+                }}
+                className="flex-none rounded-md px-1.5 py-0.5 font-medium text-fg-2 hover:bg-active hover:text-fg"
+              >
+                {t("palette.ask.back")}
+              </button>
+            </>
+          ) : null}
         </div>
         <div role="group" aria-labelledby="palette-tokens" className="flex flex-wrap items-center gap-1.5 border-b border-line px-[18px] py-2.5 text-xs text-faint">
           <span id="palette-tokens" className="mr-1">
@@ -279,6 +380,7 @@ export function Palette() {
                     className={clsx("flex min-h-11 cursor-pointer items-center gap-3 rounded-[9px] px-2.5", my === pi && "bg-active inset-ring-1 inset-ring-line-x")}
                   >
                     {r.asset && <Thumb asset={r.asset} size="row" className="size-8 flex-none rounded-[7px]" />}
+                    {r.icon && <span className="flex size-8 flex-none items-center justify-center rounded-[7px] bg-active">{r.icon}</span>}
                     <span className="flex min-w-0 flex-1 flex-col gap-px">
                       <span className="truncate font-medium">{r.label}</span>
                       {r.sub && <span className="truncate text-xs text-faint">{r.sub}</span>}

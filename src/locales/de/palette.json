@@ -34,6 +34,17 @@
     "updates": "Nach Updates suchen",
     "shortcuts": "Tastenkürzel"
   },
+  "ask": {
+    "title": "Fragen",
+    "label": "Claude daraus eine Suche machen lassen",
+    "setup": "Füge einen Anthropic-API-Schlüssel hinzu, um Claude zu fragen",
+    "asking": "Claude wird gefragt…",
+    "from": "Claudes Suche für „{{words}}“",
+    "back": "Zurück zu meinen Wörtern",
+    "empty": "Claude hat in diesen Wörtern nichts gefunden, wonach sich suchen lässt. Versuch es mit anderen Wörtern.",
+    "invalid": "Claude hat „{{query}}“ geschrieben, aber Mimikit versteht {{words}} nicht, deshalb wurde nicht gesucht.",
+    "openSettings": "Einstellungen öffnen"
+  },
   "dialog": "Suche",
   "input": "Assets, Ordner und Aktionen durchsuchen",
   "placeholder": "Assets, Ordner, Aktionen suchen",

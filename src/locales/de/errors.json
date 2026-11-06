@@ -23,5 +23,17 @@
   "clearCache": "Der Vorschaubild-Cache konnte nicht geleert werden: {{error}}",
   "cantReadImage": "Mimikit konnte dieses Bild nicht lesen.",
   "notFolder": "{{path}} ist kein Ordner.",
-  "gone": "{{path}} existiert nicht mehr."
+  "gone": "{{path}} existiert nicht mehr.",
+  "aiNoKey": "Kein Anthropic-API-Schlüssel festgelegt. Füge in den Einstellungen einen hinzu.",
+  "aiBadKeyFormat": "Das sieht nicht wie ein API-Schlüssel aus.",
+  "aiBadKey": "Anthropic hat deinen API-Schlüssel nicht akzeptiert. Prüfe ihn in den Einstellungen.",
+  "aiBilling": "Anthropic hat die Anfrage abgelehnt: Prüfe die Abrechnung deines API-Kontos.",
+  "aiRateLimited": "Zu viele Anfragen an Anthropic. Warte kurz und versuch es noch einmal.",
+  "aiBusy": "Anthropic ist gerade ausgelastet. Versuch es gleich noch einmal.",
+  "aiOffline": "Anthropic ist nicht erreichbar. Prüfe deine Internetverbindung und versuch es noch einmal.",
+  "aiDeclined": "Claude hat die Antwort abgelehnt. Versuch es mit anderen Wörtern.",
+  "aiNoAnswer": "Claudes Antwort war abgeschnitten oder unlesbar. Versuch es noch einmal.",
+  "aiTooLong": "Claude fragen geht mit bis zu 500 Zeichen.",
+  "aiKeyStore": "Der Anmeldedatenspeicher des Systems ließ sich nicht nutzen: {{error}}",
+  "aiError": "Anthropic hat einen Fehler gemeldet: {{error}}"
 }

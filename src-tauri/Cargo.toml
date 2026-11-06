@@ -40,6 +40,10 @@ dirs = "7"
 symphonia = { version = "0.6", default-features = false, features = ["wav", "ogg", "mp3", "flac", "isomp4", "aac", "id3v2"] }
 # Low OS priority for background passes (image analysis, duplicate hashing, audio headers).
 thread-priority = "3"
+# The user's Anthropic API key, in the OS credential store (Windows Credential Manager, macOS Keychain, Secret Service).
+keyring = "4.2"
+# Claude API calls (ai.rs). Already in the build through the updater: the same version and TLS, so no new crates.
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
 
 # Whether an agent's relay is still running (bridge.rs `relays_alive`). Both were already in the build through Tauri.
 [target.'cfg(windows)'.dependencies]

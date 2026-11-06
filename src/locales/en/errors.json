@@ -23,5 +23,17 @@
   "clearCache": "Couldn't clear the thumbnail cache: {{error}}",
   "cantReadImage": "Mimikit couldn't read this image.",
   "notFolder": "{{path}} is not a folder.",
-  "gone": "{{path}} no longer exists."
+  "gone": "{{path}} no longer exists.",
+  "aiNoKey": "No Anthropic API key is set. Add one in Settings.",
+  "aiBadKeyFormat": "That doesn't look like an API key.",
+  "aiBadKey": "Anthropic didn't accept your API key. Check it in Settings.",
+  "aiBilling": "Anthropic refused the request: check the billing of your API account.",
+  "aiRateLimited": "Too many requests to Anthropic. Wait a moment and try again.",
+  "aiBusy": "Anthropic is busy right now. Try again in a moment.",
+  "aiOffline": "Couldn't reach Anthropic. Check your internet connection and try again.",
+  "aiDeclined": "Claude declined to answer. Try other words.",
+  "aiNoAnswer": "Claude's answer was cut short or unreadable. Try again.",
+  "aiTooLong": "Ask takes up to 500 characters.",
+  "aiKeyStore": "Couldn't use the system's credential store: {{error}}",
+  "aiError": "Anthropic returned an error: {{error}}"
 }

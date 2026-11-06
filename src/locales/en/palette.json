@@ -34,6 +34,17 @@
     "updates": "Check for updates",
     "shortcuts": "Keyboard shortcuts"
   },
+  "ask": {
+    "title": "Ask",
+    "label": "Ask Claude to turn this into a search",
+    "setup": "Add an Anthropic API key to ask Claude",
+    "asking": "Asking Claude…",
+    "from": "Claude's search for “{{words}}”",
+    "back": "Back to my words",
+    "empty": "Claude found nothing in those words that a search can use. Try other words.",
+    "invalid": "Claude wrote “{{query}}”, but Mimikit can't read {{words}}, so it wasn't run.",
+    "openSettings": "Open Settings"
+  },
   "dialog": "Search",
   "input": "Search assets, folders and actions",
   "placeholder": "Search assets, folders, actions",

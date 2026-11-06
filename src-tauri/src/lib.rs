@@ -1,3 +1,4 @@
+mod ai;
 mod analysis;
 mod audio;
 mod backup;
@@ -923,6 +924,7 @@ fn open_link(app: AppHandle, link: String) -> Result<(), String> {
         "releases" => "https://github.com/sanchezrobertodev/mimikit/releases",
         "source" => "https://github.com/sanchezrobertodev/mimikit",
         "ko-fi" => "https://ko-fi.com/sanchezrobertodev",
+        "anthropic-keys" => "https://platform.claude.com/settings/keys",
         _ => return Err(format!("Unknown link {link}.")),
     };
     app.opener().open_url(url, None::<&str>).map_err(err)
@@ -1063,7 +1065,11 @@ pub fn run() {
             open_link,
             bridge::set_agent_bridge,
             bridge::agent_reply,
-            bridge::relays_alive
+            bridge::relays_alive,
+            ai::api_key_status,
+            ai::set_api_key,
+            ai::remove_api_key,
+            ai::ask_search
         ])
         .run(context())
         .expect("error while running tauri application");

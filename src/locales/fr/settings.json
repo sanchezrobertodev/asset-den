@@ -6,6 +6,7 @@
     "backups": "Sauvegardes",
     "storage": "Stockage",
     "updates": "Mises à jour",
+    "ai": "Fonctions d'IA",
     "about": "À propos"
   },
   "appearance": {
@@ -33,6 +34,21 @@
   "updates": {
     "checkOnLaunch": "Rechercher les mises à jour au démarrage",
     "checkOnLaunchHint": "Vérifie discrètement quelques secondes après le lancement. Rien ne s'installe sans votre accord."
+  },
+  "ai": {
+    "key": "Clé d'API Anthropic",
+    "keySet": "Définie. Conservée dans le gestionnaire d'identifiants du système, jamais dans la bibliothèque.",
+    "keyNotSet": "Non définie. Pour demander à Claude depuis la recherche, utilisez votre propre clé Anthropic, facturée sur votre compte API.",
+    "add": "Ajouter une clé",
+    "change": "Modifier",
+    "remove": "Supprimer",
+    "save": "Enregistrer",
+    "removeTitle": "Supprimer la clé d'API ?",
+    "removeHint": "Demander à Claude ne fonctionnera plus tant que vous n'aurez pas ajouté de clé.",
+    "saved": "Clé d'API enregistrée",
+    "removed": "Clé d'API supprimée",
+    "sent": "Ce que la demande envoie à Anthropic : les mots que vous tapez, la syntaxe de recherche de Mimikit et les noms de vos tags. Jamais de noms de fichiers, de chemins de dossiers, de contenu de fichiers ni de miniatures. Une recherche coûte bien moins d'un dixième de cent de dollar.",
+    "getKey": "Obtenir une clé"
   },
   "about": {
     "version": "Mimikit {{version}}",

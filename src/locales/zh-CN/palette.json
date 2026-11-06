@@ -29,6 +29,17 @@
     "updates": "检查更新",
     "shortcuts": "键盘快捷键"
   },
+  "ask": {
+    "title": "询问 Claude",
+    "label": "让 Claude 把它转换成搜索",
+    "setup": "添加 Anthropic API 密钥即可询问 Claude",
+    "asking": "正在询问 Claude…",
+    "from": "Claude 根据“{{words}}”写出的搜索",
+    "back": "回到我的原话",
+    "empty": "Claude 在这些文字中没有找到可用于搜索的内容。请换个说法。",
+    "invalid": "Claude 写出了“{{query}}”，但 Mimikit 无法识别 {{words}}，因此没有执行搜索。",
+    "openSettings": "打开设置"
+  },
   "dialog": "搜索",
   "input": "搜索资源、文件夹和操作",
   "placeholder": "搜索资源、文件夹、操作",

@@ -103,7 +103,14 @@ export const api = {
     });
     return typeof picked === "string" ? picked : null;
   },
-  openLink: (link: "releases" | "source" | "ko-fi") => invoke<void>("open_link", { link }),
+  openLink: (link: "releases" | "source" | "ko-fi" | "anthropic-keys") => invoke<void>("open_link", { link }),
+  /** Whether an Anthropic API key is stored. The key itself never comes to the window. */
+  apiKeyStatus: () => invoke<boolean>("api_key_status"),
+  setApiKey: (key: string) => invoke<void>("set_api_key", { key }),
+  removeApiKey: () => invoke<void>("remove_api_key"),
+  /** Ask: Claude turns `words` into a search, following `prompt` (lib/ask.ts). Check the query before running it. */
+  askSearch: (prompt: string, words: string) =>
+    invoke<{ query: string; inputTokens: number; outputTokens: number }>("ask_search", { prompt, words }),
   pickFolder: async (title = t("api.importTitle")) => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;

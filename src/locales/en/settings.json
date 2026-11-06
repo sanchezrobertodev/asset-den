@@ -6,6 +6,7 @@
     "backups": "Backups",
     "storage": "Storage",
     "updates": "Updates",
+    "ai": "AI features",
     "about": "About"
   },
   "appearance": {
@@ -33,6 +34,21 @@
   "updates": {
     "checkOnLaunch": "Check for updates on launch",
     "checkOnLaunchHint": "Looks quietly a few seconds after start. Nothing installs without asking."
+  },
+  "ai": {
+    "key": "Anthropic API key",
+    "keySet": "Set. Kept in your system's credential store, never in the library.",
+    "keyNotSet": "Not set. Ask in the search box uses your own Anthropic key, billed to your API account.",
+    "add": "Add key",
+    "change": "Change",
+    "remove": "Remove",
+    "save": "Save",
+    "removeTitle": "Remove the API key?",
+    "removeHint": "Ask stops working until you add a key again.",
+    "saved": "API key saved",
+    "removed": "API key removed",
+    "sent": "What Ask sends to Anthropic: the words you type, Mimikit's search syntax and your tag names. Never file names, folder paths, file contents or thumbnails. A search costs well under a tenth of a cent.",
+    "getKey": "Get a key"
   },
   "about": {
     "version": "Mimikit {{version}}",
