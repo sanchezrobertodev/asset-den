@@ -5,6 +5,8 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-05
+
 ### Added
 
 - The sidebar collapses to a narrow rail of section icons with the button at its top or **Ctrl+B** (⌘B on macOS),
