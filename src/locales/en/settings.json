@@ -47,8 +47,17 @@
     "removeHint": "Ask stops working until you add a key again.",
     "saved": "API key saved",
     "removed": "API key removed",
-    "sent": "What Ask sends to Anthropic: the words you type, Mimikit's search syntax and your tag names. Never file names, folder paths, file contents or thumbnails. A search costs well under a tenth of a cent.",
-    "getKey": "Get a key"
+    "sent": "What Ask sends to Anthropic: the words you type, Mimikit's search syntax and your tag names. Never file names, folder paths, file contents or thumbnails.",
+    "getKey": "Get a key",
+    "model": "Model",
+    "modelHint": "Haiku answers in about a second, for a tiny fraction of a cent. Sonnet and Opus cost about 20 and 40 times as much, and are slower.",
+    "effort": "Effort",
+    "effortHint": "How much Claude thinks before it answers. Higher is slower and costs more; Low is enough for searches.",
+    "effortLevel": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

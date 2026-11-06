@@ -9,7 +9,7 @@ import { useAppUpdate } from "../appUpdate";
 import { baseName } from "../lib/format";
 import { ago, bytes } from "../lib/fmt";
 import { locales, t } from "../lib/i18n";
-import type { Theme } from "../lib/prefs";
+import { AI_EFFORTS, AI_MODELS, type AiPrefs, type Theme } from "../lib/prefs";
 import { ACCENTS, THEMES, accentName, themeById, themeName, type ThemeId } from "../lib/themes";
 import { forgetThumbnails } from "../lib/thumbs";
 import { languageName, systemLanguage } from "../locales";
@@ -563,8 +563,15 @@ export function openKeySetup() {
 }
 
 /** Settings › AI features: the user's own Anthropic API key, which the backend keeps in the OS credential store (ai.rs). */
+/** Product names, the same in every language. */
+const MODEL_NAMES: Record<AiPrefs["model"], string> = {
+  "claude-haiku-5-5": "Haiku 5.5",
+  "claude-sonnet-5-5": "Sonnet 5.5",
+  "claude-opus-5-5": "Opus 5.5",
+};
+
 function ApiKey() {
-  const { setError, showToast } = useStore();
+  const { setError, showToast, ai, setAi } = useStore();
   const [stored, setStored] = useState<boolean | null>(null);
   // The key being typed, or null when not editing. The stored key never comes back to the window.
   const [draft, setDraft] = useState<string | null>(() => (wantKey ? "" : null));
@@ -688,6 +695,22 @@ function ApiKey() {
       <p id="api-key-sent" className="pb-2 text-xs text-muted">
         {t("settings.ai.sent")}
       </p>
+      <Row label={t("settings.ai.model")} hint={t("settings.ai.modelHint")}>
+        <Segmented
+          label={t("settings.ai.model")}
+          value={ai.model}
+          onChange={(model) => setAi({ model })}
+          options={AI_MODELS.map((m) => ({ value: m, label: MODEL_NAMES[m] }))}
+        />
+      </Row>
+      <Row label={t("settings.ai.effort")} hint={t("settings.ai.effortHint")}>
+        <Segmented
+          label={t("settings.ai.effort")}
+          value={ai.effort}
+          onChange={(effort) => setAi({ effort })}
+          options={AI_EFFORTS.map((e) => ({ value: e, label: t(`settings.ai.effortLevel.${e}`) }))}
+        />
+      </Row>
     </>
   );
 }

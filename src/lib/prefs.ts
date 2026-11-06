@@ -13,6 +13,13 @@ export type KindLabels = "both" | "icon" | "name";
 export type StartView = "home" | "library";
 /** The left sidebar: full, or a rail of section icons. */
 export type SidebarMode = "expanded" | "collapsed";
+/** Claude models the AI features can use, cheapest first (ai.rs `Model` accepts the same ids). */
+export const AI_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"] as const;
+export const AI_EFFORTS = ["low", "medium", "high"] as const;
+export interface AiPrefs {
+  model: (typeof AI_MODELS)[number];
+  effort: (typeof AI_EFFORTS)[number];
+}
 
 export interface Prefs {
   theme: Theme;
@@ -36,6 +43,8 @@ export interface Prefs {
   /** Audio previews start again when they end. */
   audioLoop: boolean;
   sidebar: SidebarMode;
+  /** The model and effort for Ask (and later AI features), in Settings › AI features. */
+  ai: AiPrefs;
 }
 
 const defaults: Prefs = {
@@ -54,6 +63,7 @@ const defaults: Prefs = {
   checkUpdates: true,
   audioLoop: false,
   sidebar: "expanded",
+  ai: { model: "claude-haiku-5-5", effort: "low" },
 };
 
 const KEY = "assetden.prefs.v2";
@@ -70,6 +80,11 @@ export function loadPrefs(): Prefs {
     if (!["home", "library"].includes(p.startView)) p.startView = defaults.startView;
     if (!["expanded", "collapsed"].includes(p.sidebar)) p.sidebar = defaults.sidebar;
     if (!Array.isArray(p.recentFolders)) p.recentFolders = defaults.recentFolders;
+    // A model a later version dropped falls back to the default rather than failing every Ask.
+    p.ai = {
+      model: AI_MODELS.includes(p.ai?.model) ? p.ai.model : defaults.ai.model,
+      effort: AI_EFFORTS.includes(p.ai?.effort) ? p.ai.effort : defaults.ai.effort,
+    };
     return p;
   } catch {
     return defaults;

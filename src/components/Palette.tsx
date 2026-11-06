@@ -69,7 +69,7 @@ export function Palette() {
     setAsking(true);
     setAskError(null);
     try {
-      const { query } = await api.askSearch(askPrompt(topTags(s.assets)), words);
+      const { query } = await api.askSearch(askPrompt(topTags(s.assets)), words, s.ai);
       const bad = badWords(query);
       // A search the parser would read differently from what Claude meant is shown, never run.
       if (!query) setAskError({ text: t("palette.ask.empty"), settings: false });

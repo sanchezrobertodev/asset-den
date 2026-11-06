@@ -4,16 +4,14 @@
 
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::AppHandle;
 
 const API: &str = "https://api.anthropic.com/v1";
 const API_VERSION: &str = "2026-10-21";
 const KEY_USER: &str = "anthropic-api-key";
-const TIMEOUT: Duration = Duration::from_secs(30);
-/// Ask's model: the small, fast one. A search costs about $0.0003 (see the PR's eval).
-const ASK_MODEL: &str = "claude-haiku-5-5";
+const TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_WORDS: usize = 500;
 const MAX_PROMPT: usize = 64 * 1024;
 
@@ -72,6 +70,27 @@ pub fn remove_api_key(app: AppHandle) -> Result<(), String> {
     }
 }
 
+/// The models Settings › AI features offers (AI_MODELS in src/lib/prefs.ts). Any other value is refused when a command's
+/// arguments are read, so the window can't use a model or effort the setting doesn't show.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub enum Model {
+    #[serde(rename = "claude-haiku-5-5")]
+    Haiku,
+    #[serde(rename = "claude-sonnet-5-5")]
+    Sonnet,
+    #[serde(rename = "claude-opus-5-5")]
+    Opus,
+}
+
+/// How much the model thinks before answering (AI_EFFORTS in src/lib/prefs.ts).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Effort {
+    Low,
+    Medium,
+    High,
+}
+
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AskReply {
@@ -83,7 +102,13 @@ pub struct AskReply {
 /// Turns plain words into a search with one small call. `prompt` is the search language and tag names the window
 /// builds (src/lib/ask.ts); the reply is checked there before it runs.
 #[tauri::command]
-pub async fn ask_search(app: AppHandle, prompt: String, words: String) -> Result<AskReply, String> {
+pub async fn ask_search(
+    app: AppHandle,
+    prompt: String,
+    words: String,
+    model: Model,
+    effort: Effort,
+) -> Result<AskReply, String> {
     let words = words.trim().to_string();
     if words.is_empty() || words.chars().count() > MAX_WORDS || prompt.len() > MAX_PROMPT {
         return Err(TOO_LONG.into());
@@ -92,16 +117,16 @@ pub async fn ask_search(app: AppHandle, prompt: String, words: String) -> Result
     let key = tauri::async_runtime::spawn_blocking(move || key(&app))
         .await
         .map_err(crate::err)??;
-    parse_ask(&post(&key, "/messages", &ask_body(&prompt, &words)).await?)
+    parse_ask(&post(&key, "/messages", &ask_body(&prompt, &words, model, effort)).await?)
 }
 
-fn ask_body(prompt: &str, words: &str) -> Value {
+fn ask_body(prompt: &str, words: &str, model: Model, effort: Effort) -> Value {
     json!({
-        "model": ASK_MODEL,
-        // Room for a little thinking before the short answer.
-        "max_tokens": 1024,
+        "model": model,
+        // Room for thinking at high effort before the short answer; Haiku at low writes about 20 tokens.
+        "max_tokens": 4096,
         "output_config": {
-            "effort": "low",
+            "effort": effort,
             "format": {
                 "type": "json_schema",
                 "schema": {
@@ -182,8 +207,21 @@ mod tests {
 
     #[test]
     fn ask_body_is_small_and_structured() {
-        let b = ask_body("grammar", "dark forest ambience");
+        let b = ask_body("grammar", "dark forest ambience", Model::Haiku, Effort::Low);
         assert_eq!(b["model"], "claude-haiku-5-5");
+        assert_eq!(b["output_config"]["effort"], "low");
+        let opus = ask_body("grammar", "x", Model::Opus, Effort::High);
+        assert_eq!(
+            (opus["model"].as_str(), opus["output_config"]["effort"].as_str()),
+            (Some("claude-opus-5-5"), Some("high"))
+        );
+        // Only what Settings offers gets through from the window.
+        assert_eq!(
+            serde_json::from_value::<Model>(json!("claude-sonnet-5-5")).unwrap(),
+            Model::Sonnet
+        );
+        assert!(serde_json::from_value::<Model>(json!("claude-fable-5-1")).is_err());
+        assert!(serde_json::from_value::<Effort>(json!("max")).is_err());
         assert_eq!(b["output_config"]["format"]["schema"]["required"], json!(["query"]));
         assert_eq!(b["messages"][0]["content"], "dark forest ambience");
         // Haiku 5.5 refuses sampling parameters and prefills.

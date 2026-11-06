@@ -7,6 +7,7 @@ import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import type { Swatch } from "./lib/colors";
 import type { AssetsDelta } from "./lib/delta";
 import { t, translateError } from "./lib/i18n";
+import type { AiPrefs } from "./lib/prefs";
 import type { AnalysisStatus, Asset, Collection, CollectionRule, DupGroup, Notes, Root, ScanProgress, SpriteSheet, TextPreview } from "./types";
 
 export interface AppUpdate {
@@ -109,8 +110,8 @@ export const api = {
   setApiKey: (key: string) => invoke<void>("set_api_key", { key }),
   removeApiKey: () => invoke<void>("remove_api_key"),
   /** Ask: Claude turns `words` into a search, following `prompt` (lib/ask.ts). Check the query before running it. */
-  askSearch: (prompt: string, words: string) =>
-    invoke<{ query: string; inputTokens: number; outputTokens: number }>("ask_search", { prompt, words }),
+  askSearch: (prompt: string, words: string, { model, effort }: AiPrefs) =>
+    invoke<{ query: string; inputTokens: number; outputTokens: number }>("ask_search", { prompt, words, model, effort }),
   pickFolder: async (title = t("api.importTitle")) => {
     const picked = await open({ directory: true, multiple: false, title });
     return typeof picked === "string" ? picked : null;

@@ -47,8 +47,17 @@
     "removeHint": "Demander à Claude ne fonctionnera plus tant que vous n'aurez pas ajouté de clé.",
     "saved": "Clé d'API enregistrée",
     "removed": "Clé d'API supprimée",
-    "sent": "Ce que la demande envoie à Anthropic : les mots que vous tapez, la syntaxe de recherche de Mimikit et les noms de vos tags. Jamais de noms de fichiers, de chemins de dossiers, de contenu de fichiers ni de miniatures. Une recherche coûte bien moins d'un dixième de cent de dollar.",
-    "getKey": "Obtenir une clé"
+    "sent": "Ce que la demande envoie à Anthropic : les mots que vous tapez, la syntaxe de recherche de Mimikit et les noms de vos tags. Jamais de noms de fichiers, de chemins de dossiers, de contenu de fichiers ni de miniatures.",
+    "getKey": "Obtenir une clé",
+    "model": "Modèle",
+    "modelHint": "Haiku répond en une seconde environ, pour une infime fraction de cent. Sonnet et Opus coûtent environ 20 et 40 fois plus, et sont plus lents.",
+    "effort": "Effort",
+    "effortHint": "Combien Claude réfléchit avant de répondre. Plus élevé, c'est plus lent et plus cher ; Faible suffit pour les recherches.",
+    "effortLevel": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

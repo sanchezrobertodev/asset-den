@@ -47,8 +47,17 @@
     "removeHint": "Perguntar ao Claude para de funcionar até você adicionar uma chave de novo.",
     "saved": "Chave de API salva",
     "removed": "Chave de API removida",
-    "sent": "O que vai para a Anthropic ao perguntar: as palavras que você digita, a sintaxe de busca do Mimikit e os nomes das suas tags. Nunca nomes de arquivos, caminhos de pastas, conteúdo de arquivos ou miniaturas. Cada busca custa bem menos de um décimo de centavo de dólar.",
-    "getKey": "Obter uma chave"
+    "sent": "O que vai para a Anthropic ao perguntar: as palavras que você digita, a sintaxe de busca do Mimikit e os nomes das suas tags. Nunca nomes de arquivos, caminhos de pastas, conteúdo de arquivos ou miniaturas.",
+    "getKey": "Obter uma chave",
+    "model": "Modelo",
+    "modelHint": "O Haiku responde em cerca de um segundo, por uma fração mínima de centavo. O Sonnet e o Opus custam cerca de 20 e 40 vezes mais, e são mais lentos.",
+    "effort": "Esforço",
+    "effortHint": "Quanto o Claude pensa antes de responder. Mais alto é mais lento e custa mais; Baixo basta para buscas.",
+    "effortLevel": {
+      "low": "Baixo",
+      "medium": "Médio",
+      "high": "Alto"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

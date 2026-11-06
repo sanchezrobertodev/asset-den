@@ -47,8 +47,17 @@
     "removeHint": "重新添加密钥之前，无法询问 Claude。",
     "saved": "API 密钥已保存",
     "removed": "API 密钥已移除",
-    "sent": "询问 Claude 时发送给 Anthropic 的内容：你输入的文字、Mimikit 的搜索语法和你的标签名称。绝不发送文件名、文件夹路径、文件内容或缩略图。每次搜索的费用远低于 0.1 美分。",
-    "getKey": "获取密钥"
+    "sent": "询问 Claude 时发送给 Anthropic 的内容：你输入的文字、Mimikit 的搜索语法和你的标签名称。绝不发送文件名、文件夹路径、文件内容或缩略图。",
+    "getKey": "获取密钥",
+    "model": "模型",
+    "modelHint": "Haiku 约一秒即可回答，费用只是一美分的极小部分。Sonnet 和 Opus 的费用约为其 20 倍和 40 倍，速度也更慢。",
+    "effort": "思考程度",
+    "effortHint": "Claude 回答前思考多少。越高越慢，费用也越高；搜索用“低”就够了。",
+    "effortLevel": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    }
   },
   "about": {
     "version": "Mimikit {{version}}",

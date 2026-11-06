@@ -13,8 +13,9 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
   words** puts your words back.
 - **Settings › AI features** holds your own Anthropic API key for Ask, in the system's credential store (Windows
   Credential Manager, macOS Keychain, Secret Service), never in the library. Ask sends Anthropic only your words, the
-  search syntax and your tag names, never file names, paths, contents or thumbnails. A search costs your API account
-  a few hundredths of a cent.
+  search syntax and your tag names, never file names, paths, contents or thumbnails. **Model** picks Claude Haiku 5.5
+  (the default: a search costs your API account a few hundredths of a cent), Sonnet 5.5 or Opus 5.5, and **Effort**
+  how much it thinks first (Low, Medium or High).
 
 ## [0.9.0] - 2026-11-05
 
