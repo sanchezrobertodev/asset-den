@@ -19,7 +19,7 @@ export const AI_EFFORTS = ["low", "medium", "high"] as const;
 export interface AiPrefs {
   model: (typeof AI_MODELS)[number];
   effort: (typeof AI_EFFORTS)[number];
-  /** The model Suggest tags uses (always at low effort): picked by the eval in the M3 pull request. */
+  /** Suggest tags' model, always at low effort. Haiku by default: by far the cheapest (see the M3 eval). */
   tagModel: (typeof AI_MODELS)[number];
 }
 

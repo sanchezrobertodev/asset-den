@@ -335,8 +335,8 @@ anything leaves your computer.
   counts as new.
 - **Model.** **Settings → AI features → Tagging model** picks Claude Haiku 5.5 (the default), Sonnet 5.5 or Opus 5.5,
   always at low effort. See the pull request that added it for how the default was chosen.
-- **Cost.** Billed to your API account, at batch prices: about $0.02 for 1,000 images with Haiku 5.5, about 20 times
-  that with Sonnet and 40 times with Opus. The dialog estimates each run, with the most it could cost.
+- **Cost.** Billed to your API account, at batch prices. Measured on 100 mixed assets: about $0.02 per 1,000 assets with
+  Haiku 5.5, $0.40 with Sonnet 5.5 and $0.80 with Opus 5.5. The dialog estimates each run, with the most it could cost.
 - **Undo.** **Settings → AI features → Remove all AI tags** takes off every tag you accepted from a suggestion, after
   showing how many. Tags you added yourself stay, even ones Claude also suggested. Mimikit never changes your files.
 
