@@ -13,6 +13,11 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 - **Fill the screen**: Mimikit can take over the whole screen with **F11** (⌃⌘F on macOS) or the button at the
   top right, next to Import. **Esc** goes back to a window once nothing else is open.
 
+### Fixed
+
+- Settings › AI agents no longer lists agent apps that have closed. They leave the connected list within about
+  10 seconds.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

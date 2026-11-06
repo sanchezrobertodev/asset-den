@@ -1062,7 +1062,8 @@ pub fn run() {
             restore_result,
             open_link,
             bridge::set_agent_bridge,
-            bridge::agent_reply
+            bridge::agent_reply,
+            bridge::relays_alive
         ])
         .run(context())
         .expect("error while running tauri application");

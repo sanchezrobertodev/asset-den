@@ -19,6 +19,8 @@ const KEY = "mimikit.agents.v1";
 const ASK_MS = 100_000;
 /** Changes the activity list keeps. */
 const KEEP = 50;
+/** How often the connected list checks that its relays still run. */
+const PRUNE_MS = 10_000;
 
 interface Saved {
   on: boolean;
@@ -240,10 +242,22 @@ async function decide(agent: Agent, tool: string, args: unknown): Promise<ToolRe
 
 let started = false;
 
+/** Forgets relays that have exited: their place in the connected list, and a block that a new relay could inherit with a reused pid. */
+async function prune() {
+  const { sessions, blocked } = useAgents.getState();
+  const pids = [...new Set([...sessions.map((x) => x.pid), ...blocked])].filter((p) => p > 0 && p < 2 ** 32);
+  if (!pids.length) return;
+  const alive = new Set(await invoke<number[]>("relays_alive", { pids }));
+  // Only the pids checked: a relay that called meanwhile stays.
+  const gone = new Set(pids.filter((p) => !alive.has(p)));
+  if (gone.size) useAgents.setState((s) => ({ sessions: s.sessions.filter((x) => !gone.has(x.pid)), blocked: s.blocked.filter((p) => !gone.has(p)) }));
+}
+
 /** Listens for agent calls and turns the bridge on if it was on. Off also removes an endpoint file left by a crash. */
 export async function startAgents() {
   if (started) return;
   started = true;
+  setInterval(() => void prune().catch(() => {}), PRUNE_MS);
   await listen<{ id: number; call: { tool?: unknown; args?: unknown; agent?: unknown } }>("agent-call", ({ payload: { id, call } }) => {
     void decide(cleanAgent(call.agent), String(call.tool), call.args)
       .catch(() => errorResult("internal", "Mimikit couldn't finish this call.", "Try again. If it keeps failing, tell the user."))

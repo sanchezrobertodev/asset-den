@@ -282,6 +282,39 @@ pub fn agent_reply(state: State<'_, Bridge>, id: u64, result: Value) {
     }
 }
 
+/// The relays among `pids` that are still running. Each call is its own connection, so this is how the window learns
+/// that an agent app has closed.
+#[tauri::command]
+pub fn relays_alive(pids: Vec<u32>) -> Vec<u32> {
+    pids.into_iter().filter(|&pid| running(pid)).collect()
+}
+
+#[cfg(windows)]
+fn running(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::{CloseHandle, ERROR_ACCESS_DENIED, GetLastError, STILL_ACTIVE};
+    use windows_sys::Win32::System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    // SAFETY: plain Win32 calls; the handle is closed before returning.
+    unsafe {
+        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if h.is_null() {
+            // A relay an elevated app started can't be opened, but it's there.
+            return GetLastError() == ERROR_ACCESS_DENIED;
+        }
+        let mut code = 0;
+        let alive = GetExitCodeProcess(h, &mut code) != 0 && code == STILL_ACTIVE as u32;
+        CloseHandle(h);
+        alive
+    }
+}
+
+#[cfg(unix)]
+fn running(pid: u32) -> bool {
+    // 0 and ids past i32 would name process groups to kill().
+    let Ok(pid) = i32::try_from(pid) else { return false };
+    // SAFETY: signal 0 only checks the process exists. EPERM: it does, as another user's.
+    pid > 0 && (unsafe { libc::kill(pid, 0) } == 0 || io::Error::last_os_error().raw_os_error() == Some(libc::EPERM))
+}
+
 /// Runs `f` to the end on a runtime of its own (the tests have no tokio macros).
 #[cfg(test)]
 pub fn block_on<F: Future>(f: F) -> F::Output {
@@ -362,5 +395,20 @@ mod tests {
         }
         let (status, _) = ask("GET /call HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer secret\r\n");
         assert_eq!(status, "HTTP/1.1 404 Not Found");
+    }
+
+    #[test]
+    fn tells_running_relays_from_exited_ones() {
+        // A process that has exited: this test program, only listing its tests.
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("--list")
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let gone = child.id();
+        child.wait().unwrap();
+        drop(child);
+        let me = std::process::id();
+        assert_eq!(relays_alive(vec![me, gone, 0, u32::MAX]), vec![me]);
     }
 }
