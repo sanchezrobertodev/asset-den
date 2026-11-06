@@ -52,6 +52,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   }, [assets, ids]);
   const already = asked ? all.filter((a) => asked.has(a.id)).length : 0;
   const chosen = asked && !again ? all.filter((a) => !asked.has(a.id)) : all;
+
   const prompt = useMemo(() => tagPrompt(topTags(assets)), [assets]);
   const price = estimate(chosen, ai.tagModel, prompt);
   const busy = progress !== null || sending;
@@ -87,6 +88,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
     ) : (
       <>
         <Button
+          data-autofocus={chosen.length ? undefined : true}
           onClick={() => {
             stop.current = true;
             close();
@@ -94,12 +96,14 @@ export function SuggestTags({ ids }: { ids: number[] }) {
         >
           {t("tagging.cancel")}
         </Button>
-        <Button variant="accent" data-autofocus disabled={busy || hasKey === null || !asked || !chosen.length} onClick={() => void send()}>
+        <Button variant="accent" data-autofocus={chosen.length ? true : undefined} disabled={busy || !chosen.length} onClick={() => void send()}>
           {t("tagging.send")}
         </Button>
       </>
     );
 
+  // Opens once both are known, so the dialog's default button is the right one and can take focus.
+  if (hasKey === null || !asked) return null;
   return (
     <Modal title={t("tagging.title")} onClose={() => ((stop.current = true), close())} footer={footer}>
       <div className="flex flex-col gap-3 leading-relaxed">
@@ -110,7 +114,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
             {t("tagging.askAgain", { count: already })}
           </label>
         )}
-        {asked && !chosen.length && <p className="text-muted">{t("tagging.nothingNew")}</p>}
+        {!chosen.length && <p className="text-muted">{t("tagging.nothingNew")}</p>}
         {hasKey === false && <p className="text-fg">{t("tagging.noKey")}</p>}
         <div>
           <p className="font-medium text-fg">{t("tagging.sentTitle")}</p>

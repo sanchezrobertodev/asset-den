@@ -44,6 +44,9 @@ thread-priority = "3"
 keyring = "4.2"
 # Claude API calls (ai.rs). Already in the build through the updater: the same version and TLS, so no new crates.
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
+# The TLS crypto reqwest uses, installed by ai.rs before the first request (the updater may not have yet). Already in
+# the build through reqwest, with this feature.
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 # Pictures in Suggest tags' requests (tagging.rs). Already in the build through Tauri.
 base64 = "0.22"
 

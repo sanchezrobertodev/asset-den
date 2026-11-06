@@ -1,8 +1,8 @@
 {
   "title": "建议标签",
   "assets_other": "{{count}} 个资源",
-  "askAgain_other": "也重新询问 Claude 已建议过标签的 {{count}} 个资源",
-  "nothingNew": "Claude 已经为所有这些资源建议过标签。",
+  "askAgain_other": "也重新询问已发送给 Claude 的 {{count}} 个资源",
+  "nothingNew": "所有这些资源都已发送给 Claude。",
   "sentTitle": "会发送给 Anthropic 的内容",
   "sent": "每张图片、每个模型、视频和字体的小预览，每个文件及其文件夹的名称，以及文本文件的前 2 KB。绝不发送完整文件或完整路径。音频按名称添加标签。",
   "model": "模型",

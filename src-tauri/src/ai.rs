@@ -210,6 +210,9 @@ pub(crate) async fn call(
     body: Option<&Value>,
     timeout: Duration,
 ) -> Result<(u16, Vec<u8>), String> {
+    // reqwest is built without a default crypto provider. Something else in the app may have installed one already:
+    // then this does nothing. Without it, the first request (Suggest tags' collector, at launch) panics.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let mut req = reqwest::Client::builder()
         .timeout(timeout)
         .build()

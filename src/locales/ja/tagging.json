@@ -1,8 +1,8 @@
 {
   "title": "タグを提案",
   "assets_other": "{{count}}個のアセット",
-  "askAgain_other": "Claude がすでにタグを提案した{{count}}個のアセットにも、もう一度尋ねる",
-  "nothingNew": "これらすべてに、Claude はすでにタグを提案しています。",
+  "askAgain_other": "Claude にすでに送った{{count}}個のアセットにも、もう一度尋ねる",
+  "nothingNew": "これらはすべて、すでに Claude に送っています。",
   "sentTitle": "Anthropic に送られるもの",
   "sent": "画像・モデル・動画・フォントそれぞれの小さなプレビュー、各ファイルの名前とそのフォルダーの名前、テキストファイルの先頭 2 KB。ファイル全体やフルパスは送りません。オーディオは名前からタグを付けます。",
   "model": "モデル",
