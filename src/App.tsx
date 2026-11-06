@@ -194,15 +194,23 @@ export default function App() {
     lastView.current = s.view;
   }, [s.view]);
 
+  // The window fills the screen from anywhere: F11, or ⌃⌘F on macOS. Capture phase, so fields that keep their keys
+  // to themselves (search, tags, notes) and dialogs still let it through.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "F11" && !(isMac && e.ctrlKey && e.metaKey && letter(e) === "f")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const st = useStore.getState();
+      if (!e.repeat) st.setFullscreen(!st.fullscreen);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
-      // The window fills the screen from anywhere, dialogs included: F11, or ⌃⌘F on macOS.
-      if (e.key === "F11" || (isMac && e.ctrlKey && e.metaKey && letter(e) === "f")) {
-        e.preventDefault();
-        if (!e.repeat) st.setFullscreen(!st.fullscreen);
-        return;
-      }
       // A dialog handles its own keys (Escape closes it).
       if (st.modal || modalOpen()) return;
       if ((e.metaKey || e.ctrlKey) && letter(e) === "k") {
