@@ -7,6 +7,16 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ### Added
 
+- The sidebar collapses to a narrow rail of section icons with the button at its top or **Ctrl+B** (⌘B on macOS),
+  and stays that way after a restart. In a window narrower than 1100 px it starts as the rail; the button opens it
+  until the window is wide again, without changing the saved choice.
+- **Fill the screen**: Mimikit can take over the whole screen with **F11** (⌃⌘F on macOS) or the button at the
+  top right, next to Import. **Esc** goes back to a window once nothing else is open.
+
+## [0.8.0] - 2026-11-05
+
+### Added
+
 - Keyboard multi-select: **Shift+arrows** select a range, **Ctrl+arrows** (⌘ on macOS) move without changing the
   selection, and **Ctrl+Space** adds the current asset to the selection or takes it out.
 - In full screen, **+** and **−** zoom an image and **Ctrl+0** fits it back. **J** and **L** go back and forward
@@ -21,11 +31,6 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 - **What agents did** in Settings → AI agents lists the last 50 changes agents made, with the values they replaced,
   and **Undo last agent change** takes back the newest one. Each change also shows a message with Undo, and Ctrl+Z
   undoes it. An agent can make at most 30 changes a minute, of up to 500 assets each.
-- The sidebar collapses to a narrow rail of section icons with the button at its top or **Ctrl+B** (⌘B on macOS),
-  and stays that way after a restart. In a window narrower than 1100 px it starts as the rail; the button opens it
-  until the window is wide again, without changing the saved choice.
-- **Fill the screen**: Mimikit can take over the whole screen with **F11** (⌃⌘F on macOS) or the button at the
-  top right, next to Import. **Esc** goes back to a window once nothing else is open.
 
 ### Changed
 
