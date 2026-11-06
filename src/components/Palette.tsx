@@ -34,9 +34,15 @@ const tokenLabel: Record<string, string> = {
   "note:": t("palette.tokens.word", { token: "note:" }),
 };
 
+/** Words typed before Ask sent the user to Settings for a key: search opens with them again, so they can ask once it's set. */
+let setupWords: string | null = null;
+
 export function Palette() {
   const s = useStore();
-  const [q, setQ] = useState(s.query);
+  const [q, setQ] = useState(() => setupWords ?? s.query);
+  useEffect(() => {
+    setupWords = null;
+  }, []);
   const [pi, setPi] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -51,6 +57,7 @@ export function Palette() {
     api.apiKeyStatus().then(setHasKey, () => setHasKey(null));
   }, []);
   const openSetup = () => {
+    setupWords = q;
     useStore.setState({ palette: false });
     openKeySetup();
   };
