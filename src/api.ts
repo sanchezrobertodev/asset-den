@@ -114,7 +114,8 @@ export const api = {
   askSearch: (prompt: string, words: string, { model, effort }: AiPrefs) =>
     invoke<{ query: string; inputTokens: number; outputTokens: number }>("ask_search", { prompt, words, model, effort }),
   /** Suggest tags: sends `ids` to Claude in batches, following `prompt` (lib/tagging.ts); returns how many went. */
-  suggestTags: (prompt: string, ids: number[], model: TagModel) => invoke<number>("suggest_tags", { prompt, ids, model, effort: "low" }),
+  suggestTags: (prompt: string, ids: number[], model: TagModel, batch: boolean) =>
+    invoke<number>("suggest_tags", { prompt, ids, model, effort: "low", batch }),
   /** Of `ids`, the ones Claude was already asked about (this version of the file) or that wait in a batch. */
   taggingAsked: (ids: number[]) => invoke<number[]>("tagging_asked", { ids }),
   taggingStatus: () => invoke<TaggingStatus>("tagging_status"),
@@ -140,6 +141,8 @@ export const api = {
     listen<[number, Swatch[]][]>("image-features", (e) => cb(e.payload)),
   onAnalysisStatus: (cb: (s: AnalysisStatus) => void): Promise<UnlistenFn> => listen<AnalysisStatus>("analysis-status", (e) => cb(e.payload)),
   onTaggingStatus: (cb: (s: TaggingStatus) => void): Promise<UnlistenFn> => listen<TaggingStatus>("tagging-status", (e) => cb(e.payload)),
+  /** Requests finished so far in a Suggest tags run sent right away. */
+  onTaggingDirect: (cb: (done: number) => void): Promise<UnlistenFn> => listen<number>("tagging-direct", (e) => cb(e.payload)),
   onScanProgress: (cb: (p: ScanProgress) => void): Promise<UnlistenFn> =>
     listen<ScanProgress>("scan-progress", (e) => cb(e.payload)),
   /** False on platforms the release feed doesn't cover yet; the app then hides updates entirely. */

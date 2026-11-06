@@ -1,5 +1,5 @@
 //! "Suggest tags": previews of many assets go to Claude through the Message Batches API (half the price, results usually
-//! within minutes), or straight to the Messages API for a small run, and the tags it suggests wait in `tag_suggestions`
+//! within minutes), or right away through the Messages API, as the user picks, and the tags it suggests wait in `tag_suggestions`
 //! until the user accepts or rejects them in the side panel. What an asset sends is in `content`: never a whole file or a full path. Asset files are only read, and the key
 //! stays in ai.rs.
 
@@ -29,10 +29,11 @@ const BATCH_REQUESTS: usize = 100_000;
 const TEXT_BYTES: u64 = 2048;
 const MAX_TAGS: usize = 12;
 const MAX_PROMPT: usize = 64 * 1024;
-/// Runs this small skip the batch queue: their tags come back in seconds, at the normal price instead of half.
-const DIRECT_MAX: usize = 50;
-/// The id a direct run gets in `ai_batches`, so its cost is counted at the normal price.
+/// The id prefix a run sent right away gets in `ai_batches`, so its cost is counted at the normal price.
 const DIRECT: &str = "direct_";
+/// Requests of a run sent right away that are out at once; the rest wait their turn, so a big run stays under the rate
+/// limits. The window's estimate counts on it (PARALLEL in src/lib/tagging.ts).
+const PARALLEL: usize = 4;
 const DIRECT_TIMEOUT: Duration = Duration::from_secs(120);
 /// How often pending batches are checked.
 const TICK: Duration = Duration::from_secs(60);
@@ -273,8 +274,9 @@ fn build(
     }
 }
 
-/// Sends `ids` to Claude, following `prompt` (src/lib/tagging.ts). Returns how many assets went. A big run goes in batches
-/// and its results come later, through the collector; a small one is answered and stored before this returns.
+/// Sends `ids` to Claude, following `prompt` (src/lib/tagging.ts). With `batch`, they go in batches at half price, results
+/// come later through the collector, and this returns how many assets went. Without, each request goes right away, its
+/// tags are stored as they come, and this returns how many assets Claude answered.
 #[tauri::command]
 pub async fn suggest_tags(
     app: AppHandle,
@@ -283,6 +285,7 @@ pub async fn suggest_tags(
     ids: Vec<i64>,
     model: Model,
     effort: Effort,
+    batch: bool,
 ) -> Result<usize, String> {
     if prompt.len() > MAX_PROMPT {
         return Err("The tagging instructions are too long.".into());
@@ -294,33 +297,32 @@ pub async fn suggest_tags(
     let key = ai::stored_key(&app).await?;
     let created = now_ms();
     let dir = state.thumbs_dir.clone();
-    if assets.len() <= DIRECT_MAX {
-        // Well under the batch limits, so it's one batch.
-        let batch = tauri::async_runtime::spawn_blocking(move || {
-            let mut out = None;
-            build(&dir, &assets, &prompt, model, effort, |b| {
-                out = Some(b);
-                true
-            });
-            out
-        })
-        .await
-        .map_err(err)?
-        .ok_or(NOTHING)?;
-        return direct(&app, &key, model, created, batch).await;
-    }
     // One batch waits while the next is built, so memory stays at about two batches however many assets go.
     let (tx, mut rx) = mpsc::channel::<Batch>(1);
     let building = tauri::async_runtime::spawn_blocking(move || {
         build(&dir, &assets, &prompt, model, effort, |b| tx.blocking_send(b).is_ok())
     });
-    let mut sent = 0;
-    while let Some(batch) = rx.recv().await {
+    let (mut sent, mut n, mut done) = (0, 0, 0);
+    while let Some(b) = rx.recv().await {
         // On an error the receiver goes, and the builder stops at its next batch.
+        if !batch {
+            sent += direct(
+                &app,
+                &key,
+                model,
+                &format!("{DIRECT}{created}_{n}"),
+                created,
+                b,
+                &mut done,
+            )
+            .await?;
+            n += 1;
+            continue;
+        }
         let reply = ai::post(
             &key,
             "/messages/batches",
-            &json!({ "requests": batch.requests }),
+            &json!({ "requests": b.requests }),
             UPLOAD_TIMEOUT,
         )
         .await?;
@@ -328,14 +330,14 @@ pub async fn suggest_tags(
             .as_str()
             .ok_or("Anthropic returned an error: no batch id")?
             .to_string();
-        let items = serde_json::to_string(&batch.items).map_err(err)?;
+        let items = serde_json::to_string(&b.items).map_err(err)?;
         with_db(&state, |c| {
             c.execute(
                 "INSERT INTO ai_batches (id, model, created, items) VALUES (?1, ?2, ?3, ?4)",
                 params![id, model.id(), created, items],
             )
         })?;
-        sent += batch.items.values().map(Vec::len).sum::<usize>();
+        sent += b.items.values().map(Vec::len).sum::<usize>();
         emit_status(&app);
         wake();
     }
@@ -343,54 +345,89 @@ pub async fn suggest_tags(
     Ok(sent)
 }
 
-/// Sends a small run's requests straight to the Messages API, all at once, and stores the tags. Returns how many assets
-/// Claude answered. Fails only when no request got through; the assets of one that failed stay un-asked.
-async fn direct(app: &AppHandle, key: &str, model: Model, created: i64, batch: Batch) -> Result<usize, String> {
-    let calls: Vec<_> = batch
-        .requests
-        .into_iter()
-        .map(|r| {
-            let key = key.to_string();
-            tauri::async_runtime::spawn(async move {
-                let reply = ai::post(&key, "/messages", &r["params"], DIRECT_TIMEOUT).await;
-                (r["custom_id"].as_str().unwrap_or_default().to_string(), reply)
-            })
-        })
-        .collect();
-    let (mut answers, mut usage, mut failed, mut ok) = (Vec::new(), Usage::default(), None, false);
-    for call in calls {
-        match call.await.map_err(err)? {
-            (id, Ok(m)) => {
-                ok = true;
-                take(
-                    &m,
-                    batch.items.get(&id).map_or(&[], Vec::as_slice),
-                    &mut answers,
-                    &mut usage,
-                );
-            }
-            (_, Err(e)) => failed = Some(e),
+/// Sends a batch's requests right away through the Messages API, PARALLEL at a time, and stores each one's tags as they
+/// come. `done` counts the run's finished requests, sent to the dialog as `tagging-direct`. Returns how many assets Claude
+/// answered. Fails only when no request got through; the assets of one that failed stay un-asked.
+async fn direct(
+    app: &AppHandle,
+    key: &str,
+    model: Model,
+    id: &str,
+    created: i64,
+    batch: Batch,
+    done: &mut usize,
+) -> Result<usize, String> {
+    let items = serde_json::to_string(&batch.items).map_err(err)?;
+    let mut requests = batch.requests.into_iter();
+    let mut out = tokio::task::JoinSet::new();
+    let (mut usage, mut answered, mut failed, mut stored) = (Usage::default(), 0, None, false);
+    loop {
+        while out.len() < PARALLEL
+            && let Some(r) = requests.next()
+        {
+            out.spawn(ask(key.to_string(), r));
         }
+        let Some(finished) = out.join_next().await else {
+            break;
+        };
+        let (rid, reply) = finished.map_err(err)?;
+        *done += 1;
+        let _ = app.emit("tagging-direct", *done);
+        let m = match reply {
+            Ok(m) => m,
+            Err(e) => {
+                failed = Some(e);
+                continue;
+            }
+        };
+        let mut answers = Vec::new();
+        take(
+            &m,
+            batch.items.get(&rid).map_or(&[], Vec::as_slice),
+            &mut answers,
+            &mut usage,
+        );
+        let state = app.state::<AppState>();
+        let conn = state.db.lock().unwrap();
+        if !stored {
+            conn.execute(
+                "INSERT INTO ai_batches (id, model, created, items, done) VALUES (?1, ?2, ?3, ?4, 1)",
+                params![id, model.id(), created, items],
+            )
+            .map_err(err)?;
+            stored = true;
+        }
+        let touched = store(&conn, id, model.id(), &answers, usage).map_err(err)?;
+        crate::emit_delta(app, &conn, &touched);
+        answered += touched.len();
     }
-    if let (false, Some(e)) = (ok, failed) {
+    if let (false, Some(e)) = (stored, failed) {
         return Err(e);
     }
-    let id = format!("{DIRECT}{created}");
-    let items = serde_json::to_string(&batch.items).map_err(err)?;
-    let state = app.state::<AppState>();
-    let touched = {
-        let conn = state.db.lock().unwrap();
-        conn.execute(
-            "INSERT INTO ai_batches (id, model, created, items, done) VALUES (?1, ?2, ?3, ?4, 1)",
-            params![id, model.id(), created, items],
-        )
-        .map_err(err)?;
-        let touched = store(&conn, &id, model.id(), &answers, usage).map_err(err)?;
-        crate::emit_delta(app, &conn, &touched);
-        touched
-    };
     emit_status(app);
-    Ok(touched.len())
+    Ok(answered)
+}
+
+/// One request sent right away. When Anthropic is busy or the rate limit is reached, it goes again after a pause (10, 20,
+/// then 40 seconds).
+async fn ask(key: String, r: Value) -> (String, Result<Value, String>) {
+    let id = r["custom_id"].as_str().unwrap_or_default().to_string();
+    let mut tries = 0;
+    loop {
+        let (status, body) = match ai::call(&key, Method::POST, "/messages", Some(&r["params"]), DIRECT_TIMEOUT).await {
+            Ok(x) => x,
+            Err(e) => return (id, Err(e)),
+        };
+        let reply = json_of(&body);
+        if (200..300).contains(&status) {
+            return (id, Ok(reply));
+        }
+        if tries == 3 || !(status == 429 || status >= 500) {
+            return (id, Err(ai::api_error(status, &reply)));
+        }
+        tries += 1;
+        tokio::time::sleep(Duration::from_secs(5 << tries)).await;
+    }
 }
 
 // ---------- collecting ----------

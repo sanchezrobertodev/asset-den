@@ -1,18 +1,18 @@
 // The Suggest tags dialog: what goes to Anthropic, the model and the cost, then the previews Claude needs and the send.
-// Opened from Peek (the selection) and the palette (the assets shown). A small run's tags are in when the send returns; a
-// big run's come later (src-tauri/src/tagging.rs).
+// Opened from Peek (the selection) and the palette (the assets shown). Sent right away, the tags are in when the send
+// returns; sent as a batch, they come later (src-tauri/src/tagging.rs).
 import { Tags, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, errorText } from "../api";
 import { topTags } from "../lib/ask";
 import { money } from "../lib/fmt";
 import { t } from "../lib/i18n";
-import { cost, estimate, isDirect, tagPrompt } from "../lib/tagging";
+import { cost, DIRECT_MAX, estimate, PER_REQUEST, tagPrompt } from "../lib/tagging";
 import { saveFontSample, thumbnailFor } from "../lib/thumbs";
 import { useStore } from "../store";
 import type { Asset } from "../types";
 import { MODEL_NAMES, openKeySetup } from "./Settings";
-import { Button, focusAssets, IconButton, Modal } from "./ui";
+import { Button, focusAssets, IconButton, Modal, Segmented } from "./ui";
 
 /** ai.rs NO_KEY: the collector waits for a key. */
 const NO_KEY = "No Anthropic API key is set. Add one in Settings.";
@@ -36,6 +36,9 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   const [again, setAgain] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [sending, setSending] = useState(false);
+  /** Right away or as a batch: the user's pick, or by the run's size until they make one. */
+  const [mode, setMode] = useState<"now" | "batch" | null>(null);
+  const [answered, setAnswered] = useState(0);
   const stop = useRef(false);
   const uploading = useRef(false); // set before the dialog re-renders, so a click in between can't close it
 
@@ -56,8 +59,9 @@ export function SuggestTags({ ids }: { ids: number[] }) {
   const chosen = asked && !again ? all.filter((a) => !asked.has(a.id)) : all;
 
   const prompt = useMemo(() => tagPrompt(topTags(assets)), [assets]);
-  const price = estimate(chosen, ai.tagModel, prompt);
-  const direct = isDirect(chosen.length);
+  const direct = (mode ?? (chosen.length <= DIRECT_MAX ? "now" : "batch")) === "now";
+  const price = estimate(chosen, ai.tagModel, prompt, direct);
+  const requests = Math.ceil(chosen.length / PER_REQUEST);
   const busy = progress !== null || sending;
   // Previews can stop; once the upload starts it can't, so the dialog stays until it's sent (then the sidebar can cancel).
   const dismiss = () => {
@@ -73,12 +77,19 @@ export function SuggestTags({ ids }: { ids: number[] }) {
       uploading.current = true;
       setProgress(null);
       setSending(true);
-      const n = await api.suggestTags(
-        prompt,
-        chosen.map((a) => a.id),
-        ai.tagModel,
-      );
-      showToast(direct ? t("tagging.doneToast", { count: n }) : t("tagging.sentToast", { count: n }));
+      setAnswered(0);
+      const unlisten = await api.onTaggingDirect(setAnswered);
+      const n = await api
+        .suggestTags(
+          prompt,
+          chosen.map((a) => a.id),
+          ai.tagModel,
+          !direct,
+        )
+        .finally(unlisten);
+      if (!direct) showToast(t("tagging.sentToast", { count: n }));
+      else if (n < chosen.length) showToast(t("tagging.someToast", { done: n, count: chosen.length }));
+      else showToast(t("tagging.doneToast", { count: n }));
       close();
     } catch (e) {
       setError(e);
@@ -130,6 +141,18 @@ export function SuggestTags({ ids }: { ids: number[] }) {
           <dd className="text-fg">
             {MODEL_NAMES[ai.tagModel]} <span className="text-muted">· {t("tagging.modelHint")}</span>
           </dd>
+          <dt className="self-center text-muted">{t("tagging.mode")}</dt>
+          <dd>
+            <Segmented
+              label={t("tagging.mode")}
+              value={direct ? "now" : "batch"}
+              onChange={(m) => !busy && setMode(m)}
+              options={[
+                { value: "now", label: t("tagging.modeNow") },
+                { value: "batch", label: t("tagging.modeBatch") },
+              ]}
+            />
+          </dd>
           <dt className="text-muted">{t("tagging.cost")}</dt>
           <dd className="text-fg">
             {t("tagging.estimate", { about: money(price.about), atMost: money(price.atMost) })}
@@ -138,7 +161,13 @@ export function SuggestTags({ ids }: { ids: number[] }) {
         </dl>
         <p className="text-muted">{t(direct ? "tagging.whenDirect" : "tagging.when")}</p>
         <p role="status" className="min-h-5 font-mono text-xs text-muted">
-          {progress ? t("tagging.preparing", { done: progress.done, total: progress.total }) : sending ? t(direct ? "tagging.asking" : "tagging.sending") : ""}
+          {progress ? t("tagging.preparing", { done: progress.done, total: progress.total }) : sending
+              ? direct
+                ? requests > 1
+                  ? t("tagging.askingProgress", { done: answered, total: requests })
+                  : t("tagging.asking")
+                : t("tagging.sending")
+              : ""}
         </p>
       </div>
     </Modal>

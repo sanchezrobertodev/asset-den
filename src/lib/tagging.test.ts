@@ -1,7 +1,7 @@
 // Run with `node --experimental-strip-types src/lib/tagging.test.ts` (part of `make check`).
 import assert from "node:assert/strict";
 import type { Asset } from "../types";
-import { cost, estimate, isDirect, tagPrompt } from "./tagging.ts";
+import { cost, estimate, tagPrompt } from "./tagging.ts";
 
 const asset = (o: Partial<Asset>): Asset => ({
   id: 1,
@@ -46,20 +46,21 @@ assert.equal(cost({ inputTokens: m, outputTokens: 0, cacheWriteTokens: 0, cacheR
 // The estimate: pictures, labels, text up to 2 KB, the prompt cached after the first request; "at most" is max_tokens.
 const images = Array.from({ length: 1000 }, (_, i) => asset({ id: i }));
 const prompt = "x".repeat(4000);
-const e = estimate(images, "claude-haiku-5-5", prompt);
+const e = estimate(images, "claude-haiku-5-5", prompt, false);
 // 1000 × (40 + 84) input, 60,000 output, 1000 prompt tokens written once and read 99 times.
 const about = (124_000 * 0.05 + 1000 * 0.1 + 99_000 * 0.005 + 60_000 * 0.25) / m;
 assert.ok(Math.abs(e.about - about) < 1e-12, `${e.about} != ${about}`);
 // At most: 100 requests each writing the prompt to the cache and answering with 4096 tokens.
 const atMost = (124_000 * 0.05 + 100 * 1000 * 0.1 + 100 * 4096 * 0.25) / m;
 assert.ok(Math.abs(e.atMost - atMost) < 1e-12, `${e.atMost} != ${atMost}`);
-// Up to 50 assets go straight to Claude, at twice the batch price, and each request writes the prompt.
-assert.ok(isDirect(50) && !isDirect(51));
-const small = estimate(images.slice(0, 20), "claude-sonnet-5-5", prompt);
+// Sent right away: twice the batch price, and the first four requests go at once, so each writes the prompt.
+const small = estimate(images.slice(0, 20), "claude-sonnet-5-5", prompt, true);
 assert.ok(Math.abs(small.about - (2 * (20 * 124 + 2 * 1000 * 2) + 2 * 20 * 60 * 5) / m) < 1e-12, `${small.about}`);
-const text = estimate([asset({ kind: "text", size: 1e6 })], "claude-sonnet-5-5", "");
+const big = estimate(images.slice(0, 100), "claude-sonnet-5-5", prompt, true);
+assert.ok(Math.abs(big.about - 2 * (100 * 124 + 4 * 1000 * 2 + 6 * 1000 * 0.1 + 100 * 60 * 5) / m) < 1e-12, `${big.about}`);
+const text = estimate([asset({ kind: "text", size: 1e6 })], "claude-sonnet-5-5", "", true);
 assert.equal(text.about, (2 * (40 + 512) + 2 * 60 * 5) / m); // only the first 2 KB of a text file goes
-assert.equal(estimate([asset({ kind: "audio" })], "claude-sonnet-5-5", "").about, (2 * 40 + 2 * 60 * 5) / m); // audio sends its label
-assert.equal(estimate([], "claude-opus-5-5", prompt).about, 0);
+assert.equal(estimate([asset({ kind: "audio" })], "claude-sonnet-5-5", "", true).about, (2 * 40 + 2 * 60 * 5) / m); // audio sends its label
+assert.equal(estimate([], "claude-opus-5-5", prompt, false).about, 0);
 
 console.log("tagging tests passed");
