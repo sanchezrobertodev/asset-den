@@ -1,3 +1,4 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { startAgents } from "./agent/bridge";
@@ -26,8 +27,8 @@ import { baseName, folderOf, rootLabel } from "./lib/format";
 import { rowStep } from "./lib/grid";
 import { t } from "./lib/i18n";
 import { applyTheme, onSystemThemeChange } from "./lib/prefs";
-import { shortcut } from "./lib/shortcuts";
-import { useStore } from "./store";
+import { isMac, shortcut } from "./lib/shortcuts";
+import { sidebarRail, useStore } from "./store";
 import type { Asset } from "./types";
 
 /** The library's hint bar, in order. */
@@ -136,7 +137,15 @@ export default function App() {
     void useStore.getState().init().then(startAgents);
     void useAppUpdate.getState().init();
     const off = onSystemThemeChange(() => applyTheme(useStore.getState().theme, useStore.getState().accent));
-    return off;
+    // The OS can leave or enter full screen too (macOS's green button), so the window says which it is.
+    const win = getCurrentWindow();
+    const sync = () => void win.isFullscreen().then((fullscreen) => useStore.setState({ fullscreen }), () => {});
+    sync();
+    const unlisten = win.onResized(sync);
+    return () => {
+      off();
+      void unlisten.then((f) => f());
+    };
   }, []);
 
   const collection = s.collections.find((c) => c.id === s.colSel) ?? null;
@@ -188,11 +197,22 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useStore.getState();
+      // The window fills the screen from anywhere, dialogs included: F11, or ⌃⌘F on macOS.
+      if (e.key === "F11" || (isMac && e.ctrlKey && e.metaKey && letter(e) === "f")) {
+        e.preventDefault();
+        if (!e.repeat) st.setFullscreen(!st.fullscreen);
+        return;
+      }
       // A dialog handles its own keys (Escape closes it).
       if (st.modal || modalOpen()) return;
       if ((e.metaKey || e.ctrlKey) && letter(e) === "k") {
         e.preventDefault();
         st.setPalette(!st.palette);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && letter(e) === "b") {
+        e.preventDefault();
+        if (!e.repeat) st.toggleSidebar();
         return;
       }
       if (st.palette) return;
@@ -224,7 +244,8 @@ export default function App() {
       if (e.key === "Escape") {
         if (st.full) st.setFull(false);
         else if (st.peek) st.setPeek(false);
-        else st.setSelected([]);
+        else if (st.selected.size || !st.fullscreen) st.setSelected([]);
+        else st.setFullscreen(false);
         return;
       }
       if (viewerKey(e, letter(e))) {
@@ -295,7 +316,10 @@ export default function App() {
   );
 
   return (
-    <div className="relative grid h-full grid-cols-[220px_minmax(0,1fr)] overflow-hidden bg-bg text-fg">
+    <div
+      className="relative grid h-full grid-cols-[var(--sidebar-w)_minmax(0,1fr)] overflow-hidden bg-bg text-fg"
+      style={{ "--sidebar-w": sidebarRail(s) ? "56px" : "220px" } as React.CSSProperties}
+    >
       <button
         type="button"
         onClick={focusAssets}
@@ -350,7 +374,7 @@ export default function App() {
           {s.view === "insights" && s.roots.length > 0 && <InsightsView />}
           {navigable && !peekOn && !s.palette && !s.full && order.length > 0 && (
             // One line: hints that don't fit drop out whole, and the way to the full list comes first so it never does.
-            <div className="pointer-events-none absolute bottom-3.5 left-[236px] z-[5] flex h-[30px] max-w-[calc(100%-252px)] flex-wrap content-start items-center gap-x-3.5 gap-y-4 overflow-hidden rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
+            <div className="pointer-events-none absolute bottom-3.5 left-[calc(var(--sidebar-w)+16px)] z-[5] flex h-[30px] max-w-[calc(100%-var(--sidebar-w)-32px)] flex-wrap content-start items-center gap-x-3.5 gap-y-4 overflow-hidden rounded-[9px] border border-line-soft bg-bg/90 px-3 py-1.5 text-xs whitespace-nowrap text-faint">
               <span>
                 <Kbd>{shortcut("help").keys}</Kbd> {t("app.allShortcuts")}
               </span>

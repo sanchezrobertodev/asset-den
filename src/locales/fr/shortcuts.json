@@ -19,9 +19,11 @@
   "label": {
     "move": "Passer d'une ressource à l'autre (↑ ↓ changent de rangée dans la grille)",
     "parent": "Remonter au dossier parent",
-    "back": "Quitter un champ de texte, fermer le plein écran, puis le panneau latéral, puis effacer la sélection",
+    "back": "Quitter un champ de texte, fermer le plein écran, puis le panneau latéral, puis effacer la sélection, puis revenir à une fenêtre si Mimikit occupe tout l'écran",
     "skip": "Depuis le haut de la fenêtre : aller aux ressources",
     "help": "Afficher ces raccourcis",
+    "sidebar": "Réduire ou déplier la barre latérale",
+    "fullscreen": "Afficher Mimikit sur tout l'écran, ou revenir à une fenêtre",
     "peek": "Aperçu rapide dans le panneau latéral",
     "full": "Plein écran",
     "full-back": "Revenir au panneau latéral depuis le plein écran (aussi Espace)",

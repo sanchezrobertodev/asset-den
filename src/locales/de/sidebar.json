@@ -23,6 +23,9 @@
   "theme": "Design: {{name}} (klicken zum Wechseln)",
   "shortcuts": "Tastenkürzel ({{keys}})",
   "settings": "Einstellungen",
+  "collapse": "Seitenleiste einklappen ({{keys}})",
+  "expand": "Seitenleiste ausklappen ({{keys}})",
+  "updateReady": "Mimikit {{version}} ist verfügbar",
   "cancel": "Abbrechen",
   "folder": {
     "locateTitle": "Neuen Ort für {{name}} wählen",

@@ -10,6 +10,8 @@
   "favoritesIn": "<0>Favorites</0> <1>in</1> <2/>",
   "searchPlaceholder": "Search assets, {{hash}}tags, {{type}}",
   "import": "Import",
+  "fullscreen": "Fill the screen ({{keys}})",
+  "window": "Back to a window ({{keys}})",
   "similar": {
     "stop": "Stop showing images similar to {{name}}",
     "label": "Similar to {{name}}",

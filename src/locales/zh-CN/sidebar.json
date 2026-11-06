@@ -21,6 +21,9 @@
   "theme": "主题：{{name}}（点击切换）",
   "shortcuts": "键盘快捷键（{{keys}}）",
   "settings": "设置",
+  "collapse": "折叠侧边栏（{{keys}}）",
+  "expand": "展开侧边栏（{{keys}}）",
+  "updateReady": "Mimikit {{version}} 已可用",
   "cancel": "取消",
   "folder": {
     "locateTitle": "重新定位 {{name}}",

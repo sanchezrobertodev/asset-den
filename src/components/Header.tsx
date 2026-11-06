@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Check, ChevronDown, Folder, Grid3x3, LayoutGrid, Search, Sparkles, X } from "lucide-react";
+import { Check, ChevronDown, Folder, Grid3x3, LayoutGrid, Maximize, Minimize, Search, Sparkles, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { activeFilterCount, parseQuery } from "../lib/filter";
 import { pathTo, treeFor, type FolderNode } from "../lib/folders";
@@ -24,7 +24,7 @@ const titles = {
 };
 
 export function Header() {
-  const { view, query, folder, setPalette, importFolder } = useStore();
+  const { view, query, folder, setPalette, importFolder, fullscreen, setFullscreen } = useStore();
   return (
     <div className="flex h-[60px] flex-none items-center gap-3.5 border-b border-line-soft px-7">
       {(view === "library" || view === "favorites") && folder ? (
@@ -58,6 +58,14 @@ export function Header() {
       <Button variant="accent" className={clsx("h-9 px-4", view === "home" && "ml-auto")} onClick={() => void importFolder()}>
         {t("header.import")}
       </Button>
+      {/* The app window, not the asset viewer: top right, where people look to leave full screen. */}
+      <IconButton
+        label={t(fullscreen ? "header.window" : "header.fullscreen", { keys: shortcut("fullscreen").keys })}
+        className="-mx-1.5 size-9"
+        onClick={() => setFullscreen(!fullscreen)}
+      >
+        {fullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+      </IconButton>
     </div>
   );
 }

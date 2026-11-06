@@ -10,6 +10,8 @@
   "favoritesIn": "<0>Favoritos</0> <1>en</1> <2/>",
   "searchPlaceholder": "Buscar recursos, {{hash}}etiquetas, {{type}}",
   "import": "Importar",
+  "fullscreen": "Ocupar toda la pantalla ({{keys}})",
+  "window": "Volver a una ventana ({{keys}})",
   "similar": {
     "stop": "Dejar de mostrar imágenes similares a {{name}}",
     "label": "Similares a {{name}}",

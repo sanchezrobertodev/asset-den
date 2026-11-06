@@ -10,6 +10,8 @@
   "favoritesIn": "<2/> <1>内の</1> <0>お気に入り</0>",
   "searchPlaceholder": "アセット、{{hash}}タグ、{{type}}を検索",
   "import": "インポート",
+  "fullscreen": "画面いっぱいに表示（{{keys}}）",
+  "window": "ウィンドウに戻す（{{keys}}）",
   "similar": {
     "stop": "「{{name}}」に似た画像の表示をやめる",
     "label": "{{name}}に類似",

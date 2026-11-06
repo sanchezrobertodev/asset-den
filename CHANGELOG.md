@@ -5,6 +5,14 @@ All notable changes to Mimikit (called Asset Den until 0.4.0) are documented her
 
 ## [Unreleased]
 
+### Added
+
+- The sidebar collapses to a narrow rail of section icons with the button at its top or **Ctrl+B** (⌘B on macOS),
+  and stays that way after a restart. In a window narrower than 1100 px it starts as the rail; the button opens it
+  until the window is wide again, without changing the saved choice.
+- **Fill the screen**: Mimikit can take over the whole screen with **F11** (⌃⌘F on macOS) or the button at the
+  top right, next to Import. **Esc** goes back to a window once nothing else is open.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

@@ -23,6 +23,9 @@
   "theme": "Thème : {{name}} (cliquer pour changer)",
   "shortcuts": "Raccourcis clavier ({{keys}})",
   "settings": "Paramètres",
+  "collapse": "Réduire la barre latérale ({{keys}})",
+  "expand": "Déplier la barre latérale ({{keys}})",
+  "updateReady": "Mimikit {{version}} est disponible",
   "cancel": "Annuler",
   "folder": {
     "locateTitle": "Localiser {{name}}",

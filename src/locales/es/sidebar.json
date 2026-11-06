@@ -23,6 +23,9 @@
   "theme": "Tema: {{name}} (haz clic para cambiarlo)",
   "shortcuts": "Atajos de teclado ({{keys}})",
   "settings": "Configuración",
+  "collapse": "Contraer la barra lateral ({{keys}})",
+  "expand": "Expandir la barra lateral ({{keys}})",
+  "updateReady": "Mimikit {{version}} está disponible",
   "cancel": "Cancelar",
   "folder": {
     "locateTitle": "Ubicar {{name}}",

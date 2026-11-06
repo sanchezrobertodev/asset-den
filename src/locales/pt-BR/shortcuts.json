@@ -19,9 +19,11 @@
   "label": {
     "move": "Mover entre recursos (↑ ↓ mudam de linha na grade)",
     "parent": "Subir para a pasta superior",
-    "back": "Sair de um campo de texto, fechar a tela cheia, depois o painel lateral e, por fim, limpar a seleção",
+    "back": "Sair de um campo de texto, fechar a tela cheia, depois o painel lateral, depois limpar a seleção e, por fim, voltar a uma janela se o Mimikit ocupar a tela inteira",
     "skip": "No topo da janela: pular para os recursos",
     "help": "Mostrar estes atalhos",
+    "sidebar": "Recolher ou expandir a barra lateral",
+    "fullscreen": "Mostrar o Mimikit na tela inteira ou voltar a uma janela",
     "peek": "Visualização rápida no painel lateral",
     "full": "Tela cheia",
     "full-back": "Voltar da tela cheia para o painel lateral (também Espaço)",
