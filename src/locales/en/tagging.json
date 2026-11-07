@@ -13,7 +13,7 @@
   "modeNow": "Right away",
   "modeBatch": "As a batch, half price",
   "cost": "Cost",
-  "estimate": "About {{about}}, at most {{atMost}}",
+  "estimate": "About {{about}}, or about {{high}} if the replies run long",
   "estimateHint": "Batch prices, half the usual rate, billed to your API account.",
   "estimateHintDirect": "Normal API prices, billed to your API account.",
   "when": "Results usually arrive within minutes (at most a day), and you can close Mimikit meanwhile. Suggested tags show in the side panel for you to accept or reject.",

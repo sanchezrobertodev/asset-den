@@ -340,7 +340,8 @@ anything leaves your computer.
   always at low effort. See the pull request that added it for how the default was chosen.
 - **Cost.** Billed to your API account. Measured on 100 mixed assets at batch prices: about $0.02 per 1,000 assets with
   Haiku 5.5, $0.40 with Sonnet 5.5 and $0.80 with Opus 5.5. **Right away** costs twice as much per asset, which for
-  50 assets is at most a few cents. The dialog estimates each run, with the most it could cost.
+  50 assets is at most a few cents. The dialog estimates each run, and what it would cost if every reply ran as long
+  as allowed. Both are estimates, not limits.
 - **Undo.** **Settings → AI features → Remove all AI tags** takes off every tag you accepted from a suggestion, after
   showing how many. Tags you added yourself stay, even ones Claude also suggested. Mimikit never changes your files.
 

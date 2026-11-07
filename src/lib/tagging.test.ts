@@ -50,9 +50,9 @@ const e = estimate(images, "claude-haiku-5-5", prompt, false);
 // 1000 × (40 + 84) input, 60,000 output, 1000 prompt tokens written once and read 99 times.
 const about = (124_000 * 0.05 + 1000 * 0.1 + 99_000 * 0.005 + 60_000 * 0.25) / m;
 assert.ok(Math.abs(e.about - about) < 1e-12, `${e.about} != ${about}`);
-// At most: 100 requests each writing the prompt to the cache and answering with 4096 tokens.
-const atMost = (124_000 * 0.05 + 100 * 1000 * 0.1 + 100 * 4096 * 0.25) / m;
-assert.ok(Math.abs(e.atMost - atMost) < 1e-12, `${e.atMost} != ${atMost}`);
+// High: 100 requests each writing the prompt to the cache and answering with 4096 tokens.
+const high = (124_000 * 0.05 + 100 * 1000 * 0.1 + 100 * 4096 * 0.25) / m;
+assert.ok(Math.abs(e.high - high) < 1e-12, `${e.high} != ${high}`);
 // Sent right away: twice the batch price, and the first four requests go at once, so each writes the prompt.
 const small = estimate(images.slice(0, 20), "claude-sonnet-5-5", prompt, true);
 assert.ok(Math.abs(small.about - (2 * (20 * 124 + 2 * 1000 * 2) + 2 * 20 * 60 * 5) / m) < 1e-12, `${small.about}`);

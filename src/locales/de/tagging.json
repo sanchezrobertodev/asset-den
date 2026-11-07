@@ -13,7 +13,7 @@
   "modeNow": "Sofort",
   "modeBatch": "Als Batch, halber Preis",
   "cost": "Kosten",
-  "estimate": "Etwa {{about}}, höchstens {{atMost}}",
+  "estimate": "Etwa {{about}}, oder etwa {{high}}, wenn die Antworten lang werden",
   "estimateHint": "Batch-Preise, die Hälfte des normalen Tarifs, abgerechnet über dein API-Konto.",
   "estimateHintDirect": "Normale API-Preise, abgerechnet über dein API-Konto.",
   "when": "Die Ergebnisse kommen meist innerhalb weniger Minuten (spätestens nach einem Tag), und du kannst Mimikit solange schließen. Vorgeschlagene Tags erscheinen in der Seitenleiste, wo du sie annimmst oder ablehnst.",

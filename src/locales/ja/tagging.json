@@ -11,7 +11,7 @@
   "modeNow": "すぐに",
   "modeBatch": "バッチ(半額)",
   "cost": "料金",
-  "estimate": "約 {{about}}、最大 {{atMost}}",
+  "estimate": "約 {{about}}(応答が長くなると約 {{high}})",
   "estimateHint": "バッチ料金(通常の半額)で、あなたの API アカウントに請求されます。",
   "estimateHintDirect": "通常の API 料金で、あなたの API アカウントに請求されます。",
   "when": "結果はたいてい数分以内に届きます(遅くとも 1 日以内)。その間は Mimikit を閉じてもかまいません。提案されたタグはサイドパネルに表示され、承認または却下できます。",

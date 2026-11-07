@@ -790,14 +790,17 @@ pub async fn cancel_tagging(app: AppHandle) -> Result<(), String> {
 
 // ---------- reviewing ----------
 
-/// Of `ids`, the ones whose current version Claude was already asked about, or that wait in a batch.
+/// Of `ids`, the ones whose current version Claude was already asked about, or waits in a batch. A changed file whose old
+/// version is pending counts as new: that result will be dropped as stale.
 fn asked(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i64>> {
     conn.prepare(
         "SELECT a.id FROM assets a JOIN ai_asked k ON k.asset_id = a.id AND k.size = a.size AND k.mtime = a.mtime
          WHERE a.id IN (SELECT value FROM json_each(?1))
          UNION
-         SELECT json_extract(v.value, '$[0]') FROM ai_batches b, json_each(b.items) r, json_each(r.value) v
-         WHERE b.done = 0 AND json_extract(v.value, '$[0]') IN (SELECT value FROM json_each(?1))",
+         SELECT a.id FROM ai_batches b, json_each(b.items) r, json_each(r.value) v
+         JOIN assets a ON a.id = json_extract(v.value, '$[0]') AND a.size = json_extract(v.value, '$[1]')
+           AND a.mtime = json_extract(v.value, '$[2]')
+         WHERE b.done = 0 AND a.id IN (SELECT value FROM json_each(?1))",
     )?
     .query_map([serde_json::to_string(ids).unwrap_or_default()], |r| r.get(0))?
     .collect()
@@ -1123,6 +1126,10 @@ mod tests {
         };
         assert_eq!(s.last, Some(run1));
         assert_eq!(asked(&conn, &[1, 2, 3]).unwrap(), vec![1]);
+        // Asset 1 changed while its old version waits: the new version still needs asking.
+        conn.execute("UPDATE assets SET mtime = 6 WHERE id = 1", []).unwrap();
+        assert!(asked(&conn, &[1, 2, 3]).unwrap().is_empty());
+        conn.execute("UPDATE assets SET mtime = 5 WHERE id = 1", []).unwrap();
         conn.execute("UPDATE ai_batches SET done = 1 WHERE id = 'c'", [])
             .unwrap();
         let s = status(&conn).unwrap();

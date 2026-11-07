@@ -155,7 +155,7 @@ export function SuggestTags({ ids }: { ids: number[] }) {
           </dd>
           <dt className="text-muted">{t("tagging.cost")}</dt>
           <dd className="text-fg">
-            {t("tagging.estimate", { about: money(price.about), atMost: money(price.atMost) })}
+            {t("tagging.estimate", { about: money(price.about), high: money(price.high) })}
             <span className="block text-xs text-muted">{t(direct ? "tagging.estimateHintDirect" : "tagging.estimateHint")}</span>
           </dd>
         </dl>

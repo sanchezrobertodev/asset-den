@@ -11,7 +11,7 @@
   "modeNow": "立即",
   "modeBatch": "批处理，半价",
   "cost": "费用",
-  "estimate": "约 {{about}}，最多 {{atMost}}",
+  "estimate": "约 {{about}}，回复较长时约 {{high}}",
   "estimateHint": "批处理价格，为常规价格的一半，从你的 API 账户扣费。",
   "estimateHintDirect": "常规 API 价格，从你的 API 账户扣费。",
   "when": "结果通常在几分钟内到达(最长一天)，期间你可以关闭 Mimikit。建议的标签会显示在侧边栏中，供你接受或拒绝。",

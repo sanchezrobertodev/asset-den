@@ -59,10 +59,10 @@ const TEXT_BYTES = 2048;
 /** Whether an asset goes with a picture: images, and the previews the window makes for models, videos and fonts. */
 export const sendsPicture = (a: Asset) => a.kind === "image" || a.kind === "model" || a.kind === "video" || a.kind === "font";
 
-/** About what tagging `assets` costs, and the most it can: every request answering with `max_tokens` and writing the
- * prompt to the cache. Sent right away (`direct`), the first PARALLEL requests go at once, so each writes the prompt. */
-export function estimate(assets: Asset[], model: TagModel, prompt: string, direct: boolean): { about: number; atMost: number } {
-  if (!assets.length) return { about: 0, atMost: 0 };
+/** About what tagging `assets` costs, and a high estimate: every request answering with `max_tokens` and writing the
+ * prompt to the cache. Not a ceiling: the input side is estimated too, and long names or dense text can take more. Sent right away (`direct`), the first PARALLEL requests go at once, so each writes the prompt. */
+export function estimate(assets: Asset[], model: TagModel, prompt: string, direct: boolean): { about: number; high: number } {
+  if (!assets.length) return { about: 0, high: 0 };
   let input = 0;
   for (const a of assets) {
     input += LABEL_TOKENS + (sendsPicture(a) ? PICTURE_TOKENS : 0) + (a.kind === "text" ? Math.min(a.size, TEXT_BYTES) / 4 : 0);
@@ -71,8 +71,8 @@ export function estimate(assets: Asset[], model: TagModel, prompt: string, direc
   const system = prompt.length / 4;
   const writes = direct ? Math.min(requests, PARALLEL) : 1;
   const about = cost({ inputTokens: input, outputTokens: assets.length * OUTPUT_TOKENS, cacheWriteTokens: system * writes, cacheReadTokens: system * (requests - writes) }, model, direct);
-  const atMost = cost({ inputTokens: input, outputTokens: requests * MAX_TOKENS, cacheWriteTokens: system * requests, cacheReadTokens: 0 }, model, direct);
-  return { about, atMost };
+  const high = cost({ inputTokens: input, outputTokens: requests * MAX_TOKENS, cacheWriteTokens: system * requests, cacheReadTokens: 0 }, model, direct);
+  return { about, high };
 }
 
 /** The instructions for every request of a run: what to tag, how to write tags, and the library's tags to reuse. */

@@ -13,7 +13,7 @@
   "modeNow": "Agora",
   "modeBatch": "Em lote, metade do preço",
   "cost": "Custo",
-  "estimate": "Cerca de {{about}}, no máximo {{atMost}}",
+  "estimate": "Cerca de {{about}}, ou cerca de {{high}} se as respostas forem longas",
   "estimateHint": "Preços de lote, metade do valor normal, cobrados na sua conta da API.",
   "estimateHintDirect": "Preços normais da API, cobrados na sua conta da API.",
   "when": "Os resultados costumam chegar em poucos minutos (no máximo em um dia), e você pode fechar o Mimikit enquanto isso. As tags sugeridas aparecem no painel lateral para você aceitar ou recusar.",
