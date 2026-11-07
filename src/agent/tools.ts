@@ -60,6 +60,7 @@ const FILTERS = object({
   maxBytes: int("Most file size in bytes."),
   days: int("Only files modified within this many days.", 1),
   untagged: { type: "boolean", description: "Only assets without tags." },
+  suggested: { type: "boolean", description: "Only assets with tags Claude suggested that the user hasn't reviewed yet." },
   anyTags: { type: "array", items: { type: "string", maxLength: 100 }, maxItems: 50, description: "Only assets with at least one of these tags (exact names, see list_tags)." },
   minRating: int("At least this many stars (1 to 5).", 1, 5),
   minMs: int("Least audio length in milliseconds. Only audio whose length is known matches either length filter."),

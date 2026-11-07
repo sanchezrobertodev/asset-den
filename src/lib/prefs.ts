@@ -19,6 +19,8 @@ export const AI_EFFORTS = ["low", "medium", "high"] as const;
 export interface AiPrefs {
   model: (typeof AI_MODELS)[number];
   effort: (typeof AI_EFFORTS)[number];
+  /** Suggest tags' model, always at low effort. Haiku by default: by far the cheapest (see the M3 eval). */
+  tagModel: (typeof AI_MODELS)[number];
 }
 
 export interface Prefs {
@@ -63,7 +65,7 @@ const defaults: Prefs = {
   checkUpdates: true,
   audioLoop: false,
   sidebar: "expanded",
-  ai: { model: "claude-haiku-5-5", effort: "low" },
+  ai: { model: "claude-haiku-5-5", effort: "low", tagModel: "claude-haiku-5-5" },
 };
 
 const KEY = "assetden.prefs.v2";
@@ -84,6 +86,7 @@ export function loadPrefs(): Prefs {
     p.ai = {
       model: AI_MODELS.includes(p.ai?.model) ? p.ai.model : defaults.ai.model,
       effort: AI_EFFORTS.includes(p.ai?.effort) ? p.ai.effort : defaults.ai.effort,
+      tagModel: AI_MODELS.includes(p.ai?.tagModel) ? p.ai.tagModel : defaults.ai.tagModel,
     };
     return p;
   } catch {

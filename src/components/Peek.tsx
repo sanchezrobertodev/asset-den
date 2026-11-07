@@ -189,6 +189,78 @@ export function TagEditor({ items }: { items: Asset[] }) {
   );
 }
 
+/**
+ * Claude's suggested tags for `items`, under the tag field: dashed chips that add the tag on click, with × to reject it.
+ * With several assets selected, each chip covers the ones that have it and shows how many. Focus stays in the row as
+ * chips go, then moves to Suggest tags.
+ */
+export function SuggestedTags({ items }: { items: Asset[] }) {
+  const { acceptSuggestions, rejectSuggestions, setSuggestFor } = useStore();
+  const row = useRef<HTMLDivElement>(null);
+  const suggest = useRef<HTMLButtonElement>(null);
+  const ids = items.map((a) => a.id);
+  const having = new Map<string, number[]>();
+  for (const a of items) for (const tag of a.suggested) having.set(tag, [...(having.get(tag) ?? []), a.id]);
+  const tags = [...having.keys()].sort();
+  const many = items.length > 1;
+  /** After chip `i` goes: the chip now in its place, or the last one, or Suggest tags. */
+  const refocus = (i: number) =>
+    requestAnimationFrame(() => {
+      const chips = row.current?.querySelectorAll<HTMLElement>("[data-chip]");
+      (chips?.length ? chips[Math.min(i, chips.length - 1)] : suggest.current)?.focus();
+    });
+  const textButton = "text-xs font-semibold text-accent hover:underline";
+  return (
+    <div className="flex flex-col gap-2">
+      {tags.length > 0 && (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <Label>{t("tagging.suggested")}</Label>
+            <span className="flex gap-3">
+              <button type="button" className={textButton} onClick={() => (refocus(0), void acceptSuggestions(ids))}>
+                {t("tagging.acceptAll")}
+              </button>
+              <button type="button" className={textButton} onClick={() => (refocus(0), void rejectSuggestions(ids))}>
+                {t("tagging.rejectAll")}
+              </button>
+            </span>
+          </div>
+          <div ref={row} className="flex flex-wrap gap-1.5">
+            {tags.map((tag, i) => {
+              const have = having.get(tag)!;
+              return (
+                <span key={tag} className="flex h-6 items-center rounded-md border border-dashed border-line-strong text-xs text-fg-2">
+                  <button
+                    type="button"
+                    data-chip
+                    aria-label={many ? t("tagging.acceptMany", { tag, count: have.length }) : t("tagging.accept", { tag })}
+                    onClick={() => (refocus(i), void acceptSuggestions(have, [tag]))}
+                    className="flex h-full items-center gap-1 rounded-l-md pr-1 pl-[9px] hover:bg-hover hover:text-fg"
+                  >
+                    #{tag}
+                    {many && <span className="font-mono text-[11px] text-faint">{have.length}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("tagging.reject", { tag })}
+                    onClick={() => (refocus(i), void rejectSuggestions(have, [tag]))}
+                    className="mr-0.5 flex size-5 items-center justify-center rounded text-muted hover:text-fg hover:inset-ring-1 hover:inset-ring-line-x"
+                  >
+                    <X aria-hidden className="size-3" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <button ref={suggest} type="button" className={clsx(textButton, "self-start")} onClick={() => setSuggestFor(ids)}>
+        {t("tagging.peekAction")}
+      </button>
+    </div>
+  );
+}
+
 /** Five stars as a radio group: click or use the arrow keys. Picking the current rating again clears it. */
 export function Stars({ value, onChange, className }: { value: number; onChange: (n: number) => void; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
@@ -361,6 +433,7 @@ export function Peek({ list }: { list: Asset[] }) {
             </span>
           </div>
           <TagEditor items={selectedAssets} />
+          <SuggestedTags items={selectedAssets} />
           <CollectionChecks items={selectedAssets} />
         </div>
       ) : (
@@ -439,6 +512,7 @@ function PeekBody({ a }: { a: Asset }) {
       )}
       <MetaRows a={a} />
       <TagEditor items={[a]} />
+      <SuggestedTags items={[a]} />
       <CollectionChecks items={[a]} />
       <NoteEditor key={a.id} a={a} />
     </div>

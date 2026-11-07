@@ -35,5 +35,7 @@
   "aiNoAnswer": "Claude 的回答被截断或无法读取。请重试。",
   "aiTooLong": "询问 Claude 最多 500 个字符。",
   "aiKeyStore": "无法使用系统的凭据存储：{{error}}",
-  "aiError": "Anthropic 返回了错误：{{error}}"
+  "aiError": "Anthropic 返回了错误：{{error}}",
+  "tagNothing": "没有要添加标签的内容。",
+  "tagPromptTooLong": "标签指示过长。"
 }

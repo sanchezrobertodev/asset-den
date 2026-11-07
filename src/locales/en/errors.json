@@ -35,5 +35,7 @@
   "aiNoAnswer": "Claude's answer was cut short or unreadable. Try again.",
   "aiTooLong": "Ask takes up to 500 characters.",
   "aiKeyStore": "Couldn't use the system's credential store: {{error}}",
-  "aiError": "Anthropic returned an error: {{error}}"
+  "aiError": "Anthropic returned an error: {{error}}",
+  "tagNothing": "There's nothing to tag.",
+  "tagPromptTooLong": "The tagging instructions are too long."
 }

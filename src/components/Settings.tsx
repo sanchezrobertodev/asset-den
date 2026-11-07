@@ -564,7 +564,7 @@ export function openKeySetup() {
 
 /** Settings › AI features: the user's own Anthropic API key, which the backend keeps in the OS credential store (ai.rs). */
 /** Product names, the same in every language. */
-const MODEL_NAMES: Record<AiPrefs["model"], string> = {
+export const MODEL_NAMES: Record<AiPrefs["model"], string> = {
   "claude-haiku-5-5": "Haiku 5.5",
   "claude-sonnet-5-5": "Sonnet 5.5",
   "claude-opus-5-5": "Opus 5.5",
@@ -711,7 +711,64 @@ function ApiKey() {
           options={AI_EFFORTS.map((e) => ({ value: e, label: t(`settings.ai.effortLevel.${e}`) }))}
         />
       </Row>
+      <Row label={t("tagging.settings.tagModel")} hint={t("tagging.settings.tagModelHint")}>
+        <Segmented
+          label={t("tagging.settings.tagModel")}
+          value={ai.tagModel}
+          onChange={(tagModel) => setAi({ tagModel })}
+          options={AI_MODELS.map((m) => ({ value: m, label: MODEL_NAMES[m] }))}
+        />
+      </Row>
+      <RemoveAiTags />
     </>
+  );
+}
+
+/** Takes off every tag accepted from Claude's suggestions, after a confirmation with the count (tagging.rs). */
+function RemoveAiTags() {
+  const { setError, showToast } = useStore();
+  // How many to remove while confirming; null otherwise.
+  const [count, setCount] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const back = () => {
+    setCount(null);
+    requestAnimationFrame(() => button.current?.focus());
+  };
+  const ask = () => api.aiTagCount().then(setCount, setError);
+  const remove = async () => {
+    setBusy(true);
+    try {
+      const n = await api.removeAiTags();
+      showToast(t("tagging.settings.removed", { count: n }));
+      back();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (count === null)
+    return (
+      <Row label={t("tagging.settings.removeAll")} hint={t("tagging.settings.removeAllHint")}>
+        <Button size="sm" ref={button} onClick={() => void ask()}>
+          {t("tagging.settings.remove")}
+        </Button>
+      </Row>
+    );
+  return (
+    <Row label={t("tagging.settings.removeAll")} hint={count ? t("tagging.settings.removeConfirm", { count }) : t("tagging.settings.noAiTags")}>
+      <div className="flex flex-none gap-2">
+        <Button size="sm" disabled={busy} autoFocus={!count} onClick={back}>
+          {t("settings.cancel")}
+        </Button>
+        {count > 0 && (
+          <Button size="sm" variant="danger" disabled={busy} autoFocus onClick={() => void remove()}>
+            {t("tagging.settings.remove")}
+          </Button>
+        )}
+      </div>
+    </Row>
   );
 }
 

@@ -35,5 +35,7 @@
   "aiNoAnswer": "Claudes Antwort war abgeschnitten oder unlesbar. Versuch es noch einmal.",
   "aiTooLong": "Claude fragen geht mit bis zu 500 Zeichen.",
   "aiKeyStore": "Der Anmeldedatenspeicher des Systems ließ sich nicht nutzen: {{error}}",
-  "aiError": "Anthropic hat einen Fehler gemeldet: {{error}}"
+  "aiError": "Anthropic hat einen Fehler gemeldet: {{error}}",
+  "tagNothing": "Es gibt nichts zu taggen.",
+  "tagPromptTooLong": "Die Anweisungen zum Taggen sind zu lang."
 }

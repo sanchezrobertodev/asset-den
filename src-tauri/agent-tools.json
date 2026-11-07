@@ -80,6 +80,10 @@
               "type": "boolean",
               "description": "Only assets without tags."
             },
+            "suggested": {
+              "type": "boolean",
+              "description": "Only assets with tags Claude suggested that the user hasn't reviewed yet."
+            },
             "anyTags": {
               "type": "array",
               "items": {
@@ -599,6 +603,10 @@
                 "untagged": {
                   "type": "boolean",
                   "description": "Only assets without tags."
+                },
+                "suggested": {
+                  "type": "boolean",
+                  "description": "Only assets with tags Claude suggested that the user hasn't reviewed yet."
                 },
                 "anyTags": {
                   "type": "array",

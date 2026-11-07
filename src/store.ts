@@ -8,6 +8,7 @@ import { noFilters, parseQuery, ruleMatcher, type Filters } from "./lib/filter";
 import { ancestorKeys } from "./lib/folders";
 import { t, type TKey, type Vars } from "./lib/i18n";
 import { latestRequest } from "./lib/latest";
+import type { TaggingStatus } from "./lib/tagging";
 import { markSeen, seenVersion } from "./lib/news";
 import { applyTheme, loadPrefs, savePrefs, type AiPrefs, type KindLabels, type Layout, type Prefs, type SortKey, type StartView, type Theme } from "./lib/prefs";
 import type { AccentId } from "./lib/themes";
@@ -69,6 +70,10 @@ interface State extends Prefs {
   palettes: Map<number, LabSwatch[]> | null;
   /** How many images are analysed for colours and similarity, and the analysis pass the user started. */
   analysis: AnalysisStatus;
+  /** Suggest tags: batches out with Claude, and the last run whose results are in. */
+  tagging: TaggingStatus;
+  /** The assets the Suggest tags dialog is open for. */
+  suggestFor: number[] | null;
   /** "Find similar" scope of the library: images like `id` within `max` bits, closest first. */
   similar: { id: number; name: string; max: number; ids: number[] } | null;
   /** Assets an AI agent showed the user (its `show` tool), in its order, and the agent app's name. */
@@ -124,6 +129,11 @@ interface State extends Prefs {
   setFavorite: (ids: number[], favorite: boolean) => Promise<void>;
   addTag: (ids: number[], tag: string) => Promise<void>;
   removeTag: (ids: number[], tag: string) => Promise<void>;
+  setSuggestFor: (ids: number[] | null) => void;
+  /** Makes Claude's suggestions of `ids` real tags: those in `tags`, or all of them. */
+  acceptSuggestions: (ids: number[], tags?: string[]) => Promise<void>;
+  rejectSuggestions: (ids: number[], tags?: string[]) => Promise<void>;
+  cancelTagging: () => Promise<void>;
   /** 1 to 5 stars, or 0 to clear. */
   setRating: (ids: number[], rating: number) => Promise<void>;
   setNote: (id: number, note: string) => Promise<void>;
@@ -313,6 +323,8 @@ export const useStore = create<State>((set, get, store) => {
     notes: {},
     palettes: null,
     analysis: { done: 0, total: 0, running: false, paused: false, keep: false },
+    tagging: { assets: 0, requests: 0, finished: 0, canceling: false, error: null, last: null },
+    suggestFor: null,
     similar: null,
     shown: null,
     colSel: null,
@@ -346,6 +358,8 @@ export const useStore = create<State>((set, get, store) => {
       });
       await api.onAnalysisStatus((analysis) => set({ analysis }));
       api.analysisStatus().then((analysis) => set({ analysis }), get().setError);
+      await api.onTaggingStatus((tagging) => set({ tagging }));
+      api.taggingStatus().then((tagging) => set({ tagging }), get().setError);
       api
         .restoreResult()
         .then((r) => r && get().showToast(t("store.restored")), get().setError);
@@ -639,7 +653,8 @@ export const useStore = create<State>((set, get, store) => {
     addTag: async (ids, raw) => {
       try {
         const tag = await api.addTag(ids, raw.replace(/^#/, ""));
-        patchAssets(ids, (a) => (a.tags.includes(tag) ? a : { ...a, tags: [...a.tags, tag].sort() }));
+        // Adding a tag Claude suggested takes the suggestion (the suggestion_taken trigger).
+        patchAssets(ids, (a) => (a.tags.includes(tag) ? a : { ...a, tags: [...a.tags, tag].sort(), suggested: a.suggested.filter((x) => x !== tag) }));
       } catch (e) {
         get().setError(e);
       }
@@ -647,6 +662,25 @@ export const useStore = create<State>((set, get, store) => {
     removeTag: async (ids, tag) => {
       patchAssets(ids, (a) => ({ ...a, tags: a.tags.filter((x) => x !== tag) }));
       await write(() => api.removeTag(ids, tag));
+    },
+    setSuggestFor: (suggestFor) => set({ suggestFor, palette: false }),
+    acceptSuggestions: async (ids, tags) => {
+      patchAssets(ids, (a) => {
+        const picked = tags ? a.suggested.filter((x) => tags.includes(x)) : a.suggested;
+        return { ...a, tags: [...new Set([...a.tags, ...picked])].sort(), suggested: a.suggested.filter((x) => !picked.includes(x)) };
+      });
+      await write(() => api.acceptSuggestions(ids, tags));
+    },
+    rejectSuggestions: async (ids, tags) => {
+      patchAssets(ids, (a) => ({ ...a, suggested: tags ? a.suggested.filter((x) => !tags.includes(x)) : [] }));
+      await write(() => api.rejectSuggestions(ids, tags));
+    },
+    cancelTagging: async () => {
+      try {
+        await api.cancelTagging();
+      } catch (e) {
+        get().setError(e);
+      }
     },
     setRating: async (ids, rating) => {
       // Previous ratings, grouped, so Undo restores each asset's own.

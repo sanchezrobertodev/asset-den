@@ -23,6 +23,13 @@ pub fn cache_name(path: &str, size: i64, mtime: i64) -> String {
     format!("{}.png", &h.to_hex()[..32])
 }
 
+/// Cache file name for a font's sample line, which the window draws for Suggest tags. Apart from thumbnails, so font cards
+/// and drag icons stay as they are.
+pub fn sample_name(path: &str, size: i64, mtime: i64) -> String {
+    let h = blake3::hash(format!("{path}|{size}|{mtime}|sample").as_bytes());
+    format!("{}.png", &h.to_hex()[..32])
+}
+
 /// Cache file name for a thumbnail the frontend rendered from version `rendered` (size, mtime) of the file. Errors when
 /// the file has changed since, so a frame of the old contents is never stored under the new version's name.
 pub fn rendered_name(path: &str, current: (i64, i64), rendered: (i64, i64)) -> Result<String, String> {
@@ -106,6 +113,7 @@ mod tests {
         assert_eq!(rendered_name("a", (1, 2), (1, 2)), Ok(cache_name("a", 1, 2)));
         assert!(rendered_name("a", (1, 3), (1, 2)).is_err());
         assert!(rendered_name("a", (5, 2), (1, 2)).is_err());
+        assert_ne!(sample_name("a.ttf", 1, 2), cache_name("a.ttf", 1, 2));
     }
 
     #[test]
